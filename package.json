@@ -1,0 +1,55 @@
+{
+  "name": "hitext",
+  "version": "0.0.0",
+  "description": "A project about text decoration",
+  "keywords": [
+    "text",
+    "decoration"
+  ],
+  "homepage": "https://github.com/hitext/hitext",
+  "author": "Roman Dvornov <rdvornov@gmail.com> (https://github.com/lahmatiy)",
+  "maintainers": [],
+  "license": "MIT",
+  "repository": "hitext/hitext",
+  "bugs": {
+    "url": "https://github.com/hitext/hitext/issues"
+  },
+  "main": "./src/index",
+  "eslintConfig": {
+    "env": {
+      "node": true,
+      "mocha": true,
+      "es6": true
+    },
+    "rules": {
+      "no-duplicate-case": 2,
+      "no-undef": 2,
+      "no-unused-vars": [
+        2,
+        {
+          "vars": "all",
+          "args": "after-used"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "lint": "jscs src test && eslint src test",
+    "lint-and-test": "npm run lint && npm test",
+    "test": "mocha --reporter progress",
+    "coverage": "istanbul cover _mocha -- -R min",
+    "travis": "npm run lint-and-test && npm run coveralls",
+    "coveralls": "istanbul cover _mocha --report lcovonly -- -R min && cat ./coverage/lcov.info | coveralls"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "coveralls": "^3.0.1",
+    "eslint": "^4.19.1",
+    "istanbul": "^0.4.5",
+    "jscs": "^3.0.7",
+    "mocha": "^5.2.0"
+  },
+  "engines": {
+    "node": "^8.0.0"
+  }
+}
