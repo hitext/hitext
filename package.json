@@ -41,7 +41,9 @@
     "travis": "npm run lint-and-test && npm run coveralls",
     "coveralls": "istanbul cover _mocha --report lcovonly -- -R min && cat ./coverage/lcov.info | coveralls"
   },
-  "dependencies": {},
+  "dependencies": {
+    "acorn-jsx": "^4.1.1"
+  },
   "devDependencies": {
     "coveralls": "^3.0.1",
     "eslint": "^4.19.1",
