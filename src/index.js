@@ -45,7 +45,7 @@ function print(source, ranges, printer) {
             closingOffset = Infinity;
 
             for (let j = 0; j < context.length; j++) {
-                if (context[j] !== null && context[j].end < closingOffset) {
+                if (context[j].end < closingOffset) {
                     closingOffset = context[j].end;
                 }
             }
@@ -106,12 +106,6 @@ function print(source, ranges, printer) {
 
     closeRanges(source.length);
     printSource(source.length);
-
-    for (let j = 0; j < context.length; j++) {
-        if (context[j] !== null) {
-            buffer += hooks[context[j].type].close(context[j].data);
-        }
-    }
 
     return buffer;
 }

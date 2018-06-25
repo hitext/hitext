@@ -37,6 +37,26 @@ describe('print', () => {
         );
     });
 
+    it('should be tolerant to unknown token types', () => {
+        assert.equal(
+            hitext.print(
+                'abc',
+                [
+                    { type: 'unknown', start: 0, end: 1, data: 'a' },
+                    { type: 'test', start: 1, end: 2, data: 'b' },
+                    { type: 'uncomplete', start: 2, end: 3, data: 'c'}
+                ],
+                {
+                    hooks: {
+                        test: testPrinter.hooks.test,
+                        uncomplete: {}
+                    }
+                }
+            ),
+            'a<b>b</b>c'
+        );
+    });
+
     [
         {
             ranges: [
@@ -140,6 +160,14 @@ describe('print', () => {
                 '     ccccc'
             ],
             expected: '<a>123</a><b><a>45</a></b><c><b>67</b>890</c>'
+        },
+        {
+            ranges: [
+                'aaaaaaa   ',
+                '  bbbbbbb ',
+                '    ccc   '
+            ],
+            expected: '<a>12</a><b><a>34<c>567</c></a>89</b>0'
         }
     ].forEach(test =>
         it('case\n|' + test.ranges.join('|\n|') + '|', () => {
