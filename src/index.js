@@ -86,7 +86,7 @@ function print(source, ranges, printer) {
 
         for (j = 0; j < context.length; j++) {
             if (context[j].end < range.end) {
-                for (let k = j; k < context.length; k++) {
+                for (let k = context.length - 1; k >= j; k--) {
                     buffer += hooks[context[k].type].close(context[k].data);
                 }
                 break;
