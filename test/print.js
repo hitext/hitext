@@ -44,7 +44,7 @@ describe('print', () => {
                 [
                     { type: 'unknown', start: 0, end: 1, data: 'a' },
                     { type: 'test', start: 1, end: 2, data: 'b' },
-                    { type: 'uncomplete', start: 2, end: 3, data: 'c'}
+                    { type: 'uncomplete', start: 2, end: 3, data: 'c' }
                 ],
                 {
                     hooks: {
