@@ -7,7 +7,10 @@ module.exports = {
         .replace(/>/g, '&gt;'),
 
     finalize(result) {
-        const style = Object.keys(this.hooks).map(hook => hook.style).filter(Boolean).join('\n');
+        const style = Object.keys(this.hooks)
+            .map(type => this.hooks[type] && this.hooks[type].style)
+            .filter(Boolean)
+            .join('\n');
 
         result = `<div>${result}</div>`;
 
@@ -21,16 +24,16 @@ module.exports = {
     hooks: {
         syntax: {
             style: [
-                '.token.keyword,.token.attr-value{color:#07a}',
-                '.token.string{color:#690;word-break:break-all}',
-                '.token.punctuator{color:#999}',
-                '.token.num,.token.value-keyword,.token.jsx-open-tag,.token.jsx-close-tag{color:#905}',
-                '.token.jsx-attr-name{color:#690}',
-                '.token.regexp{color:#e90}',
-                '.token.comment{color:slategray}'
+                '.syntax--keyword,.syntax--attr-value{color:#07a}',
+                '.syntax--string{color:#690;word-break:break-all}',
+                '.syntax--punctuator{color:#999}',
+                '.syntax--num,.syntax--value-keyword,.syntax--jsx-open-tag,.syntax--jsx-close-tag{color:#905}',
+                '.syntax--jsx-attr-name{color:#690}',
+                '.syntax--regexp{color:#e90}',
+                '.syntax--comment{color:slategray}'
             ].join('\n'),
             open: (data) => {
-                return '<span class="token ' + data + '">';
+                return '<span class="syntax--' + data + '">';
             },
             close: () => {
                 return '</span>';

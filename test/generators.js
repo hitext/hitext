@@ -12,9 +12,9 @@ describe('decorators', () => {
                     [hitext.generator.lang.js(hitext.generator.lang.js.syntax)],
                     hitext.printer.html
                 ),
-                `${wrapper[0]}<span class="token keyword">function</span> <span class="token name">hi</span><span class="token punctuator">(</span><span class="token name">a</span><span class="token punctuator">,</span> <span class="token name">b</span><span class="token punctuator">)</span> <span class="token punctuator">{</span>
-  <span class="token keyword">return</span> <span class="token name">a</span> <span class="token operator">+</span> <span class="token name">b</span><span class="token punctuator">;</span>
-<span class="token punctuator">}</span>${wrapper[1]}`
+                `${wrapper[0]}<span class="syntax--keyword">function</span> <span class="syntax--name">hi</span><span class="syntax--punctuator">(</span><span class="syntax--name">a</span><span class="syntax--punctuator">,</span> <span class="syntax--name">b</span><span class="syntax--punctuator">)</span> <span class="syntax--punctuator">{</span>
+  <span class="syntax--keyword">return</span> <span class="syntax--name">a</span> <span class="syntax--operator">+</span> <span class="syntax--name">b</span><span class="syntax--punctuator">;</span>
+<span class="syntax--punctuator">}</span>${wrapper[1]}`
             );
         });
 
