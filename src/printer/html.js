@@ -32,24 +32,23 @@ module.exports = {
                 '.syntax--regexp{color:#e90}',
                 '.syntax--comment{color:slategray}'
             ].join('\n'),
-            open: (data) => {
-                return '<span class="syntax--' + data + '">';
-            },
-            close: () => {
-                return '</span>';
-            }
+            open: (data) => '<span class="syntax--' + data + '">',
+            close: () => '</span>'
+        },
+        spotlight: {
+            style: [
+                '.spotlight{background:#fdf8cc}'
+            ],
+            open: () => '<span class="spotlight">',
+            close: () => '</span>'
         },
         shortener: {
             style: [
                 '.data-uri .payload{display:none}',
                 '.data-uri::before{content: "...(" attr(data-length) " chars)..."}'
             ].join('\n'),
-            open: (len) => {
-                return `<span class="data-uri" data-length="${len}"><span class="payload">`;
-            },
-            close: () => {
-                return '</span></span>';
-            }
+            open: (len) => `<span class="data-uri" data-length="${len}"><span class="payload">`,
+            close: () => '</span></span>'
         }
     }
 };
