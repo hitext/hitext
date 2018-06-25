@@ -6,17 +6,14 @@ describe('finalize', () => {
         assert.equal(
             hitext.finalize(
                 'test',
-                [
-                    { print: { xxx: { smth: 'foo' } } }
-                ],
                 {
                     target: 'xxx',
-                    finalize(source, decorators) {
-                        return decorators.map(entry => entry.smth || '') + source;
+                    finalize(source) {
+                        return '[' + source + ']';
                     }
                 }
             ),
-            `footest`
+            `[test]`
         );
     });
 });

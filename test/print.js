@@ -7,14 +7,18 @@ describe('print', () => {
             hitext.print(
                 'abc',
                 [
-                    { type: 0, start: 0, end: 1, data: 'a' },
-                    { type: 0, start: 1, end: 2, data: 'b' },
-                    { type: 0, start: 2, end: 3, data: 'c' }
+                    { type: 'test', start: 0, end: 1, data: 'a' },
+                    { type: 'test', start: 1, end: 2, data: 'b' },
+                    { type: 'test', start: 2, end: 3, data: 'c' }
                 ],
-                [
-                    { print: { html: { open: x => `<${x}>`, close: x => `</${x}>` } } }
-                ],
-                'html'
+                {
+                    hooks: {
+                        'test': {
+                            open: x => `<${x}>`,
+                            close: x => `</${x}>`
+                        }
+                    }
+                }
             ),
             '<a>a</a><b>b</b><c>c</c>'
         );

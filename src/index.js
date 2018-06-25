@@ -1,37 +1,29 @@
 const utils = require('./utils');
-const decorators = require('./temp-decorators');
+const generators = require('./temp-generators');
 const printers = require('./printer');
 
 function resolvePrinter(printer) {
     return printers[printer] || (printer && typeof printer === 'object' ? printer : printers.noop);
 }
 
-function resolveDecoratorTarget(decorator, printer) {
-    return decorator.print && decorator.print[printer.target] || {};
-}
-
-function generateRanges(source, decorators) {
+function generateRanges(source, generators) {
     const ranges = [];
 
-    utils.ensureArray(decorators)
-        .map(({ genRanges }) =>
-            utils.ensureFunction(genRanges, () => {})
-        )
-        .forEach((genRanges, index) => {
-            genRanges(source, (start, end, data) =>
-                ranges.push({ type: index, start, end, data })
+    utils.ensureArray(generators)
+        .forEach(generate => {
+            utils.ensureFunction(generate)(source, (type, start, end, data) =>
+                ranges.push({ type, start, end, data })
             );
         });
 
     return ranges;
 }
 
-function print(source, ranges, decorators, printer) {
+function print(source, ranges, printer) {
     printer = resolvePrinter(printer);
-    decorators = utils.ensureArray(decorators);
 
     const escape = utils.ensureFunction(printer.escape, chunk => chunk);
-    const context = decorators.map(() => null);
+    const context = [];
     const printSource = (offset) => {
         if (printedSource !== offset) {
             buffer += escape(source.substring(printedSource, offset));
@@ -42,11 +34,12 @@ function print(source, ranges, decorators, printer) {
         while (closingOffset <= offset) {
             printSource(closingOffset);
 
-            for (let j = 0; j < context.length; j++) {
-                if (context[j] !== null && context[j].end === closingOffset) {
-                    buffer += decorators[j].close(context[j].data);
-                    context[j] = null;
+            for (let j = context.length - 1; j >= 0; j--) {
+                if (context[j].end !== closingOffset) {
+                    break;
                 }
+                buffer += hooks[context[j].type].close(context[j].data);
+                context.pop();
             }
 
             closingOffset = Infinity;
@@ -59,43 +52,51 @@ function print(source, ranges, decorators, printer) {
         }
     };
 
+    let hooks = printer.hooks || {};
     let buffer = '';
     let closingOffset = Infinity;
     let printedSource = 0;
 
     // sort ranges
     ranges = ranges.slice().sort(
-        (a, b) => a.start - b.start || b.type - a.type
+        (a, b) => a.start - b.start || b.end - a.end
     );
 
-    // preprocess decorators
-    decorators = utils.ensureArray(decorators).map(decorator => {
-        const decoratorPrinter = resolveDecoratorTarget(decorator, printer);
-
-        return {
-            open: utils.ensureFunction(decoratorPrinter.open, () => ''),
-            close: utils.ensureFunction(decoratorPrinter.close, () => '')
+    // preprocess hooks
+    hooks = Object.keys(hooks).reduce((result, type) => {
+        result[type] = {
+            open: utils.ensureFunction(hooks[type].open, () => ''),
+            close: utils.ensureFunction(hooks[type].close, () => '')
         };
-    });
+
+        return result;
+    }, {});
 
     for (let i = 0; i < ranges.length; i++) {
         const range = ranges[i];
+        let j = 0;
+
+        // ignore ranges without a type hook
+        if (hooks.hasOwnProperty(range.type) === false) {
+            continue;
+        }
 
         closeRanges(range.start);
         printSource(range.start);
 
-        for (let j = 0; j <= range.type; j++) {
-            if (context[j] !== null) {
-                buffer += decorators[j].close(context[j].data);
+        for (j = 0; j < context.length; j++) {
+            if (context[j].end < range.end) {
+                for (let k = j; k < context.length; k++) {
+                    buffer += hooks[context[k].type].close(context[k].data);
+                }
+                break;
             }
         }
 
-        context[range.type] = range;
+        context.splice(j, 0, range);
 
-        for (let j = range.type; j >= 0; j--) {
-            if (context[j] !== null) {
-                buffer += decorators[j].open(context[j].data);
-            }
+        for (; j < context.length; j++) {
+            buffer += hooks[context[j].type].open(context[j].data);
         }
 
         if (range.end < closingOffset) {
@@ -108,30 +109,27 @@ function print(source, ranges, decorators, printer) {
 
     for (let j = 0; j < context.length; j++) {
         if (context[j] !== null) {
-            buffer += decorators[j].close(context[j].data);
+            buffer += hooks[context[j].type].close(context[j].data);
         }
     }
 
     return buffer;
 }
 
-function finalize(source, decorators, printer) {
+function finalize(source, printer) {
     printer = resolvePrinter(printer);
 
-    return utils.ensureFunction(printer.finalize, String)(
-        source,
-        utils.ensureArray(decorators).map(decorator => resolveDecoratorTarget(decorator, printer))
-    );
+    return utils.ensureFunction(printer.finalize, String).call(printer, source);
 }
 
-function decorate(source, decorators, printer) {
-    const ranges = generateRanges(source, decorators);
+function decorate(source, generators, printer) {
+    const ranges = generateRanges(source, generators);
     // console.log(ranges);
 
-    let result = print(source, ranges, decorators, printer);
+    let result = print(source, ranges, printer);
     // console.log(result);
 
-    result = finalize(result, decorators, printer);
+    result = finalize(result, printer);
     // console.log(result);
 
     return result;
@@ -139,7 +137,7 @@ function decorate(source, decorators, printer) {
 
 module.exports = {
     printer: printers,
-    decorator: decorators,
+    generator: generators,
     generateRanges,
     print,
     finalize,
