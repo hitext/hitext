@@ -57,6 +57,27 @@ describe('print', () => {
         );
     });
 
+    it('order of ranges should be independant of generator order', () => {
+        const printer = {
+            hooks: {
+                'a': testPrinter.hooks.test,
+                'b': testPrinter.hooks.test
+            }
+        };
+        const a = { type: 'a', start: 1, end: 2, data: 'a' };
+        const b = { type: 'b', start: 1, end: 2, data: 'b' };
+
+        assert.equal(
+            hitext.print('123', [a, b], printer),
+            hitext.print('123', [b, a], printer)
+        );
+
+        assert.equal(
+            hitext.print('123', [b, a], printer),
+            '1<a><b>2</b></a>3'
+        );
+    });
+
     [
         {
             ranges: [

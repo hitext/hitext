@@ -24,10 +24,36 @@ function print(source, ranges, printer) {
 
     const escape = utils.ensureFunction(printer.escape, chunk => chunk);
     const context = [];
+    let hooks = printer.hooks || {};
+    let hookPriority = [];
+    let buffer = '';
+    let closingOffset = Infinity;
+    let printedOffset = 0;
+
+    // preprocess hooks
+    hooks = Object.keys(hooks).reduce((result, type) => {
+        hookPriority.push(type);
+        result[type] = {
+            open: utils.ensureFunction(hooks[type].open, () => ''),
+            close: utils.ensureFunction(hooks[type].close, () => '')
+        };
+
+        return result;
+    }, {});
+
+    // sort ranges
+    ranges = ranges.slice().sort(
+        (a, b) =>
+            a.start - b.start ||
+            b.end - a.end ||
+            hookPriority.indexOf(a.type) - hookPriority.indexOf(b.type)
+    );
+
+    // main part
     const printSource = (offset) => {
-        if (printedSource !== offset) {
-            buffer += escape(source.substring(printedSource, offset));
-            printedSource = offset;
+        if (printedOffset !== offset) {
+            buffer += escape(source.substring(printedOffset, offset));
+            printedOffset = offset;
         }
     };
     const closeRanges = (offset) => {
@@ -38,7 +64,7 @@ function print(source, ranges, printer) {
                 if (context[j].end !== closingOffset) {
                     break;
                 }
-                buffer += hooks[context[j].type].close(context[j].data);
+                buffer += hooks[context[j].type].close(context[j].data) || '';
                 context.pop();
             }
 
@@ -51,26 +77,6 @@ function print(source, ranges, printer) {
             }
         }
     };
-
-    let hooks = printer.hooks || {};
-    let buffer = '';
-    let closingOffset = Infinity;
-    let printedSource = 0;
-
-    // sort ranges
-    ranges = ranges.slice().sort(
-        (a, b) => a.start - b.start || b.end - a.end
-    );
-
-    // preprocess hooks
-    hooks = Object.keys(hooks).reduce((result, type) => {
-        result[type] = {
-            open: utils.ensureFunction(hooks[type].open, () => ''),
-            close: utils.ensureFunction(hooks[type].close, () => '')
-        };
-
-        return result;
-    }, {});
 
     for (let i = 0; i < ranges.length; i++) {
         const range = ranges[i];
@@ -87,7 +93,7 @@ function print(source, ranges, printer) {
         for (j = 0; j < context.length; j++) {
             if (context[j].end < range.end) {
                 for (let k = context.length - 1; k >= j; k--) {
-                    buffer += hooks[context[k].type].close(context[k].data);
+                    buffer += hooks[context[k].type].close(context[k].data) || '';
                 }
                 break;
             }
@@ -96,7 +102,7 @@ function print(source, ranges, printer) {
         context.splice(j, 0, range);
 
         for (; j < context.length; j++) {
-            buffer += hooks[context[j].type].open(context[j].data);
+            buffer += hooks[context[j].type].open(context[j].data) || '';
         }
 
         if (range.end < closingOffset) {
@@ -135,5 +141,6 @@ module.exports = {
     generateRanges,
     print,
     finalize,
-    decorate
+    decorate,
+    utils
 };
