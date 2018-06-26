@@ -22,11 +22,12 @@ function generateRanges(source, generators) {
 function print(source, ranges, printer) {
     printer = resolvePrinter(printer);
 
-    const escape = utils.ensureFunction(printer.escape, chunk => chunk);
-    const context = [];
+    const print = utils.ensureFunction(printer.print, chunk => chunk);
+    const context = utils.ensureFunction(printer.createContext, () => {})();
+    const openedRanges = [];
     let hooks = printer.hooks || {};
     let hookPriority = [];
-    let buffer = '';
+    let buffer = utils.ensureFunction(printer.start, () => '')(context);
     let closingOffset = Infinity;
     let printedOffset = 0;
 
@@ -52,27 +53,29 @@ function print(source, ranges, printer) {
     // main part
     const printSource = (offset) => {
         if (printedOffset !== offset) {
-            buffer += escape(source.substring(printedOffset, offset));
+            buffer += print(source.substring(printedOffset, offset), context);
             printedOffset = offset;
         }
     };
+    const open = index => hooks[openedRanges[index].type].open(openedRanges[index].data, context) || '';
+    const close = index => hooks[openedRanges[index].type].close(openedRanges[index].data, context) || '';
     const closeRanges = (offset) => {
         while (closingOffset <= offset) {
             printSource(closingOffset);
 
-            for (let j = context.length - 1; j >= 0; j--) {
-                if (context[j].end !== closingOffset) {
+            for (let j = openedRanges.length - 1; j >= 0; j--) {
+                if (openedRanges[j].end !== closingOffset) {
                     break;
                 }
-                buffer += hooks[context[j].type].close(context[j].data) || '';
-                context.pop();
+                buffer += close(j);
+                openedRanges.pop();
             }
 
             closingOffset = Infinity;
 
-            for (let j = 0; j < context.length; j++) {
-                if (context[j].end < closingOffset) {
-                    closingOffset = context[j].end;
+            for (let j = 0; j < openedRanges.length; j++) {
+                if (openedRanges[j].end < closingOffset) {
+                    closingOffset = openedRanges[j].end;
                 }
             }
         }
@@ -90,19 +93,19 @@ function print(source, ranges, printer) {
         closeRanges(range.start);
         printSource(range.start);
 
-        for (j = 0; j < context.length; j++) {
-            if (context[j].end < range.end) {
-                for (let k = context.length - 1; k >= j; k--) {
-                    buffer += hooks[context[k].type].close(context[k].data) || '';
+        for (j = 0; j < openedRanges.length; j++) {
+            if (openedRanges[j].end < range.end) {
+                for (let k = openedRanges.length - 1; k >= j; k--) {
+                    buffer += close(k);
                 }
                 break;
             }
         }
 
-        context.splice(j, 0, range);
+        openedRanges.splice(j, 0, range);
 
-        for (; j < context.length; j++) {
-            buffer += hooks[context[j].type].open(context[j].data) || '';
+        for (; j < openedRanges.length; j++) {
+            buffer += open(j);
         }
 
         if (range.end < closingOffset) {
@@ -112,6 +115,8 @@ function print(source, ranges, printer) {
 
     closeRanges(source.length);
     printSource(source.length);
+
+    buffer += utils.ensureFunction(printer.finish, () => {})(context) || '';
 
     return buffer;
 }

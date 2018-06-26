@@ -1,7 +1,7 @@
 const assert = require('assert');
 const hitext = require('../src');
 
-describe('decorators', () => {
+describe('build-in generators', () => {
     const wrapper = hitext.finalize('[:::]', hitext.printer.html).split('[:::]');
 
     describe('spotlight', () => {
@@ -57,6 +57,34 @@ describe('decorators', () => {
   <span class="spotlight"><span class="syntax--keyword">return</span> <span class="syntax--name">a</span> <span class="syntax--operator">+</span> <span class="syntax--name">b</span></span><span class="syntax--punctuator">;</span>
 <span class="syntax--punctuator">}</span>${wrapper[1]}`
 
+            );
+        });
+
+    });
+
+    describe('tty printer', () => {
+        it('basic', () => {
+            assert.equal(
+                hitext.decorate(
+                    'function hi(a, b) {\n  return a + b;\n}',
+                    [hitext.generator.lang.js(hitext.generator.lang.js.syntax)],
+                    hitext.printer.tty
+                ),
+                '\u001b[31mfunction\u001b[39m hi(a, b) {\n  \u001b[31mreturn\u001b[39m a + b;\n}'
+            );
+        });
+
+        it('with spotlight', () => {
+            assert.equal(
+                hitext.decorate(
+                    'function hi(a, b) {\n  return a + b;\n}',
+                    [
+                        hitext.generator.lang.js(hitext.generator.lang.js.syntax),
+                        hitext.generator.spotlight([22, 34])
+                    ],
+                    hitext.printer.tty
+                ),
+                '\u001b[31mfunction\u001b[39m hi(a, b) {\n  \u001b[31m\u001b[44mreturn\u001b[37m a + b\u001b[39m\u001b[49m;\n}'
             );
         });
     });

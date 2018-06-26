@@ -1,4 +1,5 @@
 module.exports = {
     noop: require('./noop'),
-    html: require('./html')
+    html: require('./html'),
+    tty: require('./tty')
 };

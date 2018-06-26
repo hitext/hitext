@@ -7,7 +7,6 @@ describe('finalize', () => {
             hitext.finalize(
                 'test',
                 {
-                    target: 'xxx',
                     finalize(source) {
                         return '[' + source + ']';
                     }

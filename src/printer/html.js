@@ -1,7 +1,8 @@
 module.exports = {
-    target: 'html',
+    // start: () => '<div>',
+    // finish: () => '</div>',
 
-    escape: chunk => chunk
+    print: chunk => chunk
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;'),
