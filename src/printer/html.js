@@ -12,13 +12,7 @@ module.exports = {
             .filter(Boolean)
             .join('\n');
 
-        result = `<div>${result}</div>`;
-
-        if (style) {
-            result = `<style>\n${style}\n</style>\n${result}`;
-        }
-
-        return result;
+        return `<style>\n${style}\n</style>\n<div>${result}</div>`;
     },
 
     hooks: {
@@ -27,8 +21,8 @@ module.exports = {
                 '.syntax--keyword,.syntax--attr-value{color:#07a}',
                 '.syntax--string{color:#690;word-break:break-all}',
                 '.syntax--punctuator{color:#999}',
-                '.syntax--num,.syntax--value-keyword,.syntax--jsx-open-tag,.syntax--jsx-close-tag{color:#905}',
-                '.syntax--jsx-attr-name{color:#690}',
+                '.syntax--number,.syntax--value-keyword,.syntax--tag{color:#905}',
+                '.syntax--attr-name{color:#690}',
                 '.syntax--regexp{color:#e90}',
                 '.syntax--comment{color:slategray}'
             ].join('\n'),
@@ -38,7 +32,7 @@ module.exports = {
         spotlight: {
             style: [
                 '.spotlight{background:#fdf8cc}'
-            ],
+            ].join('\n'),
             open: () => '<span class="spotlight">',
             close: () => '</span>'
         },
@@ -47,7 +41,7 @@ module.exports = {
                 '.data-uri .payload{display:none}',
                 '.data-uri::before{content: "...(" attr(data-length) " chars)..."}'
             ].join('\n'),
-            open: (len) => `<span class="data-uri" data-length="${len}"><span class="payload">`,
+            open: (data) => `<span class="data-uri" data-length="${data}"><span class="payload">`,
             close: () => '</span></span>'
         }
     }

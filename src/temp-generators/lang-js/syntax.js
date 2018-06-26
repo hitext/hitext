@@ -3,12 +3,7 @@ const acorn = require('acorn-jsx');
 /* jscs:disable requireCamelCaseOrUpperCaseIdentifiers */
 module.exports = ({ ast, tokens, comments, addRange, walk }) => {
     comments.forEach(token =>
-        addRange(
-            'syntax',
-            token.start,
-            token.end,
-            'comment'
-        )
+        addRange('syntax', token.start, token.end, 'comment')
     );
 
     tokens.forEach(({ token, context }) => {
@@ -31,14 +26,20 @@ module.exports = ({ ast, tokens, comments, addRange, walk }) => {
             default:
                 switch (token.type) {
                     case acorn.tokTypes.num:
+                        type = 'number';
+                        break;
+
                     case acorn.tokTypes.regexp:
+                        type = 'regexp';
+                        break;
+
                     case acorn.tokTypes.template:
                     case acorn.tokTypes.invalidTemplate:
-                        type = token.type.label;
+                        type = 'template';
                         break;
 
                     case acorn.tokTypes.name:
-                        type = token.type.label;
+                        type = 'name';
                         if (token.value === 'from') {
                             type = 'keyword';
                         }
@@ -104,67 +105,27 @@ module.exports = ({ ast, tokens, comments, addRange, walk }) => {
         }
 
         if (type) {
-            addRange(
-                'syntax',
-                token.start,
-                token.end,
-                type
-            );
+            addRange('syntax', token.start, token.end, type);
         }
     });
 
     walk.simple(ast, {
         JSXOpeningElement(node) {
-            addRange(
-                'syntax',
-                node.name.range[0],
-                node.name.range[1],
-                'jsx-open-tag'
-            );
-            addRange(
-                'syntax',
-                node.range[1] - 1,
-                node.range[1],
-                'punctuator'
-            );
+            addRange('syntax', node.name.range[0], node.name.range[1], 'tag');
+            addRange('syntax', node.range[1] - 1, node.range[1], 'punctuator');
         },
         JSXClosingElement(node) {
-            addRange(
-                'syntax',
-                node.name.range[0],
-                node.name.range[1],
-                'jsx-close-tag'
-            );
-            addRange(
-                'syntax',
-                node.range[1] - 1,
-                node.range[1],
-                'punctuator'
-            );
+            addRange('syntax', node.name.range[0], node.name.range[1], 'tag');
+            addRange('syntax', node.range[1] - 1, node.range[1], 'punctuator');
         },
         JSXOpeningFragment(node) {
-            addRange(
-                'syntax',
-                node.range[1] - 1,
-                node.range[1],
-                'punctuator'
-            );
+            addRange('syntax', node.range[1] - 1, node.range[1], 'punctuator');
         },
         JSXClosingFragment(node) {
-            addRange(
-                'syntax',
-                node.range[1] - 1,
-                node.range[1],
-                'punctuator'
-            );
+            addRange('syntax', node.range[1] - 1, node.range[1], 'punctuator');
         },
         JSXAttribute(node) {
-            addRange(
-                'syntax',
-                node.name.range[0],
-                node.name.range[1],
-                'jsx-attr-name'
-            );
+            addRange('syntax', node.name.range[0], node.name.range[1], 'attr-name');
 
             if (node.value && node.value.type === 'Literal') {
                 addRange('syntax', node.value.range[0], node.value.range[0] + 1, 'punctuator');
