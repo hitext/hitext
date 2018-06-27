@@ -12,7 +12,7 @@ describe('finalize', () => {
                     }
                 }
             ),
-            `[test]`
+            '[test]'
         );
     });
 });
