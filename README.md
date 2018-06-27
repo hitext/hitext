@@ -30,14 +30,15 @@ The approach allows to combine any number of decorators (which became range gene
 ```js
 const hitext = require('hitext');
 
-hitext.decorate(
-    'const a = 1;\nconst b = 2;',
-    [
-        // NOTE: hitext.generator.lang.js will be extracted to separate package
-        hitext.generator.lang.js(hitext.generator.lang.js.syntax),
-        hitext.generator.spotlight([6, 11], [19, 24])
-    ],
-    hitext.printer.html
+const source = 'const a = 1;\nconst b = 2;';
+const generators = [
+    // NOTE: hitext.generator.lang.js will be extracted to separate package later
+    hitext.generator.lang.js(hitext.generator.lang.js.syntax),
+    hitext.generator.spotlight([6, 11], [19, 24])
+];
+
+console.log(
+    hitext.decorate(source, generators, 'html')
 );
 ```
 
