@@ -19,6 +19,8 @@
     "lint": "eslint src test",
     "lint-and-test": "npm run lint && npm test",
     "test": "mocha --reporter progress",
+    "build": "browserify --standalone hitext src/index.js | uglifyjs --compress --mangle -o dist/hitext.js",
+    "prepublish": "npm run build",
     "coverage": "istanbul cover _mocha -- -R min",
     "travis": "npm run lint-and-test && npm run coveralls",
     "coveralls": "istanbul cover _mocha --report lcovonly -- -R min && cat ./coverage/lcov.info | coveralls"
@@ -28,10 +30,12 @@
     "ansi-styles": "^3.2.1"
   },
   "devDependencies": {
+    "browserify": "^16.2.2",
     "coveralls": "^3.0.1",
     "eslint": "^4.19.1",
     "istanbul": "^0.4.5",
-    "mocha": "^5.2.0"
+    "mocha": "^5.2.0",
+    "uglify-es": "^3.3.9"
   },
   "engines": {
     "node": "^8.0.0"
