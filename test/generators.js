@@ -38,11 +38,33 @@ describe('build-in generators', () => {
             )
         );
 
+        it('using non-string and non-regexp value', () =>
+            assert.equal(
+                hitext.decorate(
+                    '1234567890',
+                    [hitext.generator.match(123)],
+                    'html'
+                ),
+                '<div><span class="match">123</span>4567890</div>'
+            )
+        );
+
         it('using regexp', () =>
             assert.equal(
                 hitext.decorate(
                     'Hello world!',
                     [hitext.generator.match(/\w+/)],
+                    'html'
+                ),
+                '<div><span class="match">Hello</span> <span class="match">world</span>!</div>'
+            )
+        );
+
+        it('using regexp with flags', () =>
+            assert.equal(
+                hitext.decorate(
+                    'Hello world!',
+                    [hitext.generator.match(/hello|world/ig)],
                     'html'
                 ),
                 '<div><span class="match">Hello</span> <span class="match">world</span>!</div>'

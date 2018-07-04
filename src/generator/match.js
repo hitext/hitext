@@ -3,22 +3,6 @@ function processMatch(createRange, type, start, end) {
 }
 
 module.exports = function(pattern, type) {
-    if (typeof pattern === 'string') {
-        return function(source, createRange) {
-            let index = -1;
-
-            while (true) {
-                index = source.indexOf(pattern, index + 1);
-
-                if (index === -1) {
-                    break;
-                }
-
-                processMatch(createRange, type, index, index + pattern.length);
-            }
-        };
-    }
-
     if (pattern instanceof RegExp) {
         const flags = pattern.flags.indexOf('g') !== -1 ? pattern.flags : pattern.flags + 'g';
         const matchRx = new RegExp(pattern, flags);
@@ -31,4 +15,19 @@ module.exports = function(pattern, type) {
             }
         };
     }
+
+    pattern = String(pattern);
+    return function(source, createRange) {
+        let index = -1;
+
+        while (true) {
+            index = source.indexOf(pattern, index + 1);
+
+            if (index === -1) {
+                break;
+            }
+
+            processMatch(createRange, type, index, index + pattern.length);
+        }
+    };
 };
