@@ -57,6 +57,63 @@ describe('print', () => {
         );
     });
 
+    describe('ranges out of source boundaries', () => {
+        it('intersect with boundaries', () => {
+            assert.equal(
+                hitext.print(
+                    'abc',
+                    [
+                        { type: 'test', start: -9, end: 9, data: 'a' },
+                        { type: 'test', start: -8, end: 1, data: 'b' },
+                        { type: 'test', start: 2, end: 9, data: 'c' }
+                    ],
+                    testPrinter
+                ),
+                '<a><b>a</b>b<c>c</c></a>'
+            );
+        });
+
+        it('intersect with boundaries', () => {
+            assert.equal(
+                hitext.print(
+                    'abc',
+                    [
+                        { type: 'test', start: -9, end: -5, data: 'a' },
+                        { type: 'test', start: 1, end: 2, data: 'b' },
+                        { type: 'test', start: 5, end: 9, data: 'c' }
+                    ],
+                    testPrinter
+                ),
+                '<a></a>a<b>b</b>c<c></c>'
+            );
+        });
+    });
+
+    it('should ignore ranges with bad start/end', () => {
+        assert.equal(
+            hitext.print(
+                '1234567890',
+                [
+                    { type: 'test', start: NaN, end: 2, data: 'a' },
+                    { type: 'test', start: undefined, end: 2, data: 'a' },
+                    { type: 'test', start: null, end: 2, data: 'a' },
+                    { type: 'test', start: false, end: 2, data: 'a' },
+                    { type: 'test', start: '1', end: 2, data: 'a' },
+                    { type: 'test', start: 6, end: 3, data: 'b' },
+                    { type: 'test', start: 8, end: NaN, data: 'c' },
+                    { type: 'test', start: 8, end: undefined, data: 'c' },
+                    { type: 'test', start: 8, end: null, data: 'c' },
+                    { type: 'test', start: 8, end: false, data: 'c' },
+                    { type: 'test', start: 8, end: '1', data: 'c' },
+                    { type: 'test', start: NaN, end: NaN, data: 'd' },
+                    { type: 'test', start: 3, end: 6, data: 'e' }
+                ],
+                testPrinter
+            ),
+            '123<e>456</e>7890'
+        );
+    });
+
     it('order of ranges should be independant of generator order', () => {
         const printer = {
             hooks: {

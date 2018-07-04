@@ -91,6 +91,11 @@ function print(source, ranges, printer) {
             continue;
         }
 
+        // ignore ranges with wrong start/end values
+        if (range.start > range.end || !Number.isFinite(range.start) || !Number.isFinite(range.end)) {
+            continue;
+        }
+
         closeRanges(range.start);
         printSource(range.start);
 
@@ -117,6 +122,12 @@ function print(source, ranges, printer) {
     closeRanges(source.length);
     printSource(source.length);
 
+    // print ranges out of source boundaries
+    for (let i = openedRanges.length - 1; i >= 0; i--) {
+        buffer += close(i);
+    }
+
+    // finish printing
     buffer += ensureFunction(printer.finish, () => {})(context) || '';
 
     return buffer;
