@@ -1,6 +1,6 @@
 const utils = require('./utils');
 const { ensureArray, ensureFunction } = utils;
-const generators = require('./temp-generators');
+const generators = require('./generator');
 const printers = require('./printer');
 
 function resolvePrinter(printer) {
