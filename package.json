@@ -38,5 +38,13 @@
   },
   "engines": {
     "node": "^8.0.0"
-  }
+  },
+  "files": [
+    "dist",
+    "src",
+    "theme",
+    "CHANGELOG.md",
+    "LICENSE",
+    "README.md"
+  ]
 }
