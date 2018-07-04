@@ -1,6 +1,6 @@
 const stubGeneratorFactory =
-    ranges => (source, addRange) =>
-        ranges.forEach(range => addRange(...range));
+    ranges => (source, createRange) =>
+        ranges.forEach(range => createRange(...range));
 
 module.exports = {
     stub: stubGeneratorFactory

@@ -1,4 +1,5 @@
 const utils = require('./utils');
+const { ensureArray, ensureFunction } = utils;
 const generators = require('./temp-generators');
 const printers = require('./printer');
 
@@ -9,9 +10,9 @@ function resolvePrinter(printer) {
 function generateRanges(source, generators) {
     const ranges = [];
 
-    utils.ensureArray(generators)
+    ensureArray(generators)
         .forEach(generate => {
-            utils.ensureFunction(generate)(source, (type, start, end, data) =>
+            ensureFunction(generate)(source, (type, start, end, data) =>
                 ranges.push({ type, start, end, data })
             );
         });
@@ -22,12 +23,12 @@ function generateRanges(source, generators) {
 function print(source, ranges, printer) {
     printer = resolvePrinter(printer);
 
-    const print = utils.ensureFunction(printer.print, chunk => chunk);
-    const context = utils.ensureFunction(printer.createContext, () => {})();
+    const print = ensureFunction(printer.print, chunk => chunk);
+    const context = ensureFunction(printer.createContext, () => {})();
     const openedRanges = [];
     let hooks = printer.hooks || {};
     let hookPriority = [];
-    let buffer = utils.ensureFunction(printer.start, () => '')(context);
+    let buffer = ensureFunction(printer.start, () => '')(context);
     let closingOffset = Infinity;
     let printedOffset = 0;
 
@@ -35,8 +36,8 @@ function print(source, ranges, printer) {
     hooks = Object.keys(hooks).reduce((result, type) => {
         hookPriority.push(type);
         result[type] = {
-            open: utils.ensureFunction(hooks[type].open, () => ''),
-            close: utils.ensureFunction(hooks[type].close, () => '')
+            open: ensureFunction(hooks[type].open, () => ''),
+            close: ensureFunction(hooks[type].close, () => '')
         };
 
         return result;
@@ -116,7 +117,7 @@ function print(source, ranges, printer) {
     closeRanges(source.length);
     printSource(source.length);
 
-    buffer += utils.ensureFunction(printer.finish, () => {})(context) || '';
+    buffer += ensureFunction(printer.finish, () => {})(context) || '';
 
     return buffer;
 }
@@ -124,28 +125,41 @@ function print(source, ranges, printer) {
 function finalize(source, printer) {
     printer = resolvePrinter(printer);
 
-    return utils.ensureFunction(printer.finalize, String).call(printer, source);
+    return ensureFunction(printer.finalize, String).call(printer, source);
 }
 
 function decorate(source, generators, printer) {
     const ranges = generateRanges(source, generators);
-    // console.log(ranges);
 
     let result = print(source, ranges, printer);
-    // console.log(result);
 
     result = finalize(result, printer);
-    // console.log(result);
 
     return result;
 }
 
-module.exports = {
-    printer: printers,
-    generator: generators,
-    generateRanges,
-    print,
-    finalize,
-    decorate,
-    utils
-};
+function hitext(generators, printer) {
+    generators = ensureArray(generators);
+
+    return {
+        use(generator) {
+            return hitext(generators.concat(generator), printer);
+        },
+        printer(printer) {
+            return hitext(generators, printer);
+        },
+        decorate(source) {
+            return decorate(source, generators, printer);
+        }
+    };
+}
+
+hitext.printer = printers;
+hitext.generator = generators;
+hitext.generateRanges = generateRanges;
+hitext.print = print;
+hitext.finalize = finalize;
+hitext.decorate = decorate;
+hitext.utils = utils;
+
+module.exports = hitext;
