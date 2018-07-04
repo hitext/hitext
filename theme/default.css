@@ -1,0 +1,35 @@
+.syntax--keyword,
+.syntax--attr-value {
+    color: #07a
+}
+
+.syntax--string {
+    color: #690;
+    word-break: break-all
+}
+
+.syntax--punctuator {
+    color: #999
+}
+
+.syntax--number,
+.syntax--value-keyword,
+.syntax--tag {
+    color: #905
+}
+
+.syntax--attr-name {
+    color: #690
+}
+
+.syntax--regexp {
+    color: #e90
+}
+
+.syntax--comment {
+    color: slategray
+}
+
+.spotlight {
+    background: #fdf8cc
+}
