@@ -12,54 +12,88 @@ HiText is a basis for a text (source code) decoration. The main goal is to provi
 
 ## Why?
 
-Just imagine you want to output in HTML a JavaScript code with syntax highlighting and to spotlight some fragments of it. You can use a library for syntax highlighting, that's not a problem. For fragment spotlighting you can get substrings and wrap them into HTML tags. Both operations are not so hard, but the problem is to combine of their results. Each operation adds HTML tags to a source, so other operations will not perform as expected because of HTML tags.
+Just imagine you want to output in HTML a JavaScript code with syntax highlighting and to spotlight some fragments of it. You can use a library for syntax highlighting, that's not a problem. For fragment spotlighting you can get substrings and wrap them into HTML tags. Both operations are not so hard, but the problem is to combine results of them. Each operation adds HTML tags to a result, so another operation will not perform as expected because of HTML tags.
 
-The solution is to change decoration operations to produce ranges instead of markup. Once ranges is generated HiText merges them by universal rules and gets a stream of segments. As the final step, this stream is used to generate open and close tags when needed.
+The solution is to change such operations to produce a set of ranges instead of markup. Once ranges is generated, HiText can merge them by universal rules and get a stream of segments. As a final step, segment stream is used to generate open and close tags when needed.
 
-The approach allows to combine any number of decorators (which became range generators). Moreover, using a source and a range set, it's possible to output a result in any format beside HTML. A output format is defined by a printer.
+The approach allows to combine any number of decorators (which became range generators). Moreover, using a source and a range set, it's possible to output a result in any format beside HTML. An output format is defined by a printer.
 
 ## Features
 
 - Univeral way to combine any number of decorators (generators)
 - Much easier to make a generator
-- Parser with formatting loses can be used. No need to mutate AST to decorate a code
+- Parser with formatting loses can be used. No necessary to mutate AST to decorate a code
 - Flexible setup for output format. Build-in printers: HTML, TTY (terminal)
 
 ## Example
 
 ```js
 const hitext = require('hitext');
-
+const prism = require('hitext-prism');
+const printer = hitext.printer.html.fork(prism.printer.html);
 const source = 'const a = 1;\nconst b = 2;';
+
 const generators = [
-    // NOTE: hitext.generator.lang.js will be extracted to separate package later
-    hitext.generator.lang.js(hitext.generator.lang.js.syntax),
+    prism('js'),
     hitext.generator.spotlight([6, 11], [19, 24])
 ];
 
 console.log(
-    hitext.decorate(source, generators, 'html')
+    hitext.decorate(source, generators, printer)
 );
+
+// or
+
+const decorator = hitext()
+    .use(prism('js'))
+    .use(hitext.generator.spotlight([6, 11], [19, 24]))
+    .printer(printer);
+
+console.log(decorator.decorate(source));
 ```
 
-Result:
+Output:
 
 ```html
-<style>
-.syntax--keyword,.syntax--attr-value{color:#07a}
-.syntax--string{color:#690;word-break:break-all}
-.syntax--punctuator{color:#999}
-.syntax--number,.syntax--value-keyword,.syntax--tag{color:#905}
-.syntax--attr-name{color:#690}
-.syntax--regexp{color:#e90}
-.syntax--comment{color:slategray}
-.spotlight{background:#fdf8cc}
-</style>
-<div><span class="syntax--keyword">const</span> <span class="spotlight"><span class="syntax--name">a</span> <span class="syntax--operator">=</span> <span class="syntax--number">1</span></span><span class="syntax--punctuator">;</span>
-<span class="syntax--keyword">const</span> <span class="spotlight"><span class="syntax--name">b</span> <span class="syntax--operator">=</span> <span class="syntax--number">2</span></span><span class="syntax--punctuator">;</span></div>
+<div><span class="token keyword">const</span> <span class="spotlight">a <span class="token operator">=</span> <span class="token number">1</span></span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> <span class="spotlight">b <span class="token operator">=</span> <span class="token number">2</span></span><span class="token punctuation">;</span></div>
 ```
 
 ![image](https://user-images.githubusercontent.com/270491/41946250-0df745e2-79ba-11e8-8b32-38a9f938a380.png)
+
+## Build-in generators
+
+### spotlight(...ranges)
+
+```js
+const hitext = require('hitext');
+
+console.log(
+    hitext.decorate('1234567890', [hitext.generator.spotlight([3, 6])], 'html')
+);
+// '<div>123<span class="spotlight">456</span>7890</div>'
+```
+
+### match(pattern, match)
+
+```js
+const hitext = require('hitext');
+
+console.log(
+    hitext.decorate('Hello world! Hello world!', [hitext.generator.match('world')], 'html')
+);
+// <div>Hello <span class="match">world</span>! Hello <span class="match">world</span>!</div>
+
+console.log(
+    hitext.decorate('Hello world!', [hitext.generator.match(/\w+/)], 'html')
+);
+// <div><span class="match">Hello</span> <span class="match">world</span>!</div>
+
+console.log(
+    hitext.decorate('Hello world!', [hitext.generator.match(/\w+/, 'spotlight')], 'html')
+);
+// <div><span class="spotlight">Hello</span> <span class="spotlight">world</span>!</div>
+```
 
 ## License
 
