@@ -1,4 +1,6 @@
 module.exports = {
+    fork: require('./fork'),
+
     start() {
         return '<div>';
     },

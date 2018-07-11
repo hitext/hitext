@@ -77,6 +77,8 @@ function styleToPrint(current, next) {
 }
 
 module.exports = {
+    fork: require('./fork'),
+
     createContext() {
         return {
             printed: initialStyle,
