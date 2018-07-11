@@ -1,10 +1,5 @@
 module.exports = function(extension = {}) {
-    return {
-        ...this,
-        ...extension,
-        hooks: {
-            ...this.hooks,
-            ...extension.hooks
-        }
-    };
+    return Object.assign({}, this, extension, {
+        hooks: Object.assign({}, this.hooks, extension.hooks)
+    });
 };

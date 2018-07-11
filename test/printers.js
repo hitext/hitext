@@ -50,7 +50,14 @@ describe('build-in printers', () => {
             }
         });
 
-        it('html', () => {
+        it('should support a fork with no changes', () => {
+            assert.doesNotThrow(() => {
+                hitext.printer.html.fork();
+                hitext.printer.html.fork({});
+            });
+        });
+
+        it('extend html printer', () => {
             const ranges = [
                 { type: 'syntax', start: 0, end: 1, data: 'value' },
                 { type: 'spotlight', start: 1, end: 2 },
