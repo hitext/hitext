@@ -46,7 +46,10 @@ describe('build-in printers', () => {
     describe('fork printer', () => {
         it('all default printers have a fork method', () => {
             for (var name in hitext.printer) {
-                assert.equal(typeof hitext.printer[name].fork, 'function');
+                const printer = hitext.printer[name];
+                if (typeof printer !== 'function') {
+                    assert.equal(typeof printer.fork, 'function');
+                }
             }
         });
 
@@ -86,6 +89,60 @@ describe('build-in printers', () => {
                 '<div><span class="syntax--value">1</span><span class="spotlight">2</span><custom>3</custom></div>'
             );
             assert.equal(typeof customHtmlPrinter.fork, 'function');
+        });
+
+        it('compose', () => {
+            const ranges = [
+                { type: 'syntax', start: 0, end: 1, data: 'value' },
+                { type: 'spotlight', start: 1, end: 2 },
+                { type: 'match', start: 2, end: 3 }
+            ];
+            const htmlPrinter = hitext.printer.html;
+            const customPrinter = hitext.printer.compose(
+                htmlPrinter,
+                {
+                    hooks: {
+                        syntax: {
+                            open() {
+                                return '<custom-syntax>';
+                            },
+                            close() {
+                                return '</custom-syntax>';
+                            }
+                        }
+                    }
+                },
+                {
+                    hooks: {
+                        spotlight: {
+                            open() {
+                                return '<custom-spotlight>';
+                            },
+                            close() {
+                                return '</custom-spotlight>';
+                            }
+                        }
+                    }
+                },
+                {
+                    hooks: {
+                        match: {
+                            open() {
+                                return '<custom-match>';
+                            },
+                            close() {
+                                return '</custom-match>';
+                            }
+                        }
+                    }
+                }
+            );
+
+            assert.equal(
+                hitext.print('123', ranges, customPrinter),
+                '<div><custom-syntax>1</custom-syntax><custom-spotlight>2</custom-spotlight><custom-match>3</custom-match></div>'
+            );
+            assert.equal(typeof customPrinter.fork, 'function');
         });
     });
 });
