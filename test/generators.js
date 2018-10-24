@@ -10,7 +10,7 @@ describe('build-in generators', () => {
                     [hitext.generator.spotlight([3, 6])],
                     'html'
                 ),
-                '<div>123<span class="spotlight">456</span>7890</div>'
+                '123<span class="spotlight">456</span>7890'
             )
         );
 
@@ -21,7 +21,7 @@ describe('build-in generators', () => {
                     [hitext.generator.spotlight([3, 6], [10, 15])],
                     'html'
                 ),
-                '<div>123<span class="spotlight">456</span>7890<span class="spotlight">12345</span>67890</div>'
+                '123<span class="spotlight">456</span>7890<span class="spotlight">12345</span>67890'
             )
         );
     });
@@ -34,7 +34,7 @@ describe('build-in generators', () => {
                     [hitext.generator.match('world')],
                     'html'
                 ),
-                '<div>Hello <span class="match">world</span>! Hello <span class="match">world</span>!</div>'
+                'Hello <span class="match">world</span>! Hello <span class="match">world</span>!'
             )
         );
 
@@ -45,7 +45,7 @@ describe('build-in generators', () => {
                     [hitext.generator.match(123)],
                     'html'
                 ),
-                '<div><span class="match">123</span>4567890</div>'
+                '<span class="match">123</span>4567890'
             )
         );
 
@@ -56,7 +56,7 @@ describe('build-in generators', () => {
                     [hitext.generator.match(/\w+/)],
                     'html'
                 ),
-                '<div><span class="match">Hello</span> <span class="match">world</span>!</div>'
+                '<span class="match">Hello</span> <span class="match">world</span>!'
             )
         );
 
@@ -67,7 +67,7 @@ describe('build-in generators', () => {
                     [hitext.generator.match(/hello|world/ig)],
                     'html'
                 ),
-                '<div><span class="match">Hello</span> <span class="match">world</span>!</div>'
+                '<span class="match">Hello</span> <span class="match">world</span>!'
             )
         );
 
@@ -78,7 +78,7 @@ describe('build-in generators', () => {
                     [hitext.generator.match(/\w+/, 'spotlight')],
                     'html'
                 ),
-                '<div><span class="spotlight">Hello</span> <span class="spotlight">world</span>!</div>'
+                '<span class="spotlight">Hello</span> <span class="spotlight">world</span>!'
             )
         );
     });
