@@ -28,7 +28,7 @@ function print(source, ranges, printer) {
     const openedRanges = [];
     let hooks = printer.hooks || {};
     let hookPriority = [];
-    let buffer = ensureFunction(printer.start, () => '')(context);
+    let buffer = ensureFunction(printer.open, () => '')(context);
     let closingOffset = Infinity;
     let printedOffset = 0;
 
@@ -128,7 +128,7 @@ function print(source, ranges, printer) {
     }
 
     // finish printing
-    buffer += ensureFunction(printer.finish, () => {})(context) || '';
+    buffer += ensureFunction(printer.close, () => {})(context) || '';
 
     return buffer;
 }

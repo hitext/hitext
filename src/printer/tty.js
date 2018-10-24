@@ -87,11 +87,11 @@ module.exports = {
         };
     },
 
-    start(context) {
+    open(context) {
         return styleToPrint({}, context.printed);
     },
 
-    finish(context) {
+    close(context) {
         return styleToPrint(context.printed, context.style);
     },
 
