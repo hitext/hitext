@@ -140,7 +140,7 @@ describe('build-in printers', () => {
 
             assert.equal(
                 hitext.print('123', ranges, customPrinter),
-                '<div><custom-syntax>1</custom-syntax><custom-spotlight>2</custom-spotlight><custom-match>3</custom-match></div>'
+                '<custom-syntax>1</custom-syntax><custom-spotlight>2</custom-spotlight><custom-match>3</custom-match>'
             );
             assert.equal(typeof customPrinter.fork, 'function');
         });

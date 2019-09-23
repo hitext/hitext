@@ -20,17 +20,17 @@ The approach allows to combine any number of decorators (which became range gene
 
 ## Features
 
-- Univeral way to combine any number of decorators (generators)
+- Universal way to combine a number of decorators (generators)
 - Much easier to make a generator
-- Parser with formatting loses can be used. No necessary to mutate AST to decorate a code
-- Flexible setup for output format. Build-in printers: HTML, TTY (terminal)
+- Parsers with formatting losses can be used. No AST mutations required to decorate an input
+- Flexible setup for an output. Build-in printers: HTML, TTY (terminal)
 
 ## Example
 
 ```js
 const hitext = require('hitext');
 const prism = require('hitext-prism');
-const printer = hitext.printer.html.fork(prism.printer.html);
+const html = hitext.printer.html.fork(prism.printer.html);
 const source = 'const a = 1;\nconst b = 2;';
 
 const generators = [
@@ -39,7 +39,7 @@ const generators = [
 ];
 
 console.log(
-    hitext.decorate(source, generators, printer)
+    hitext.decorate(source, generators, html)
 );
 
 // or
@@ -47,7 +47,7 @@ console.log(
 const decorator = hitext()
     .use(prism('js'))
     .use(hitext.generator.spotlight([6, 11], [19, 24]))
-    .printer(printer);
+    .printer(html);
 
 console.log(decorator.decorate(source));
 ```
@@ -55,8 +55,8 @@ console.log(decorator.decorate(source));
 Output:
 
 ```html
-<div><span class="token keyword">const</span> <span class="spotlight">a <span class="token operator">=</span> <span class="token number">1</span></span><span class="token punctuation">;</span>
-<span class="token keyword">const</span> <span class="spotlight">b <span class="token operator">=</span> <span class="token number">2</span></span><span class="token punctuation">;</span></div>
+<span class="token keyword">const</span> <span class="spotlight">a <span class="token operator">=</span> <span class="token number">1</span></span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> <span class="spotlight">b <span class="token operator">=</span> <span class="token number">2</span></span><span class="token punctuation">;</span>
 ```
 
 ![image](https://user-images.githubusercontent.com/270491/41946250-0df745e2-79ba-11e8-8b32-38a9f938a380.png)
@@ -71,7 +71,7 @@ const hitext = require('hitext');
 console.log(
     hitext.decorate('1234567890', [hitext.generator.spotlight([3, 6])], 'html')
 );
-// '<div>123<span class="spotlight">456</span>7890</div>'
+// '123<span class="spotlight">456</span>7890'
 ```
 
 ### match(pattern, match)
@@ -82,17 +82,17 @@ const hitext = require('hitext');
 console.log(
     hitext.decorate('Hello world! Hello world!', [hitext.generator.match('world')], 'html')
 );
-// <div>Hello <span class="match">world</span>! Hello <span class="match">world</span>!</div>
+// Hello <span class="match">world</span>! Hello <span class="match">world</span>!
 
 console.log(
     hitext.decorate('Hello world!', [hitext.generator.match(/\w+/)], 'html')
 );
-// <div><span class="match">Hello</span> <span class="match">world</span>!</div>
+// <span class="match">Hello</span> <span class="match">world</span>!
 
 console.log(
     hitext.decorate('Hello world!', [hitext.generator.match(/\w+/, 'spotlight')], 'html')
 );
-// <div><span class="spotlight">Hello</span> <span class="spotlight">world</span>!</div>
+// <span class="spotlight">Hello</span> <span class="spotlight">world</span>!
 ```
 
 ## License

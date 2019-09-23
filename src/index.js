@@ -2,6 +2,7 @@ const utils = require('./utils');
 const { ensureArray, ensureFunction } = utils;
 const generators = require('./generator');
 const printers = require('./printer');
+const emptyString = () => '';
 
 function resolvePrinter(printer) {
     return printers[printer] || (printer && typeof printer === 'object' ? printer : printers.noop);
@@ -28,7 +29,7 @@ function print(source, ranges, printer) {
     const openedRanges = [];
     let hooks = printer.hooks || {};
     let hookPriority = [];
-    let buffer = ensureFunction(printer.open, () => '')(context);
+    let buffer = ensureFunction(printer.open, emptyString)(context);
     let closingOffset = Infinity;
     let printedOffset = 0;
 
@@ -36,8 +37,8 @@ function print(source, ranges, printer) {
     hooks = Object.keys(hooks).reduce((result, type) => {
         hookPriority.push(type);
         result[type] = {
-            open: ensureFunction(hooks[type].open, () => ''),
-            close: ensureFunction(hooks[type].close, () => '')
+            open: ensureFunction(hooks[type].open, emptyString),
+            close: ensureFunction(hooks[type].close, emptyString)
         };
 
         return result;
@@ -128,7 +129,7 @@ function print(source, ranges, printer) {
     }
 
     // finish printing
-    buffer += ensureFunction(printer.close, () => {})(context) || '';
+    buffer += ensureFunction(printer.close, emptyString)(context) || '';
 
     return buffer;
 }
@@ -141,7 +142,6 @@ function finalize(source, printer) {
 
 function decorate(source, generators, printer) {
     const ranges = generateRanges(source, generators);
-
     let result = print(source, ranges, printer);
 
     result = finalize(result, printer);
@@ -165,12 +165,12 @@ function hitext(generators, printer) {
     };
 }
 
-hitext.printer = printers;
-hitext.generator = generators;
-hitext.generateRanges = generateRanges;
-hitext.print = print;
-hitext.finalize = finalize;
-hitext.decorate = decorate;
-hitext.utils = utils;
-
-module.exports = hitext;
+module.exports = Object.assign(hitext, {
+    printer: printers,
+    generator: generators,
+    generateRanges,
+    print,
+    finalize,
+    decorate,
+    utils
+});
