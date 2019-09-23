@@ -4,6 +4,10 @@
         "mocha": true,
         "es6": true
     },
+    "parserOptions": {
+        "ecmaVersion": 2018,
+        "sourceType": "module"
+    },
     "rules": {
         "no-duplicate-case": 2,
         "no-undef": 2,
@@ -39,7 +43,13 @@
         ],
         "operator-linebreak": [
             2,
-            "after"
+            "after",
+            {
+                "overrides": {
+                    "?": "before",
+                    ":": "before"
+                }
+            }
         ],
         "key-spacing": [
             2,
