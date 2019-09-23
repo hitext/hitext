@@ -1,11 +1,11 @@
 module.exports = {
     fork: require('./fork'),
 
-    open() {
-        return '<div>';
+    start() {
+        return '';
     },
-    close() {
-        return '</div>';
+    finish() {
+        return '';
     },
 
     print: chunk => chunk
