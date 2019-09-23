@@ -2,10 +2,10 @@ module.exports = {
     fork: require('./fork'),
 
     start() {
-        return '<div>';
+        return '';
     },
     finish() {
-        return '</div>';
+        return '';
     },
 
     print: chunk => chunk

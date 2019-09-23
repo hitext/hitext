@@ -14,14 +14,14 @@ describe('build-in printers', () => {
                     ],
                     'html'
                 ),
-                '<div><span class="syntax--value">1</span><span class="spotlight">2</span><span class="match">3</span></div>'
+                '<span class="syntax--value">1</span><span class="spotlight">2</span><span class="match">3</span>'
             )
         );
 
         it('should escape special chars', () => {
             assert.equal(
                 hitext.print('<br>&amp;', [], 'html'),
-                '<div>&lt;br&gt;&amp;amp;</div>'
+                '&lt;br&gt;&amp;amp;'
             );
         });
     });
@@ -79,11 +79,11 @@ describe('build-in printers', () => {
 
             assert.equal(
                 hitext.print('123', ranges, htmlPrinter),
-                '<div><span class="syntax--value">1</span><span class="spotlight">2</span><span class="match">3</span></div>'
+                '<span class="syntax--value">1</span><span class="spotlight">2</span><span class="match">3</span>'
             );
             assert.equal(
                 hitext.print('123', ranges, customHtmlPrinter),
-                '<div><span class="syntax--value">1</span><span class="spotlight">2</span><custom>3</custom></div>'
+                '<span class="syntax--value">1</span><span class="spotlight">2</span><custom>3</custom>'
             );
             assert.equal(typeof customHtmlPrinter.fork, 'function');
         });
