@@ -30,26 +30,31 @@ The approach allows to combine any number of decorators (which became range gene
 ```js
 const hitext = require('hitext');
 const prism = require('hitext-prism');
-const html = hitext.printer.html.fork(prism.printer.html);
 const source = 'const a = 1;\nconst b = 2;';
-
 const generators = [
     prism('js'),
     hitext.generator.spotlight([6, 11], [19, 24])
 ];
 
+const printer = hitext.printer.html.fork(prism.printer.html);
+// alternative:
+// const printer = hitext.printer.compose(
+//     hitext.printer.html,
+//     prism.printer.html
+// );
+
 console.log(
-    hitext.decorate(source, generators, html)
+    hitext.decorate(source, generators, printer)
 );
 
 // or
 
-const decorator = hitext()
+const highlightJsAndSpotlight = hitext()
     .use(prism('js'))
     .use(hitext.generator.spotlight([6, 11], [19, 24]))
-    .printer(html);
+    .printer('html');
 
-console.log(decorator.decorate(source));
+console.log(highlightJsAndSpotlight(source));
 ```
 
 Output:

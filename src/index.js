@@ -4,25 +4,27 @@ const generators = require('./generator');
 const printers = require('./printer');
 const emptyString = () => '';
 
-function resolvePrinter(printer) {
-    return printers[printer] || (printer && typeof printer === 'object' ? printer : printers.noop);
+function resolvePrinter(printer, printerSet) {
+    if (printer in printerSet) {
+        printer = printerSet[printer];
+    }
+
+    return printer && typeof printer === 'object' ? printer : printers.noop;
 }
 
 function generateRanges(source, generators) {
     const ranges = [];
+    const addRange = (type, start, end, data) => ranges.push({ type, start, end, data });
 
-    ensureArray(generators)
-        .forEach(generate => {
-            ensureFunction(generate)(source, (type, start, end, data) =>
-                ranges.push({ type, start, end, data })
-            );
-        });
+    ensureArray(generators).forEach(generate =>
+        ensureFunction(generate)(source, addRange, context)
+    );
 
     return ranges;
 }
 
 function print(source, ranges, printer) {
-    printer = resolvePrinter(printer);
+    printer = resolvePrinter(printer, printers);
 
     const print = ensureFunction(printer.print, chunk => chunk);
     const context = ensureFunction(printer.createContext, () => {})();
@@ -135,40 +137,52 @@ function print(source, ranges, printer) {
 }
 
 function finalize(source, printer) {
-    printer = resolvePrinter(printer);
+    printer = resolvePrinter(printer, printers);
 
     return ensureFunction(printer.finalize, String).call(printer, source);
 }
 
 function decorate(source, generators, printer) {
     const ranges = generateRanges(source, generators);
-    let result = print(source, ranges, printer);
-
-    result = finalize(result, printer);
+    const printResult = print(source, ranges, printer);
+    const result = finalize(printResult, printer);
 
     return result;
 }
 
-function hitext(generators, printer) {
-    generators = ensureArray(generators);
+function pipelineChain(generators, printerSet, selectedPrinter) {
+    const decorateMethod = (source, printer) =>
+        decorate(source, generators, resolvePrinter(printer || selectedPrinter, printerSet));
 
-    return {
-        use(generator) {
-            return hitext(generators.concat(generator), printer);
+    return Object.assign(decorateMethod, {
+        decorate: decorateMethod,
+        use(plugin) {
+            const generator = plugin.generator || plugin;
+            const newPrinterSet = plugin.printer
+                ? printerSet.fork(plugin.printer)
+                : printerSet;
+
+            if (typeof generator === 'function') {
+                generators = generators.concat(generator);
+            }
+
+            return pipelineChain(generators, newPrinterSet, selectedPrinter);
         },
-        printer(printer) {
-            return hitext(generators, printer);
-        },
-        decorate(source) {
-            return decorate(source, generators, printer);
+        printer(selectedPrinter) {
+            return pipelineChain(generators, printerSet, selectedPrinter);
         }
-    };
+    });
+}
+
+function hitext(generators, selectedPrinter) {
+    return pipelineChain(ensureArray(generators), printers, selectedPrinter);
 }
 
 module.exports = Object.assign(hitext, {
     printer: printers,
     generator: generators,
     generateRanges,
+    resolvePrinter,
     print,
     finalize,
     decorate,

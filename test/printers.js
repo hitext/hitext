@@ -47,6 +47,7 @@ describe('build-in printers', () => {
         it('all default printers have a fork method', () => {
             for (var name in hitext.printer) {
                 const printer = hitext.printer[name];
+
                 if (typeof printer !== 'function') {
                     assert.equal(typeof printer.fork, 'function');
                 }
@@ -90,16 +91,18 @@ describe('build-in printers', () => {
             );
             assert.equal(typeof customHtmlPrinter.fork, 'function');
         });
+    });
 
-        it('compose', () => {
+    describe('compose printers', () => {
+        it('basic', () => {
             const ranges = [
                 { type: 'syntax', start: 0, end: 1, data: 'value' },
                 { type: 'spotlight', start: 1, end: 2 },
                 { type: 'match', start: 2, end: 3 }
             ];
-            const htmlPrinter = hitext.printer.html;
+
             const customPrinter = hitext.printer.compose(
-                htmlPrinter,
+                hitext.printer.html,
                 {
                     hooks: {
                         syntax: {

@@ -56,4 +56,25 @@ describe('basic', () => {
             expected
         );
     });
+
+    it('hitext().use() with set { generator, printer }', () => {
+        assert.equal(
+            hitext()
+                .use({ generator: genA, printer: { html: printer } })
+                .use(genB)
+                .decorate(source, 'html'),
+            expected
+        );
+    });
+
+    it('hitext().use() should return a decorate function', () => {
+        const decorate = hitext()
+            .use({ generator: genA, printer: { html: printer } })
+            .use(genB);
+
+        assert.equal(
+            decorate(source, 'html'),
+            expected
+        );
+    });
 });

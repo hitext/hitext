@@ -1,13 +1,6 @@
 module.exports = {
     fork: require('./fork'),
 
-    start() {
-        return '';
-    },
-    finish() {
-        return '';
-    },
-
     print: chunk => chunk
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')

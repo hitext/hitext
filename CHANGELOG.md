@@ -1,3 +1,11 @@
+## next
+
+- Added `hitext.printer.compose()` method (e.g. `printer.fork(foo).fork(bar)` can be replaced with `hitext.printer.compose(printer, foo, bar)`)
+- Added `hitext.printer.fork()` method to extend/overload a printer set
+- Changed `hitext()` pipeline to return a decorate function (i.e. `hitext(...).use(...).decorate(...)` -> `hitext(...).use(...)(...)`)
+- Renamed printer's methods: `start` -> `open`, `finish` -> `close`
+- Removed default `<div>` wrapper for `html` printer
+
 ## 1.0.0-alpha.2 (July 10, 2018)
 
 - Added posibility to create a preset with `use()` and `printer()` chaining
