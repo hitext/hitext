@@ -57,60 +57,93 @@ describe('basic', () => {
         );
     });
 
-    it('hitext().use() with set { generator, printer }', () => {
-        assert.equal(
-            hitext()
+    describe('hitext().use()', () => {
+        it('with set { generator, printer }', () => {
+            assert.equal(
+                hitext()
+                    .use({ generator: genA, printer: { html: printer } })
+                    .use(genB)
+                    .decorate(source, 'html'),
+                expected
+            );
+        });
+
+        it('should return a decorate function', () => {
+            const decorate = hitext()
                 .use({ generator: genA, printer: { html: printer } })
-                .use(genB)
-                .decorate(source, 'html'),
-            expected
-        );
-    });
+                .use(genB);
 
-    it('hitext().use() should return a decorate function', () => {
-        const decorate = hitext()
-            .use({ generator: genA, printer: { html: printer } })
-            .use(genB);
+            assert.equal(
+                decorate(source, 'html'),
+                expected
+            );
+        });
 
-        assert.equal(
-            decorate(source, 'html'),
-            expected
-        );
-    });
+        it('should take two arguments', () => {
+            const decorate = hitext()
+                .use(genA, { html: printer })
+                .use(genB);
 
-    it('hitext().use() compose printers', () => {
-        const decorate = hitext()
-            .use({
-                generator: (_, addRange) => addRange('foo', 1, 2),
-                printer: {
+            assert.equal(
+                decorate(source, 'html'),
+                expected
+            );
+        });
+
+        it('second argument should override plugin default printer', () => {
+            const decorate = hitext()
+                .use({ generator: genA, printer: { html: printer } }, {
                     html: {
                         ranges: {
-                            foo: {
-                                open: () => '<foo>',
-                                close: () => '</foo>'
+                            stub: {
+                                open: () => '!!',
+                                close: () => '!/!'
                             }
                         }
                     }
-                }
-            })
-            .use({
-                generator: (_, addRange) => addRange('bar', 1, 2),
-                printer: {
-                    html: {
-                        ranges: {
-                            bar: {
-                                open: () => '<bar>',
-                                close: () => '</bar>'
+                })
+                .use(genB);
+
+            assert.equal(
+                decorate(source, 'html'),
+                '!!1234!/!!!5678!/!'
+            );
+        });
+
+        it('compose printers', () => {
+            const decorate = hitext()
+                .use({
+                    generator: (_, addRange) => addRange('foo', 1, 2),
+                    printer: {
+                        html: {
+                            ranges: {
+                                foo: {
+                                    open: () => '<foo>',
+                                    close: () => '</foo>'
+                                }
                             }
                         }
                     }
-                }
-            })
-            .decorate;
+                })
+                .use({
+                    generator: (_, addRange) => addRange('bar', 1, 2),
+                    printer: {
+                        html: {
+                            ranges: {
+                                bar: {
+                                    open: () => '<bar>',
+                                    close: () => '</bar>'
+                                }
+                            }
+                        }
+                    }
+                })
+                .decorate;
 
-        assert.equal(
-            decorate('abc', 'html'),
-            'a<foo><bar>b</bar></foo>c'
-        );
+            assert.equal(
+                decorate('abc', 'html'),
+                'a<foo><bar>b</bar></foo>c'
+            );
+        });
     });
 });

@@ -156,10 +156,11 @@ function pipelineChain(generators, printerSet, selectedPrinter) {
 
     return Object.assign(decorateMethod, {
         decorate: decorateMethod,
-        use(plugin) {
+        use(plugin, printer) {
             const generator = plugin.generator || plugin;
-            const newPrinterSet = plugin.printer
-                ? printerSet.fork(plugin.printer)
+            const newPrinter = printer || plugin.printer;
+            const newPrinterSet = newPrinter
+                ? printerSet.fork(newPrinter)
                 : printerSet;
 
             if (typeof generator === 'function') {
