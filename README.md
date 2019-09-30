@@ -68,6 +68,81 @@ Output:
 
 ## Build-in generators
 
+### line
+
+```js
+const hitext = require('hitext');
+
+console.log(
+    hitext()
+        .use({
+            generator: hitext.generator.line,
+            printer: {
+                html: {
+                    ranges: {
+                        line: {
+                            open: (num) => `<span title="line #${num}">`,
+                            close: () => '</span>'
+                        }
+                    }
+                }
+            }
+        })
+        .decorate('foo\nbar', 'html')
+);
+// '<span title="line #1">foo\n</span><span title="line #2">foo</span>'
+```
+
+### lineContent
+
+```js
+const hitext = require('hitext');
+
+console.log(
+    hitext()
+        .use({
+            generator: hitext.generator.lineContent,
+            printer: {
+                html: {
+                    ranges: {
+                        lineContent: {
+                            open: (num) => `<span title="line #${num}">`,
+                            close: () => '</span>'
+                        }
+                    }
+                }
+            }
+        })
+        .decorate('foo\nbar', 'html')
+);
+// '<span title="line #1">foo</span>\n<span title="line #2">foo</span>'
+```
+
+### newLine
+
+```js
+const hitext = require('hitext');
+
+console.log(
+    hitext()
+        .use({
+            generator: hitext.generator.newLine,
+            printer: {
+                html: {
+                    ranges: {
+                        newLine: {
+                            open: (num) => `<span title="line #${num}">`,
+                            close: () => '</span>'
+                        }
+                    }
+                }
+            }
+        })
+        .decorate('foo\nbar', 'html')
+);
+// 'foo<span title="line #1">\n</span>foo'
+```
+
 ### spotlight(...ranges)
 
 ```js
