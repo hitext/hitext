@@ -5,7 +5,7 @@ function newLineLength(source, i) {
 
         case 0x0a: // \n
             return 1;
-        
+
         case 0x0d: // \r
             return i + 1 < source.length && source.charCodeAt(i + 1) === 0x0a
                 ? 2  // \r\n
