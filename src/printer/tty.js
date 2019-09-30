@@ -1,4 +1,5 @@
 const styles = require('ansi-styles');
+const { createPrinter } = require('./utils');
 const initialStyle = buildStyle('reset');
 const spotlightStyle = buildStyle('bgBlue', 'white');
 const syntaxStyleMap = buildStyleMap({
@@ -76,9 +77,7 @@ function styleToPrint(current, next) {
     return modifiers;
 }
 
-module.exports = {
-    fork: require('./fork'),
-
+module.exports = createPrinter({
     createContext() {
         return {
             printed: initialStyle,
@@ -114,4 +113,4 @@ module.exports = {
         syntax: buildHook(data => syntaxStyleMap[data]),
         spotlight: buildHook(() => spotlightStyle)
     }
-};
+});

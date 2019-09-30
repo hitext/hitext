@@ -1,3 +1,1 @@
-module.exports = {
-    fork: require('./fork')
-};
+module.exports = require('./utils').createPrinter();
