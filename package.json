@@ -10,11 +10,14 @@
     "decoration"
   ],
   "main": "./src/index",
+  "browser": {
+    "./src/printer/tty.js": "./src/printer/noop.js"
+  },
   "scripts": {
     "lint": "eslint src test",
     "lint-and-test": "npm run lint && npm test",
     "test": "mocha --reporter progress",
-    "build": "browserify --standalone hitext src/index.js > dist/hitext.js && uglifyjs dist/hitext.js --compress --mangle -o dist/hitext.min.js",
+    "build": "rollup --config && uglifyjs dist/hitext.js --compress --mangle -o dist/hitext.min.js",
     "prepublish": "npm run build",
     "coverage": "nyc npm test",
     "travis": "nyc npm run lint-and-test && npm run coveralls",
@@ -24,11 +27,13 @@
     "ansi-styles": "^3.2.1"
   },
   "devDependencies": {
-    "browserify": "^16.2.3",
     "coveralls": "^3.0.4",
     "eslint": "^6.3.0",
     "mocha": "^5.2.0",
     "nyc": "^14.1.1",
+    "rollup": "^1.22.0",
+    "rollup-plugin-commonjs": "^10.1.0",
+    "rollup-plugin-node-resolve": "^5.2.0",
     "uglify-es": "^3.3.9"
   },
   "engines": {
