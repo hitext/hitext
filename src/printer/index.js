@@ -18,7 +18,7 @@ module.exports = {
                 continue;
             }
 
-            if (hasOwnProperty.call(newPrinterSet, 'key')) {
+            if (hasOwnProperty.call(newPrinterSet, key)) {
                 const existing = newPrinterSet[key];
                 newPrinterSet[key] = existing && typeof existing.fork === 'function'
                     ? existing.fork(extenstion[key])

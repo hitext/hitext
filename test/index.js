@@ -77,4 +77,40 @@ describe('basic', () => {
             expected
         );
     });
+
+    it('hitext().use() compose printers', () => {
+        const decorate = hitext()
+            .use({
+                generator: (_, addRange) => addRange('foo', 1, 2),
+                printer: {
+                    html: {
+                        ranges: {
+                            foo: {
+                                open: () => '<foo>',
+                                close: () => '</foo>'
+                            }
+                        }
+                    }
+                }
+            })
+            .use({
+                generator: (_, addRange) => addRange('bar', 1, 2),
+                printer: {
+                    html: {
+                        ranges: {
+                            bar: {
+                                open: () => '<bar>',
+                                close: () => '</bar>'
+                            }
+                        }
+                    }
+                }
+            })
+            .decorate;
+
+        assert.equal(
+            decorate('abc', 'html'),
+            'a<foo><bar>b</bar></foo>c'
+        );
+    });
 });
