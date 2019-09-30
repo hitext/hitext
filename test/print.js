@@ -135,6 +135,54 @@ describe('print', () => {
         );
     });
 
+    it('should be fine when open/close is omitted in printer range hook', () => {
+        const a = { type: 'a', start: 1, end: 2 };
+        const b = { type: 'b', start: 2, end: 3 };
+        const c = { type: 'c', start: 3, end: 4 };
+
+        assert.equal(
+            hitext.print('123456', [a, b, c], {
+                ranges: {
+                    a: {
+                        open: () => '<a>',
+                        close: () => '</a>'
+                    },
+                    b: {
+                        open() {},
+                        close() {}
+                    },
+                    c: {}
+                }
+            }),
+            '1<a>2</a>3456'
+        );
+    });
+
+    it('should use range hook print method when defined', () => {
+        const ranges = [
+            { type: 'a', start: 1, end: 6 },
+            { type: 'b', start: 2, end: 5 },
+            { type: 'c', start: 3, end: 4 },
+            { type: 'a', start: 8, end: 10 }
+        ];
+
+        assert.equal(
+            hitext.print('1234567890', ranges, {
+                print: chunk => chunk.replace(/./g, '_'),
+                ranges: {
+                    a: {
+                        print: chunk => chunk.replace(/./g, 'a')
+                    },
+                    b: {
+                        print: chunk => chunk.replace(/./g, 'b')
+                    },
+                    c: {}
+                }
+            }),
+            '_ab_ba__aa'
+        );
+    });
+
     [
         {
             ranges: [

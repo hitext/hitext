@@ -37,10 +37,12 @@ function print(source, ranges, printer) {
 
     // preprocess range hooks
     rangeHooks = Object.keys(rangeHooks).reduce((result, type) => {
+        const rangeHook = rangeHooks[type];
         hookPriority.push(type);
         result[type] = {
-            open: ensureFunction(rangeHooks[type].open, emptyString),
-            close: ensureFunction(rangeHooks[type].close, emptyString)
+            open: ensureFunction(rangeHook.open, emptyString),
+            close: ensureFunction(rangeHook.close, emptyString),
+            print: ensureFunction(rangeHook.print, print)
         };
 
         return result;
@@ -55,14 +57,15 @@ function print(source, ranges, printer) {
     );
 
     // main part
+    const open = index => rangeHooks[openedRanges[index].type].open(openedRanges[index].data, context) || '';
+    const close = index => rangeHooks[openedRanges[index].type].close(openedRanges[index].data, context) || '';
     const printSource = (offset) => {
         if (printedOffset !== offset) {
-            buffer += print(source.substring(printedOffset, offset), context);
+            const printSubstr = openedRanges.length ? rangeHooks[openedRanges[openedRanges.length - 1].type].print : print;
+            buffer += printSubstr(source.substring(printedOffset, offset), context);
             printedOffset = offset;
         }
     };
-    const open = index => rangeHooks[openedRanges[index].type].open(openedRanges[index].data, context) || '';
-    const close = index => rangeHooks[openedRanges[index].type].close(openedRanges[index].data, context) || '';
     const closeRanges = (offset) => {
         while (closingOffset <= offset) {
             printSource(closingOffset);
