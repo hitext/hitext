@@ -69,7 +69,7 @@ describe('build-in printers', () => {
             ];
             const htmlPrinter = hitext.printer.html;
             const customHtmlPrinter = htmlPrinter.fork({
-                hooks: {
+                ranges: {
                     match: {
                         open() {
                             return '<custom>';
@@ -104,7 +104,7 @@ describe('build-in printers', () => {
             const customPrinter = hitext.printer.compose(
                 hitext.printer.html,
                 {
-                    hooks: {
+                    ranges: {
                         syntax: {
                             open() {
                                 return '<custom-syntax>';
@@ -116,7 +116,7 @@ describe('build-in printers', () => {
                     }
                 },
                 {
-                    hooks: {
+                    ranges: {
                         spotlight: {
                             open() {
                                 return '<custom-spotlight>';
@@ -128,7 +128,7 @@ describe('build-in printers', () => {
                     }
                 },
                 {
-                    hooks: {
+                    ranges: {
                         match: {
                             open() {
                                 return '<custom-match>';

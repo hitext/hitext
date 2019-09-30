@@ -6,7 +6,7 @@ const expected = '<a>1234</a><b>5678</b>';
 const genA = (source, createRange) => createRange('stub', 0, 4, 'a');
 const genB = (source, createRange) => createRange('stub', 4, 8, 'b');
 const printer = {
-    hooks: {
+    ranges: {
         stub: {
             open: marker => '<' + marker + '>',
             close: marker => '</' + marker + '>'

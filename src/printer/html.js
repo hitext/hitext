@@ -6,7 +6,7 @@ module.exports = {
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;'),
 
-    hooks: {
+    ranges: {
         syntax: {
             open: (data) => '<span class="syntax--' + data + '">',
             close: () => '</span>'

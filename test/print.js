@@ -2,7 +2,7 @@ const assert = require('assert');
 const hitext = require('../src');
 
 const testPrinter = {
-    hooks: {
+    ranges: {
         test: {
             open: x => `<${x}>`,
             close: x => `</${x}>`
@@ -47,8 +47,8 @@ describe('print', () => {
                     { type: 'uncomplete', start: 2, end: 3, data: 'c' }
                 ],
                 {
-                    hooks: {
-                        test: testPrinter.hooks.test,
+                    ranges: {
+                        test: testPrinter.ranges.test,
                         uncomplete: {}
                     }
                 }
@@ -116,9 +116,9 @@ describe('print', () => {
 
     it('order of ranges should be independant of generator order', () => {
         const printer = {
-            hooks: {
-                'a': testPrinter.hooks.test,
-                'b': testPrinter.hooks.test
+            ranges: {
+                'a': testPrinter.ranges.test,
+                'b': testPrinter.ranges.test
             }
         };
         const a = { type: 'a', start: 1, end: 2, data: 'a' };

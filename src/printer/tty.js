@@ -110,7 +110,7 @@ module.exports = {
         return chunk;
     },
 
-    hooks: {
+    ranges: {
         syntax: buildHook(data => syntaxStyleMap[data]),
         spotlight: buildHook(() => spotlightStyle)
     }

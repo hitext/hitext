@@ -17,7 +17,7 @@ function generateRanges(source, generators) {
     const addRange = (type, start, end, data) => ranges.push({ type, start, end, data });
 
     ensureArray(generators).forEach(generate =>
-        ensureFunction(generate)(source, addRange, context)
+        ensureFunction(generate)(source, addRange)
     );
 
     return ranges;
@@ -29,18 +29,18 @@ function print(source, ranges, printer) {
     const print = ensureFunction(printer.print, chunk => chunk);
     const context = ensureFunction(printer.createContext, () => {})();
     const openedRanges = [];
-    let hooks = printer.hooks || {};
+    let rangeHooks = printer.ranges || {};
     let hookPriority = [];
     let buffer = ensureFunction(printer.open, emptyString)(context);
     let closingOffset = Infinity;
     let printedOffset = 0;
 
-    // preprocess hooks
-    hooks = Object.keys(hooks).reduce((result, type) => {
+    // preprocess range hooks
+    rangeHooks = Object.keys(rangeHooks).reduce((result, type) => {
         hookPriority.push(type);
         result[type] = {
-            open: ensureFunction(hooks[type].open, emptyString),
-            close: ensureFunction(hooks[type].close, emptyString)
+            open: ensureFunction(rangeHooks[type].open, emptyString),
+            close: ensureFunction(rangeHooks[type].close, emptyString)
         };
 
         return result;
@@ -61,8 +61,8 @@ function print(source, ranges, printer) {
             printedOffset = offset;
         }
     };
-    const open = index => hooks[openedRanges[index].type].open(openedRanges[index].data, context) || '';
-    const close = index => hooks[openedRanges[index].type].close(openedRanges[index].data, context) || '';
+    const open = index => rangeHooks[openedRanges[index].type].open(openedRanges[index].data, context) || '';
+    const close = index => rangeHooks[openedRanges[index].type].close(openedRanges[index].data, context) || '';
     const closeRanges = (offset) => {
         while (closingOffset <= offset) {
             printSource(closingOffset);
@@ -90,7 +90,7 @@ function print(source, ranges, printer) {
         let j = 0;
 
         // ignore ranges without a type hook
-        if (hooks.hasOwnProperty(range.type) === false) {
+        if (rangeHooks.hasOwnProperty(range.type) === false) {
             continue;
         }
 
