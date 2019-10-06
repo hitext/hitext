@@ -1,9 +1,13 @@
-const { ensureFunction } = require('./utils');
 const emptyString = () => '';
+const noop = function() {};
+
+function ensureFunction(value, alt) {
+    return typeof value === 'function' ? value : alt || noop;
+}
 
 module.exports = function print(source, ranges, printer) {
     const print = ensureFunction(printer.print, chunk => chunk);
-    const context = ensureFunction(printer.createContext, () => {})();
+    const context = ensureFunction(printer.createContext)();
     const openedRanges = [];
     let rangeHooks = printer.ranges || {};
     let hookPriority = [];

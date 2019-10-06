@@ -10,10 +10,6 @@ const globalThis = (function() {
     }
 }());
 
-function composePrinters(...extensions) {
-    return extensions.reduce((result, current) => result.fork(current), createPrinter());
-}
-
 function createPrinter(base) {
     return forkPrinter.call(null, base);
 }
@@ -72,7 +68,6 @@ function forkPrinterSet(extension) {
 };
 
 module.exports = {
-    composePrinters,
     createPrinter,
     forkPrinter,
     forkPrinterSet
