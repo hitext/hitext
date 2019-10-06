@@ -17,7 +17,7 @@
     "lint": "eslint src test",
     "lint-and-test": "npm run lint && npm test",
     "test": "mocha --reporter progress",
-    "build": "rollup --config && uglifyjs dist/hitext.js --compress --mangle -o dist/hitext.min.js",
+    "build": "rollup --config && terser dist/hitext.js --compress --mangle --ecma 6 -o dist/hitext.min.js",
     "prepublish": "npm run build",
     "coverage": "nyc npm test",
     "travis": "nyc npm run lint-and-test && npm run coveralls",
@@ -34,7 +34,7 @@
     "rollup": "^1.22.0",
     "rollup-plugin-commonjs": "^10.1.0",
     "rollup-plugin-node-resolve": "^5.2.0",
-    "uglify-es": "^3.3.9"
+    "terser": "^4.3.4"
   },
   "engines": {
     "node": "^8.0.0"
