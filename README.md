@@ -30,38 +30,51 @@ The approach allows to combine any number of decorators (which became range gene
 ```js
 const hitext = require('hitext');
 const prism = require('hitext-prism');
-const source = 'const a = 1;\nconst b = 2;';
-const generators = [
+const spotlightRanges = [[6, 11], [19, 24]];
+const spotlightPrinter = {
+    html: {
+        open() { return '<span class="spotlight">'; },
+        close() { return '</span>'; }
+    }
+}
+const lineNumber = {
+    ranges: hitext.generator.line,
+    printer: {
+        html: {
+            open(num) { return num + ' | ' }
+        }
+    }
+};
+
+// 1. Create pipeline
+const highlightJsAndSpotlight = hitext([
     prism('js'),
-    hitext.generator.spotlight([6, 11], [19, 24])
-];
-
-const printer = hitext.printer.html.fork(prism.printer.html);
-// alternative:
-// const printer = hitext.printer.compose(
-//     hitext.printer.html,
-//     prism.printer.html
-// );
-
-console.log(
-    hitext.decorate(source, generators, printer)
-);
-
+    [spotlightRanges, spotlightPrinter],
+    lineNumber
+], 'html');
 // or
-
-const highlightJsAndSpotlight = hitext()
+const highlightJsAndSpotlight = hitext([prism('js')], 'html')
+    .use(spotlightRanges, spotlightPrinter)
+    .use(lineNumber);
+// or
+const highlightJsAndSpotlight = hitext
     .use(prism('js'))
-    .use(hitext.generator.spotlight([6, 11], [19, 24]))
+    .use({
+        ranges: spotlightRanges,
+        printer: spotlightPrinter
+    })
+    .use(lineNumber)
     .printer('html');
 
-console.log(highlightJsAndSpotlight(source));
+// 2. Apply to a text
+console.log(highlightJsAndSpotlight('const a = 1;\nconst b = 2;'));
 ```
 
 Output:
 
 ```html
-<span class="token keyword">const</span> <span class="spotlight">a <span class="token operator">=</span> <span class="token number">1</span></span><span class="token punctuation">;</span>
-<span class="token keyword">const</span> <span class="spotlight">b <span class="token operator">=</span> <span class="token number">2</span></span><span class="token punctuation">;</span>
+1 | <span class="token keyword">const</span> <span class="spotlight">a <span class="token operator">=</span> <span class="token number">1</span></span><span class="token punctuation">;</span>
+2 | <span class="token keyword">const</span> <span class="spotlight">b <span class="token operator">=</span> <span class="token number">2</span></span><span class="token punctuation">;</span>
 ```
 
 ![image](https://user-images.githubusercontent.com/270491/41946250-0df745e2-79ba-11e8-8b32-38a9f938a380.png)
@@ -75,17 +88,10 @@ const hitext = require('hitext');
 
 console.log(
     hitext()
-        .use({
-            generator: hitext.generator.line,
-            printer: {
-                html: {
-                    ranges: {
-                        line: {
-                            open: (num) => `<span title="line #${num}">`,
-                            close: () => '</span>'
-                        }
-                    }
-                }
+        .use(hitext.generator.line, {
+            html: {
+                open: (num) => `<span title="line #${num}">`,
+                close: () => '</span>'
             }
         })
         .decorate('foo\nbar', 'html')
@@ -100,17 +106,10 @@ const hitext = require('hitext');
 
 console.log(
     hitext()
-        .use({
-            generator: hitext.generator.lineContent,
-            printer: {
-                html: {
-                    ranges: {
-                        lineContent: {
-                            open: (num) => `<span title="line #${num}">`,
-                            close: () => '</span>'
-                        }
-                    }
-                }
+        .use(hitext.generator.lineContent, {
+            html: {
+                open: (num) => `<span title="line #${num}">`,
+                close: () => '</span>'
             }
         })
         .decorate('foo\nbar', 'html')
@@ -125,17 +124,10 @@ const hitext = require('hitext');
 
 console.log(
     hitext()
-        .use({
-            generator: hitext.generator.newLine,
-            printer: {
-                html: {
-                    ranges: {
-                        newLine: {
-                            open: (num) => `<span title="line #${num}">`,
-                            close: () => '</span>'
-                        }
-                    }
-                }
+        .use(hitext.generator.newLine, {
+            html: {
+                open: (num) => `<span title="line #${num}">`,
+                close: () => '</span>'
             }
         })
         .decorate('foo\nbar', 'html')
@@ -143,36 +135,30 @@ console.log(
 // 'foo<span title="line #1">\n</span>foo'
 ```
 
-### spotlight(...ranges)
-
-```js
-const hitext = require('hitext');
-
-console.log(
-    hitext.decorate('1234567890', [hitext.generator.spotlight([3, 6])], 'html')
-);
-// '123<span class="spotlight">456</span>7890'
-```
-
 ### match(pattern, match)
 
 ```js
 const hitext = require('hitext');
+const matchPrinter = {
+    html: {
+        open: (num) => `<span class="match">`,
+        close: () => '</span>'
+    }
+};
 
 console.log(
-    hitext.decorate('Hello world! Hello world!', [hitext.generator.match('world')], 'html')
+    hitext()
+        .use(hitext.generator.match('world'), matchPrinter)
+        .decorate('Hello world! Hello world!', 'html')
 );
 // Hello <span class="match">world</span>! Hello <span class="match">world</span>!
 
 console.log(
-    hitext.decorate('Hello world!', [hitext.generator.match(/\w+/)], 'html')
+    hitext()
+        .use(hitext.generator.match(/\w+/), matchPrinter)
+        .decorate('Hello world!', 'html')
 );
 // <span class="match">Hello</span> <span class="match">world</span>!
-
-console.log(
-    hitext.decorate('Hello world!', [hitext.generator.match(/\w+/, 'spotlight')], 'html')
-);
-// <span class="spotlight">Hello</span> <span class="spotlight">world</span>!
 ```
 
 ## License

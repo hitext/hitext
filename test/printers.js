@@ -1,18 +1,19 @@
 const assert = require('assert');
 const hitext = require('../src');
+const print = require('../src/print');
 
 describe('build-in printers', () => {
     describe('html', () => {
         it('basic', () =>
             assert.equal(
-                hitext.print(
+                print(
                     '123',
                     [
                         { type: 'syntax', start: 0, end: 1, data: 'value' },
                         { type: 'spotlight', start: 1, end: 2 },
                         { type: 'match', start: 2, end: 3 }
                     ],
-                    'html'
+                    hitext.printer.html
                 ),
                 '<span class="syntax--value">1</span><span class="spotlight">2</span><span class="match">3</span>'
             )
@@ -20,7 +21,7 @@ describe('build-in printers', () => {
 
         it('should escape special chars', () => {
             assert.equal(
-                hitext.print('<br>&amp;', [], 'html'),
+                print('<br>&amp;', [], hitext.printer.html),
                 '&lt;br&gt;&amp;amp;'
             );
         });
@@ -29,14 +30,14 @@ describe('build-in printers', () => {
     describe('tty', () => {
         it('basic', () =>
             assert.equal(
-                hitext.print(
+                print(
                     '123',
                     [
                         { type: 'syntax', start: 0, end: 1, data: 'value' },
                         { type: 'spotlight', start: 1, end: 2 },
                         { type: 'match', start: 2, end: 3 }
                     ],
-                    'tty'
+                    hitext.printer.tty
                 ),
                 '\u001b[36m1\u001b[37m\u001b[44m2\u001b[39m\u001b[49m3'
             )
@@ -82,70 +83,14 @@ describe('build-in printers', () => {
             });
 
             assert.equal(
-                hitext.print('123', ranges, htmlPrinter),
+                print('123', ranges, htmlPrinter),
                 '<span class="syntax--value">1</span><span class="spotlight">2</span><span class="match">3</span>'
             );
             assert.equal(
-                hitext.print('123', ranges, customHtmlPrinter),
+                print('123', ranges, customHtmlPrinter),
                 '<span class="syntax--value">1</span><span class="spotlight">2</span><custom>3</custom>'
             );
             assert.equal(typeof customHtmlPrinter.fork, 'function');
-        });
-    });
-
-    describe('compose printers', () => {
-        it('basic', () => {
-            const ranges = [
-                { type: 'syntax', start: 0, end: 1, data: 'value' },
-                { type: 'spotlight', start: 1, end: 2 },
-                { type: 'match', start: 2, end: 3 }
-            ];
-
-            const customPrinter = hitext.printer.compose(
-                hitext.printer.html,
-                {
-                    ranges: {
-                        syntax: {
-                            open() {
-                                return '<custom-syntax>';
-                            },
-                            close() {
-                                return '</custom-syntax>';
-                            }
-                        }
-                    }
-                },
-                {
-                    ranges: {
-                        spotlight: {
-                            open() {
-                                return '<custom-spotlight>';
-                            },
-                            close() {
-                                return '</custom-spotlight>';
-                            }
-                        }
-                    }
-                },
-                {
-                    ranges: {
-                        match: {
-                            open() {
-                                return '<custom-match>';
-                            },
-                            close() {
-                                return '</custom-match>';
-                            }
-                        }
-                    }
-                }
-            );
-
-            assert.equal(
-                hitext.print('123', ranges, customPrinter),
-                '<custom-syntax>1</custom-syntax><custom-spotlight>2</custom-spotlight><custom-match>3</custom-match>'
-            );
-            assert.equal(typeof customPrinter.fork, 'function');
         });
     });
 });

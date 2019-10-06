@@ -1,10 +1,16 @@
 ## next
 
-- Added `hitext.printer.compose()` method (e.g. `printer.fork(foo).fork(bar)` can be replaced with `hitext.printer.compose(printer, foo, bar)`)
 - Added `hitext.printer.fork()` method to extend/overload a printer set
 - Changed `hitext()` pipeline to return a decorate function (i.e. `hitext(...).use(...).decorate(...)` -> `hitext(...).use(...)(...)`)
+- Added second argument (`printer`) to `hitext().use()` that overrides decorator's default printer setup (e.x. `hitext().use(decorator, { html: { ... } })`)
 - Renamed printer's methods: `start` -> `open`, `finish` -> `close`
 - Removed default `<div>` wrapper for `html` printer
+- Removed from export: `generateRanges`, `resolvePrinter`, `print`, `finalize`, `decorate` and `utils`
+- Changed semantic for main function to `hitext([...plugins], printerType, printerSet)`
+- Changed first argument of `hitext.use()` method to be a decorator (i.e. `{ name, ranges: function(source, createRange) | Array.<range>, printer: Object }`) or array of ranges
+- Added `generateRanges()` method to pipeline
+- Removed first argument (`type`) in `createRange()` handler, range's `type` is now set up automatically
+- Removed `spotlight` generator (use array of ranges instead)
 
 ## 1.0.0-alpha.2 (July 10, 2018)
 

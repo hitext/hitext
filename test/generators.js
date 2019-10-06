@@ -1,84 +1,170 @@
 const assert = require('assert');
 const hitext = require('../src');
+const generateRanges = require('../src/generateRanges');
+
+function gen(source, generate) {
+    return generateRanges(source, [{
+        marker: 'test',
+        generate
+    }]);
+}
 
 describe('build-in generators', () => {
-    describe('spotlight', () => {
-        it('basic', () =>
-            assert.equal(
-                hitext.decorate(
-                    '1234567890',
-                    [hitext.generator.spotlight([3, 6])],
-                    'html'
-                ),
-                '123<span class="spotlight">456</span>7890'
-            )
-        );
-
-        it('several ranges', () =>
-            assert.equal(
-                hitext.decorate(
-                    '12345678901234567890',
-                    [hitext.generator.spotlight([3, 6], [10, 15])],
-                    'html'
-                ),
-                '123<span class="spotlight">456</span>7890<span class="spotlight">12345</span>67890'
-            )
-        );
-    });
-
     describe('match', () => {
         it('using string', () =>
-            assert.equal(
-                hitext.decorate(
+            assert.deepEqual(
+                gen(
                     'Hello world! Hello world!',
-                    [hitext.generator.match('world')],
-                    'html'
+                    hitext.generator.match('world')
                 ),
-                'Hello <span class="match">world</span>! Hello <span class="match">world</span>!'
-            )
-        );
-
-        it('using non-string and non-regexp value', () =>
-            assert.equal(
-                hitext.decorate(
-                    '1234567890',
-                    [hitext.generator.match(123)],
-                    'html'
-                ),
-                '<span class="match">123</span>4567890'
+                [
+                    { type: 'test', start: 6, end: 11, data: undefined },
+                    { type: 'test', start: 19, end: 24, data: undefined }
+                ]
             )
         );
 
         it('using regexp', () =>
-            assert.equal(
-                hitext.decorate(
+            assert.deepEqual(
+                gen(
                     'Hello world!',
-                    [hitext.generator.match(/\w+/)],
-                    'html'
+                    hitext.generator.match(/\w+/)
                 ),
-                '<span class="match">Hello</span> <span class="match">world</span>!'
+                [
+                    { type: 'test', start: 0, end: 5, data: undefined },
+                    { type: 'test', start: 6, end: 11, data: undefined }
+                ]
             )
         );
 
         it('using regexp with flags', () =>
-            assert.equal(
-                hitext.decorate(
+            assert.deepEqual(
+                gen(
                     'Hello world!',
-                    [hitext.generator.match(/hello|world/ig)],
-                    'html'
+                    hitext.generator.match(/hello|world/ig)
                 ),
-                '<span class="match">Hello</span> <span class="match">world</span>!'
+                [
+                    { type: 'test', start: 0, end: 5, data: undefined },
+                    { type: 'test', start: 6, end: 11, data: undefined }
+                ]
             )
         );
 
-        it('using custom type', () =>
-            assert.equal(
-                hitext.decorate(
-                    'Hello world!',
-                    [hitext.generator.match(/\w+/, 'spotlight')],
-                    'html'
+        it('using non-string and non-regexp value', () =>
+            assert.deepEqual(
+                gen(
+                    '1234567890',
+                    hitext.generator.match(234)
                 ),
-                '<span class="spotlight">Hello</span> <span class="spotlight">world</span>!'
+                [
+                    { type: 'test', start: 1, end: 4, data: undefined }
+                ]
+            )
+        );
+    });
+
+    describe('line', () => {
+        it('new-line ending input', () =>
+            assert.deepEqual(
+                gen(
+                    '\na\rbb\r\nccc\n\r',
+                    hitext.generator.line
+                ),
+                [
+                    { type: 'test', start: 0, end: 1, data: 1 },
+                    { type: 'test', start: 1, end: 3, data: 2 },
+                    { type: 'test', start: 3, end: 7, data: 3 },
+                    { type: 'test', start: 7, end: 11, data: 4 },
+                    { type: 'test', start: 11, end: 12, data: 5 },
+                    { type: 'test', start: 12, end: 12, data: 6 }
+                ]
+            )
+        );
+
+        it('non-new-line ending input', () =>
+            assert.deepEqual(
+                gen(
+                    '\na\rbb\r\nccc\n\rdddd',
+                    hitext.generator.line
+                ),
+                [
+                    { type: 'test', start: 0, end: 1, data: 1 },
+                    { type: 'test', start: 1, end: 3, data: 2 },
+                    { type: 'test', start: 3, end: 7, data: 3 },
+                    { type: 'test', start: 7, end: 11, data: 4 },
+                    { type: 'test', start: 11, end: 12, data: 5 },
+                    { type: 'test', start: 12, end: 16, data: 6 }
+                ]
+            )
+        );
+    });
+
+    describe('lineContent', () => {
+        it('new-line ending input', () =>
+            assert.deepEqual(
+                gen(
+                    '\na\rbb\r\nccc\n\r',
+                    hitext.generator.lineContent
+                ),
+                [
+                    { type: 'test', start: 0, end: 0, data: 1 },
+                    { type: 'test', start: 1, end: 2, data: 2 },
+                    { type: 'test', start: 3, end: 5, data: 3 },
+                    { type: 'test', start: 7, end: 10, data: 4 },
+                    { type: 'test', start: 11, end: 11, data: 5 },
+                    { type: 'test', start: 12, end: 12, data: 6 }
+                ]
+            )
+        );
+
+        it('non-new-line ending input', () =>
+            assert.deepEqual(
+                gen(
+                    '\na\rbb\r\nccc\n\rdddd',
+                    hitext.generator.lineContent
+                ),
+                [
+                    { type: 'test', start: 0, end: 0, data: 1 },
+                    { type: 'test', start: 1, end: 2, data: 2 },
+                    { type: 'test', start: 3, end: 5, data: 3 },
+                    { type: 'test', start: 7, end: 10, data: 4 },
+                    { type: 'test', start: 11, end: 11, data: 5 },
+                    { type: 'test', start: 12, end: 16, data: 6 }
+                ]
+            )
+        );
+    });
+
+    describe('newLine', () => {
+        it('new-line ending input', () =>
+            assert.deepEqual(
+                gen(
+                    '\na\rbb\r\nccc\n\r',
+                    hitext.generator.newLine
+                ),
+                [
+                    { type: 'test', start: 0, end: 1, data: 1 },
+                    { type: 'test', start: 2, end: 3, data: 2 },
+                    { type: 'test', start: 5, end: 7, data: 3 },
+                    { type: 'test', start: 10, end: 11, data: 4 },
+                    { type: 'test', start: 11, end: 12, data: 5 }
+                ]
+            )
+        );
+
+        it('non-new-line ending input', () =>
+            assert.deepEqual(
+                gen(
+                    '\na\rbb\r\nccc\n\rdddd',
+                    hitext.generator.newLine
+                ),
+                [
+                    { type: 'test', start: 0, end: 1, data: 1 },
+                    { type: 'test', start: 2, end: 3, data: 2 },
+                    { type: 'test', start: 5, end: 7, data: 3 },
+                    { type: 'test', start: 10, end: 11, data: 4 },
+                    { type: 'test', start: 11, end: 12, data: 5 }
+                ]
             )
         );
     });

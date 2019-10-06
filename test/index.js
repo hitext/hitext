@@ -3,86 +3,100 @@ const hitext = require('../src');
 
 const source = '12345678';
 const expected = '<a>1234</a><b>5678</b>';
-const genA = (source, createRange) => createRange('stub', 0, 4, 'a');
-const genB = (source, createRange) => createRange('stub', 4, 8, 'b');
+const genA = (source, createRange) => createRange(0, 4, 'a');
+const genB = (source, createRange) => createRange(4, 8, 'b');
 const printer = {
-    ranges: {
-        stub: {
-            open: marker => '<' + marker + '>',
-            close: marker => '</' + marker + '>'
-        }
+    html: {
+        open: marker => '<' + marker + '>',
+        close: marker => '</' + marker + '>'
     }
+};
+const pluginA = {
+    ranges: genA,
+    printer
+};
+const pluginB = {
+    ranges: genB,
+    printer
 };
 
 describe('basic', () => {
     it('should print', () => {
-        assert.equal(hitext.decorate('Hi!'), 'Hi!');
         assert.equal(hitext().decorate('Hi!'), 'Hi!');
     });
 
-    it('hitext(generators, printer)', () => {
+    it('hitext(plugins, printerType)', () => {
         assert.equal(
-            hitext([genA, genB], printer).decorate(source),
-            expected
-        );
-    });
-
-    it('hitext(null, printer).use()', () => {
-        assert.equal(
-            hitext(null, printer)
-                .use(genA)
-                .use(genB)
-                .decorate(source),
+            hitext([pluginA, pluginB], 'html').decorate(source),
             expected
         );
     });
 
     it('hitext(generators).printer()', () => {
         assert.equal(
-            hitext([genA, genB])
-                .printer(printer)
+            hitext([pluginA, pluginB])
+                .printer('html')
                 .decorate(source),
+            expected
+        );
+    });
+
+    it('hitext(generators) as arrays', () => {
+        assert.equal(
+            hitext([[genA, printer], [{ ranges: genB, printer }]])
+                .decorate(source, 'html'),
+            expected
+        );
+    });
+
+    it('hitext.use()', () => {
+        assert.equal(
+            hitext
+                .use(pluginA)
+                .use(pluginB)
+                .decorate(source, 'html'),
             expected
         );
     });
 
     it('hitext().use().printer()', () => {
         assert.equal(
-            hitext()
-                .use(genA)
-                .use(genB)
-                .printer(printer)
+            hitext
+                .use(pluginA)
+                .use(pluginB)
+                .printer('html')
                 .decorate(source),
             expected
         );
     });
 
-    describe('hitext().use()', () => {
-        it('with set { generator, printer }', () => {
+    describe('hitext.use()', () => {
+        it('should return a decorate function', () => {
+            const decorate = hitext
+                .use({ ranges: genA, printer })
+                .use(pluginB);
+
             assert.equal(
-                hitext()
-                    .use({ generator: genA, printer: { html: printer } })
-                    .use(genB)
-                    .decorate(source, 'html'),
+                decorate(source, 'html'),
                 expected
             );
         });
 
-        it('should return a decorate function', () => {
-            const decorate = hitext()
-                .use({ generator: genA, printer: { html: printer } })
-                .use(genB);
+        it('with set { generator, printer }', () => {
+            const pipeline = hitext
+                .use({ ranges: genA, printer })
+                .use(pluginB);
 
             assert.equal(
-                decorate(source, 'html'),
+                pipeline.decorate(source, 'html'),
                 expected
             );
         });
 
         it('should take two arguments', () => {
-            const decorate = hitext()
-                .use(genA, { html: printer })
-                .use(genB);
+            const decorate = hitext
+                .use(genA, printer)
+                .use(pluginB);
 
             assert.equal(
                 decorate(source, 'html'),
@@ -90,58 +104,54 @@ describe('basic', () => {
             );
         });
 
-        it('second argument should override plugin default printer', () => {
-            const decorate = hitext()
-                .use({ generator: genA, printer: { html: printer } }, {
-                    html: {
-                        ranges: {
-                            stub: {
-                                open: () => '!!',
-                                close: () => '!/!'
-                            }
-                        }
-                    }
-                })
-                .use(genB);
+        it('should take an array as first argument', () => {
+            const decorate = hitext
+                .use([[0, 4, 'a'], [4, 8, 'b']], printer);
 
             assert.equal(
                 decorate(source, 'html'),
-                '!!1234!/!!!5678!/!'
+                expected
+            );
+        });
+
+        it('second argument should override plugin\'s default printer', () => {
+            const decorate = hitext
+                .use(pluginA, {
+                    html: {
+                        open: () => '!!',
+                        close: () => '!/!'
+                    }
+                });
+
+            assert.equal(
+                decorate(source, 'html'),
+                '!!1234!/!5678'
             );
         });
 
         it('compose printers', () => {
-            const decorate = hitext()
+            const pipeline = hitext
                 .use({
-                    generator: (_, addRange) => addRange('foo', 1, 2),
+                    ranges: [[1, 2]],
                     printer: {
                         html: {
-                            ranges: {
-                                foo: {
-                                    open: () => '<foo>',
-                                    close: () => '</foo>'
-                                }
-                            }
+                            open: () => '<foo>',
+                            close: () => '</foo>'
                         }
                     }
                 })
                 .use({
-                    generator: (_, addRange) => addRange('bar', 1, 2),
+                    ranges: [[1, 2]],
                     printer: {
                         html: {
-                            ranges: {
-                                bar: {
-                                    open: () => '<bar>',
-                                    close: () => '</bar>'
-                                }
-                            }
+                            open: () => '<bar>',
+                            close: () => '</bar>'
                         }
                     }
-                })
-                .decorate;
+                });
 
             assert.equal(
-                decorate('abc', 'html'),
+                pipeline.decorate('abc', 'html'),
                 'a<foo><bar>b</bar></foo>c'
             );
         });

@@ -1,8 +1,4 @@
-function processMatch(createRange, type, start, end) {
-    createRange(type || 'match', start, end);
-}
-
-module.exports = function(pattern, type) {
+module.exports = function(pattern) {
     if (pattern instanceof RegExp) {
         const flags = pattern.flags.indexOf('g') !== -1 ? pattern.flags : pattern.flags + 'g';
         const matchRx = new RegExp(pattern, flags);
@@ -11,7 +7,7 @@ module.exports = function(pattern, type) {
             let match;
 
             while (match = matchRx.exec(source)) {
-                processMatch(createRange, type, match.index, match.index + match[0].length);
+                createRange(match.index, match.index + match[0].length);
             }
         };
     }
@@ -27,7 +23,7 @@ module.exports = function(pattern, type) {
                 break;
             }
 
-            processMatch(createRange, type, index, index + pattern.length);
+            createRange(index, index + pattern.length);
         }
     };
 };

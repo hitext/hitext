@@ -1,20 +1,22 @@
 const assert = require('assert');
-const hitext = require('../src');
-const stubGeneratorFactory = require('./helpers/generators').stub;
+const generateRanges = require('../src/generateRanges');
+const stubGeneratorFactory = (marker, ranges) => ({
+    marker,
+    generate: (source, createRange) =>
+        ranges.forEach(range => createRange(...range))
+});
 
 describe('genRanges', () => {
     it('no generators', () => {
-        assert.deepEqual(hitext.generateRanges('abc'), []);
-        assert.deepEqual(hitext.generateRanges('abc', []), []);
-        assert.deepEqual(hitext.generateRanges('abc', {}), []);
+        assert.deepEqual(generateRanges('abc', []), []);
     });
 
     it('single decorator', () => {
         assert.deepEqual(
-            hitext.generateRanges('abc', [
-                stubGeneratorFactory([
-                    [0, 0, 1, '1'],
-                    [0, 2, 3, '2']
+            generateRanges('abc', [
+                stubGeneratorFactory(0, [
+                    [0, 1, '1'],
+                    [2, 3, '2']
                 ])
             ]), [
                 { type: 0, start: 0, end: 1, data: '1' },
@@ -24,14 +26,14 @@ describe('genRanges', () => {
 
     it('several generators', () => {
         assert.deepEqual(
-            hitext.generateRanges('abc', [
-                stubGeneratorFactory([
-                    [0, 0, 1, '1'],
-                    [0, 2, 3, '2']
+            generateRanges('abc', [
+                stubGeneratorFactory(0, [
+                    [0, 1, '1'],
+                    [2, 3, '2']
                 ]),
-                stubGeneratorFactory([
-                    [1, 1, 2, 'a'],
-                    [1, 2, 3, 'b']
+                stubGeneratorFactory(1, [
+                    [1, 2, 'a'],
+                    [2, 3, 'b']
                 ])
             ]), [
                 { type: 0, start: 0, end: 1, data: '1' },

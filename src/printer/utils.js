@@ -49,7 +49,6 @@ function forkPrinterSet(extension) {
     }
 
     newPrinterSet.fork = forkPrinterSet.bind(newPrinterSet);
-    newPrinterSet.compose = composePrinters;
 
     return newPrinterSet;
 };

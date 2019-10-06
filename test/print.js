@@ -1,5 +1,5 @@
 const assert = require('assert');
-const hitext = require('../src');
+const print = require('../src/print');
 
 const testPrinter = {
     ranges: {
@@ -24,7 +24,7 @@ const generateRanges = lines =>
 describe('print', () => {
     it('basic', () => {
         assert.equal(
-            hitext.print(
+            print(
                 'abc',
                 [
                     { type: 'test', start: 0, end: 1, data: 'a' },
@@ -39,7 +39,7 @@ describe('print', () => {
 
     it('should be tolerant to unknown token types', () => {
         assert.equal(
-            hitext.print(
+            print(
                 'abc',
                 [
                     { type: 'unknown', start: 0, end: 1, data: 'a' },
@@ -60,7 +60,7 @@ describe('print', () => {
     describe('ranges out of source boundaries', () => {
         it('intersect with boundaries', () => {
             assert.equal(
-                hitext.print(
+                print(
                     'abc',
                     [
                         { type: 'test', start: -9, end: 9, data: 'a' },
@@ -75,7 +75,7 @@ describe('print', () => {
 
         it('intersect with boundaries', () => {
             assert.equal(
-                hitext.print(
+                print(
                     'abc',
                     [
                         { type: 'test', start: -9, end: -5, data: 'a' },
@@ -91,7 +91,7 @@ describe('print', () => {
 
     it('should ignore ranges with bad start/end', () => {
         assert.equal(
-            hitext.print(
+            print(
                 '1234567890',
                 [
                     { type: 'test', start: NaN, end: 2, data: 'a' },
@@ -125,12 +125,12 @@ describe('print', () => {
         const b = { type: 'b', start: 1, end: 2, data: 'b' };
 
         assert.equal(
-            hitext.print('123', [a, b], printer),
-            hitext.print('123', [b, a], printer)
+            print('123', [a, b], printer),
+            print('123', [b, a], printer)
         );
 
         assert.equal(
-            hitext.print('123', [b, a], printer),
+            print('123', [b, a], printer),
             '1<a><b>2</b></a>3'
         );
     });
@@ -141,7 +141,7 @@ describe('print', () => {
         const c = { type: 'c', start: 3, end: 4 };
 
         assert.equal(
-            hitext.print('123456', [a, b, c], {
+            print('123456', [a, b, c], {
                 ranges: {
                     a: {
                         open: () => '<a>',
@@ -167,7 +167,7 @@ describe('print', () => {
         ];
 
         assert.equal(
-            hitext.print('1234567890', ranges, {
+            print('1234567890', ranges, {
                 print: chunk => chunk.replace(/./g, '_'),
                 ranges: {
                     a: {
@@ -298,7 +298,7 @@ describe('print', () => {
     ].forEach(test =>
         it('case\n|' + test.ranges.join('|\n|') + '|', () => {
             assert.equal(
-                hitext.print(
+                print(
                     '1234567890',
                     generateRanges(test.ranges),
                     testPrinter

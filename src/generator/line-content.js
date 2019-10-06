@@ -1,6 +1,6 @@
 const { newLineLength } = require('./utils');
 
-module.exports = (source, addRange) => {
+module.exports = (source, createRange) => {
     let line = 1;
     let lineStart = 0;
 
@@ -8,11 +8,11 @@ module.exports = (source, addRange) => {
         const nl = newLineLength(source, i);
 
         if (nl !== 0) {
-            addRange('line-content', lineStart, i, line++);
+            createRange(lineStart, i, line++);
             lineStart = i + nl;
             i += nl - 1;
         }
     }
 
-    addRange('line-content', lineStart, source.length, line++);
+    createRange(lineStart, source.length, line++);
 };
