@@ -1,6 +1,6 @@
 module.exports = {
-    match: require('./match'),
-    line: require('./line'),
-    lineContent: require('./line-content'),
-    newLine: require('./new-line')
+    genLines: require('./line'),
+    genLineContents: require('./line-content'),
+    genMatches: require('./match'),
+    genNewLines: require('./new-line')
 };

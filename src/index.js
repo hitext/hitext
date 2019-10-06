@@ -82,7 +82,9 @@ function hitext(plugins, printerType, printerSet) {
     return pipeline;
 }
 
-module.exports = Object.assign(hitext, hitext(), {
-    printer: printers,
-    generator: generators
+module.exports = Object.assign(hitext, generators, {
+    printer: Object.assign((...args) => hitext().printer(...args), printers),
+    use(...args) {
+        return hitext().use(...args);
+    }
 });

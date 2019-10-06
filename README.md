@@ -16,10 +16,10 @@ HiText is a basis for a text (source code) decoration. The main goal is to provi
 - [Features](#features)
 - [Example](#example)
 - [Build-in generators](#build-in-generators)
-    - [line](#line)
-    - [lineContent](#linecontent)
-    - [newLine](#newline)
-    - [match(pattern, match)](#matchpattern-match)
+    - [genLines](#genlines)
+    - [genLineContents](#genlinecontents)
+    - [genNewLines](#gennewlines)
+    - [genMatches(pattern, match)](#genmatchespattern-match)
 - [Build-in printers](#build-in-printers)
     - [html](#html)
     - [tty](#tty)
@@ -55,7 +55,7 @@ const spotlightPrinter = {
     }
 }
 const lineNumber = {
-    ranges: hitext.generator.line,
+    ranges: hitext.genLines,
     printer: {
         html: {
             open(num) { return num + ' | ' }
@@ -94,18 +94,16 @@ Output:
 2 | <span class="token keyword">const</span> <span class="spotlight">b <span class="token operator">=</span> <span class="token number">2</span></span><span class="token punctuation">;</span>
 ```
 
-![image](https://user-images.githubusercontent.com/270491/41946250-0df745e2-79ba-11e8-8b32-38a9f938a380.png)
-
 ## Build-in generators
 
-### line
+### genLines
 
 ```js
 const hitext = require('hitext');
 
 console.log(
     hitext()
-        .use(hitext.generator.line, {
+        .use(hitext.genLines, {
             html: {
                 open: (num) => `<span title="line #${num}">`,
                 close: () => '</span>'
@@ -116,14 +114,14 @@ console.log(
 // '<span title="line #1">foo\n</span><span title="line #2">foo</span>'
 ```
 
-### lineContent
+### genLineContents
 
 ```js
 const hitext = require('hitext');
 
 console.log(
     hitext()
-        .use(hitext.generator.lineContent, {
+        .use(hitext.genLineContents, {
             html: {
                 open: (num) => `<span title="line #${num}">`,
                 close: () => '</span>'
@@ -134,14 +132,14 @@ console.log(
 // '<span title="line #1">foo</span>\n<span title="line #2">foo</span>'
 ```
 
-### newLine
+### genNewLines
 
 ```js
 const hitext = require('hitext');
 
 console.log(
     hitext()
-        .use(hitext.generator.newLine, {
+        .use(hitext.genNewLines, {
             html: {
                 open: (num) => `<span title="line #${num}">`,
                 close: () => '</span>'
@@ -152,7 +150,7 @@ console.log(
 // 'foo<span title="line #1">\n</span>foo'
 ```
 
-### match(pattern, match)
+### genMatches(pattern, match)
 
 ```js
 const hitext = require('hitext');
@@ -165,14 +163,14 @@ const matchPrinter = {
 
 console.log(
     hitext()
-        .use(hitext.generator.match('world'), matchPrinter)
+        .use(hitext.genMatches('world'), matchPrinter)
         .decorate('Hello world! Hello world!', 'html')
 );
 // Hello <span class="match">world</span>! Hello <span class="match">world</span>!
 
 console.log(
     hitext()
-        .use(hitext.generator.match(/\w+/), matchPrinter)
+        .use(hitext.genMatches(/\w+/), matchPrinter)
         .decorate('Hello world!', 'html')
 );
 // <span class="match">Hello</span> <span class="match">world</span>!
