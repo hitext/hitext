@@ -29,9 +29,9 @@ function pipelineChain(generators, printerSet, defaultPrinterType) {
         const printer = printerSet[printerType || defaultPrinterType] || printers.noop;
         const ranges = generateRanges(source, generators);
         const result = print(source, ranges, printer);
-    
+
         return result;
-    };   
+    };
 
     return Object.assign(decorate, {
         decorate,
@@ -52,11 +52,11 @@ function pipelineChain(generators, printerSet, defaultPrinterType) {
             if (!printer) {
                 printer = plugin.printer;
             }
-            
+
             if (!printer) {
                 return decorate; // exception?
             }
-            
+
             return pipelineChain(
                 generators.concat(preprocessGenerator(marker, generate)),
                 printerSet.fork(preprocessPrinter(marker, printer)),
