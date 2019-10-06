@@ -19,13 +19,31 @@ function createPrinter(base) {
 }
 
 function forkPrinter(extension) {
-    const newPrinter = {};
     const base = this === globalThis ? {} : this || {};
+    const ranges = Object.assign({}, base.ranges);
+    const newPrinter = {};
 
-    return Object.assign(newPrinter, base, extension, {
+    Object.assign(newPrinter, base, extension, {
         fork: forkPrinter.bind(newPrinter),
-        ranges: Object.assign({}, base.ranges, extension ? extension.ranges : null)
+        ranges
     });
+
+    if (typeof newPrinter.createHook !== 'function') {
+        newPrinter.createHook = () => {};
+    }
+
+    if (extension && extension.ranges) {
+        [].concat(
+            Object.getOwnPropertyNames(extension.ranges),
+            Object.getOwnPropertySymbols(extension.ranges)
+        ).forEach(key => {
+            ranges[key] = typeof extension.ranges[key] === 'function'
+                ? newPrinter.createHook(extension.ranges[key])
+                : extension.ranges[key];
+        });
+    }
+
+    return newPrinter;
 }
 
 function forkPrinterSet(extension) {

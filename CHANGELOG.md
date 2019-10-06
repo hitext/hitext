@@ -11,6 +11,8 @@
 - Added `generateRanges()` method to pipeline
 - Removed first argument (`type`) in `createRange()` handler, range's `type` is now set up automatically
 - Removed `spotlight` generator (use array of ranges instead)
+- Removed any range specific from build-in printers
+- Added ability to extend printer via a function (`createHook` method is used), see `tty` printer examples
 
 ## 1.0.0-alpha.2 (July 10, 2018)
 

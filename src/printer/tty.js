@@ -1,16 +1,18 @@
 const styles = require('ansi-styles');
 const { createPrinter } = require('./utils');
-const initialStyle = buildStyle('reset');
-const spotlightStyle = buildStyle('bgBlue', 'white');
-const syntaxStyleMap = buildStyleMap({
-    'string': 'yellow',
-    'comment': 'gray',
-    'keyword': 'red',
-    'key': 'cyan',
-    'value': 'cyan'
-});
+const initialStyle = createStyle('reset');
+const createStyleFetcherUtils = {
+    createStyleMap: (map, fetcher = data => data) => {
+        const styleMap = createStyleMap(map);
+        return (...args) => styleMap[fetcher(...args)];
+    },
+    createStyle: (...styles) => {
+        const style = createStyle(...styles);
+        return () => style;
+    }
+};
 
-function buildStyle(...style) {
+function createStyle(...style) {
     return style.reduce((result, name) => {
         switch (true) {
             case name in styles.color:
@@ -34,17 +36,19 @@ function buildStyle(...style) {
     }, {});
 }
 
-function buildStyleMap(map) {
+function createStyleMap(map) {
     const result = {};
 
     for (let key in map) {
-        result[key] = Array.isArray(map[key]) ? buildStyle(...map[key]) : buildStyle(map[key]);
+        result[key] = Array.isArray(map[key]) ? createStyle(...map[key]) : createStyle(map[key]);
     }
 
     return result;
 }
 
-function buildHook(styleFetcher) {
+function createHook(createStyleFetcherFn) {
+    const styleFetcher = createStyleFetcherFn(createStyleFetcherUtils);
+
     return {
         open: (data, context) => {
             const style = styleFetcher(data) || {};
@@ -109,8 +113,5 @@ module.exports = createPrinter({
         return chunk;
     },
 
-    ranges: {
-        syntax: buildHook(data => syntaxStyleMap[data]),
-        spotlight: buildHook(() => spotlightStyle)
-    }
+    createHook
 });

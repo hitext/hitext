@@ -10,6 +10,23 @@
 
 HiText is a basis for a text (source code) decoration. The main goal is to provide a universal way to combine libraries decorating text and an output in the required format (HTML, TTY etc). The only prerequsites you need are a source text and set of ranges with some options, the rest will be done by HiText.
 
+<!-- TOC depthFrom:2 -->
+
+- [Why?](#why)
+- [Features](#features)
+- [Example](#example)
+- [Build-in generators](#build-in-generators)
+    - [line](#line)
+    - [lineContent](#linecontent)
+    - [newLine](#newline)
+    - [match(pattern, match)](#matchpattern-match)
+- [Build-in printers](#build-in-printers)
+    - [html](#html)
+    - [tty](#tty)
+- [License](#license)
+
+<!-- /TOC -->
+
 ## Why?
 
 Just imagine you want to output in HTML a JavaScript code with syntax highlighting and to spotlight some fragments of it. You can use a library for syntax highlighting, that's not a problem. For fragment spotlighting you can get substrings and wrap them into HTML tags. Both operations are not so hard, but the problem is to combine results of them. Each operation adds HTML tags to a result, so another operation will not perform as expected because of HTML tags.
@@ -159,6 +176,47 @@ console.log(
         .decorate('Hello world!', 'html')
 );
 // <span class="match">Hello</span> <span class="match">world</span>!
+```
+
+## Build-in printers
+
+### html
+
+```js
+hitext
+    .use(whatever, {
+        html: {
+            open: data => '<span class="example">',
+            close: data => '</span>'
+        }
+    })
+    .printer('html');
+```
+
+### tty
+
+```js
+hitext
+    .use(whatever, {
+        tty({ createStyle }) => createStyle('bgWhite', 'red')
+    })
+    .use(whatever, {
+        tty({ createStyleMap }) => createStyleMap({
+            foo: 'green',
+            bar: ['bgWhite', 'red']
+        })
+    })
+    .use(whatever, {
+        tty({ createStyleMap }) => createStyleMap({
+            foo: 'green',
+            bar: ['bgWhite', 'red']
+        }, data => {
+            // specify the way how to transform data to map key
+            // when this argument is not specified `data => data` is using
+            return data.magickField;
+        })
+    })
+    .printer('tty');
 ```
 
 ## License

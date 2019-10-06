@@ -7,7 +7,7 @@ describe('build-in printers', () => {
         it('basic', () =>
             assert.equal(
                 print(
-                    '123',
+                    'abc',
                     [
                         { type: 'syntax', start: 0, end: 1, data: 'value' },
                         { type: 'spotlight', start: 1, end: 2 },
@@ -15,7 +15,7 @@ describe('build-in printers', () => {
                     ],
                     hitext.printer.html
                 ),
-                '<span class="syntax--value">1</span><span class="spotlight">2</span><span class="match">3</span>'
+                'abc'
             )
         );
 
@@ -31,15 +31,35 @@ describe('build-in printers', () => {
         it('basic', () =>
             assert.equal(
                 print(
-                    '123',
+                    '1234',
                     [
                         { type: 'syntax', start: 0, end: 1, data: 'value' },
                         { type: 'spotlight', start: 1, end: 2 },
-                        { type: 'match', start: 2, end: 3 }
+                        { type: 'match', start: 2, end: 3 },
+                        { type: 'color', start: 3, end: 4, data: 'foo' }
                     ],
-                    hitext.printer.tty
+                    hitext.printer.tty.fork({
+                        ranges: {
+                            syntax({ createStyleMap }) {
+                                return createStyleMap(
+                                    { 'value': 'cyan' }
+                                );
+                            },
+                            spotlight({ createStyle }) {
+                                return createStyle('bgBlue', 'white');
+                            },
+                            color({ createStyleMap }) {
+                                return createStyleMap([
+                                    'green',
+                                    'red',
+                                    'yellow',
+                                    'blue'
+                                ], data => data.length - 1);
+                            }
+                        }
+                    })
                 ),
-                '\u001b[36m1\u001b[37m\u001b[44m2\u001b[39m\u001b[49m3'
+                '\u001b[36m1\u001b[37m\u001b[44m2\u001b[39m\u001b[49m3\u001b[33m4\u001b[39m'
             )
         );
     });
@@ -84,11 +104,11 @@ describe('build-in printers', () => {
 
             assert.equal(
                 print('123', ranges, htmlPrinter),
-                '<span class="syntax--value">1</span><span class="spotlight">2</span><span class="match">3</span>'
+                '123'
             );
             assert.equal(
                 print('123', ranges, customHtmlPrinter),
-                '<span class="syntax--value">1</span><span class="spotlight">2</span><custom>3</custom>'
+                '12<custom>3</custom>'
             );
             assert.equal(typeof customHtmlPrinter.fork, 'function');
         });
