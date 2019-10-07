@@ -13,6 +13,7 @@
 - Removed `spotlight` generator (use array of ranges instead)
 - Removed any range specific from build-in printers
 - Added ability to extend printer via a function (`createHook` method is used), see `tty` printer examples
+- Removed `theme` folder that had contained CSS for `html` printer
 
 ## 1.0.0-alpha.2 (July 10, 2018)
 
