@@ -1,42 +1,18 @@
-const globalThis = (function() {
-    if (typeof self !== 'undefined') {
-        return self;   // eslint-disable-line no-undef
-    }
-    if (typeof window !== 'undefined') {
-        return window; // eslint-disable-line no-undef
-    }
-    if (typeof global !== 'undefined') {
-        return global;
-    }
-}());
-
 function createPrinter(base) {
     return forkPrinter.call(null, base);
 }
 
 function forkPrinter(extension) {
-    const base = this === globalThis ? {} : this || {};
-    const ranges = Object.assign({}, base.ranges);
+    const base = this === global ? {} : this || {};
     const newPrinter = {};
 
     Object.assign(newPrinter, base, extension, {
         fork: forkPrinter.bind(newPrinter),
-        ranges
+        ranges: Object.assign({}, base.ranges, extension && extension.ranges)
     });
 
     if (typeof newPrinter.createHook !== 'function') {
-        newPrinter.createHook = () => {};
-    }
-
-    if (extension && extension.ranges) {
-        [].concat(
-            Object.getOwnPropertyNames(extension.ranges),
-            Object.getOwnPropertySymbols(extension.ranges)
-        ).forEach(key => {
-            ranges[key] = typeof extension.ranges[key] === 'function'
-                ? newPrinter.createHook(extension.ranges[key])
-                : extension.ranges[key];
-        });
+        newPrinter.createHook = fn => fn();
     }
 
     return newPrinter;

@@ -20,13 +20,20 @@ module.exports = function print(source, ranges, printer) {
         Object.getOwnPropertyNames(rangeHooks),
         Object.getOwnPropertySymbols(rangeHooks)
     ).reduce((result, type) => {
-        const rangeHook = rangeHooks[type];
-        hookPriority.push(type);
-        result[type] = {
-            open: ensureFunction(rangeHook.open, emptyString),
-            close: ensureFunction(rangeHook.close, emptyString),
-            print: ensureFunction(rangeHook.print, print)
-        };
+        let rangeHook = rangeHooks[type];
+
+        if (typeof rangeHook === 'function') {
+            rangeHooks[type] = rangeHook = printer.createHook(rangeHook);
+        }
+
+        if (rangeHook) {
+            hookPriority.push(type);
+            result[type] = {
+                open: ensureFunction(rangeHook.open, emptyString),
+                close: ensureFunction(rangeHook.close, emptyString),
+                print: ensureFunction(rangeHook.print, print)
+            };
+        }
 
         return result;
     }, {});

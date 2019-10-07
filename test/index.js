@@ -129,6 +129,22 @@ describe('basic', () => {
             );
         });
 
+        it('functional printer\'s extension should be lazy', () => {
+            let called = 0;
+            const decorate = hitext
+                .use(genA, {
+                    html: () => called++
+                });
+
+            assert.equal(called, 0);
+
+            decorate('asd', 'html');
+            assert.equal(called, 1);
+
+            decorate('asd', 'html');
+            assert.equal(called, 1);
+        });
+
         it('compose printers', () => {
             const pipeline = hitext
                 .use({
