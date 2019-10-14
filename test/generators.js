@@ -15,7 +15,7 @@ describe('build-in generators', () => {
             assert.deepEqual(
                 gen(
                     'Hello world! Hello world!',
-                    hitext.genMatches('world')
+                    hitext.gen.matches('world')
                 ),
                 [
                     { type: 'test', start: 6, end: 11, data: undefined },
@@ -28,7 +28,7 @@ describe('build-in generators', () => {
             assert.deepEqual(
                 gen(
                     'Hello world!',
-                    hitext.genMatches(/\w+/)
+                    hitext.gen.matches(/\w+/)
                 ),
                 [
                     { type: 'test', start: 0, end: 5, data: undefined },
@@ -41,7 +41,7 @@ describe('build-in generators', () => {
             assert.deepEqual(
                 gen(
                     'Hello world!',
-                    hitext.genMatches(/hello|world/ig)
+                    hitext.gen.matches(/hello|world/ig)
                 ),
                 [
                     { type: 'test', start: 0, end: 5, data: undefined },
@@ -54,7 +54,7 @@ describe('build-in generators', () => {
             assert.deepEqual(
                 gen(
                     '1234567890',
-                    hitext.genMatches(234)
+                    hitext.gen.matches(234)
                 ),
                 [
                     { type: 'test', start: 1, end: 4, data: undefined }
@@ -68,7 +68,7 @@ describe('build-in generators', () => {
             assert.deepEqual(
                 gen(
                     '\na\rbb\r\nccc\n\r',
-                    hitext.genLines
+                    hitext.gen.lines
                 ),
                 [
                     { type: 'test', start: 0, end: 1, data: 1 },
@@ -85,7 +85,7 @@ describe('build-in generators', () => {
             assert.deepEqual(
                 gen(
                     '\na\rbb\r\nccc\n\rdddd',
-                    hitext.genLines
+                    hitext.gen.lines
                 ),
                 [
                     { type: 'test', start: 0, end: 1, data: 1 },
@@ -104,7 +104,7 @@ describe('build-in generators', () => {
             assert.deepEqual(
                 gen(
                     '\na\rbb\r\nccc\n\r',
-                    hitext.genLineContents
+                    hitext.gen.lineContents
                 ),
                 [
                     { type: 'test', start: 0, end: 0, data: 1 },
@@ -121,7 +121,7 @@ describe('build-in generators', () => {
             assert.deepEqual(
                 gen(
                     '\na\rbb\r\nccc\n\rdddd',
-                    hitext.genLineContents
+                    hitext.gen.lineContents
                 ),
                 [
                     { type: 'test', start: 0, end: 0, data: 1 },
@@ -140,7 +140,7 @@ describe('build-in generators', () => {
             assert.deepEqual(
                 gen(
                     '\na\rbb\r\nccc\n\r',
-                    hitext.genNewLines
+                    hitext.gen.newlines
                 ),
                 [
                     { type: 'test', start: 0, end: 1, data: 1 },
@@ -156,7 +156,7 @@ describe('build-in generators', () => {
             assert.deepEqual(
                 gen(
                     '\na\rbb\r\nccc\n\rdddd',
-                    hitext.genNewLines
+                    hitext.gen.newlines
                 ),
                 [
                     { type: 'test', start: 0, end: 1, data: 1 },
