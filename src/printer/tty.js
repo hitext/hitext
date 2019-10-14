@@ -2,7 +2,7 @@ const styles = require('ansi-styles');
 const { createPrinter } = require('./utils');
 const initialStyle = createStyle('reset');
 const createStyleFetcherUtils = {
-    createStyleMap: (map, fetcher = data => data) => {
+    createStyleMap: (map, fetcher = ({ data }) => data) => {
         const styleMap = createStyleMap(map);
         return (...args) => styleMap[fetcher(...args)];
     },
@@ -50,16 +50,11 @@ function createHook(createStyleFetcherFn) {
     const styleFetcher = createStyleFetcherFn(createStyleFetcherUtils);
 
     return {
-        open: (data, context) => {
-            const style = styleFetcher(data) || {};
-
-            context.stack.push(context.style);
-            context.style = Object.assign({}, context.style, style);
-            // console.log('!o', context.style);
+        open: (context) => {
+            context.pushStyle(styleFetcher(context) || {});
         },
-        close: (data, context) => {
-            context.style = context.stack.pop();
-            // console.log('!c', context.style);
+        close: (context) => {
+            context.popStyle();
         }
     };
 }
@@ -83,34 +78,44 @@ function styleToPrint(current, next) {
 
 module.exports = createPrinter({
     createContext() {
+        const stack = [];
+        let currentStyle = initialStyle;
+        let printedStyle = {};
+
         return {
-            printed: initialStyle,
-            style: initialStyle,
-            stack: []
+            pushStyle(style) {
+                stack.push(currentStyle);
+                currentStyle = Object.assign({}, currentStyle, style);
+            },
+            popStyle() {
+                currentStyle = stack.pop();
+            },
+            styleToPrint() {
+                if (printedStyle !== currentStyle) {
+                    const newStyle = styleToPrint(printedStyle, currentStyle);
+
+                    printedStyle = currentStyle;
+
+                    if (newStyle) {
+                        return newStyle;
+                    }
+                }
+
+                return '';
+            }
         };
     },
 
     open(context) {
-        return styleToPrint({}, context.printed);
+        return context.styleToPrint();
     },
 
     close(context) {
-        return styleToPrint(context.printed, context.style);
+        return context.styleToPrint();
     },
 
     print(chunk, context) {
-        // console.log('>>', chunk);
-        if (context.printed !== context.style) {
-            const newStyle = styleToPrint(context.printed, context.style);
-
-            context.printed = context.style;
-
-            if (newStyle) {
-                return newStyle + chunk;
-            }
-        }
-
-        return chunk;
+        return context.styleToPrint() + chunk;
     },
 
     createHook

@@ -4,8 +4,8 @@ const print = require('../src/print');
 const testPrinter = {
     ranges: {
         test: {
-            open: x => `<${x}>`,
-            close: x => `</${x}>`
+            open: ({ data: x }) => `<${x}>`,
+            close: ({ data: x }) => `</${x}>`
         }
     }
 };
@@ -181,6 +181,86 @@ describe('print', () => {
             }),
             '_ab_ba__aa'
         );
+    });
+
+    describe('print context', () => {
+        const source = 'Hello, World!';
+        const ranges = [[1, 5], [1, 2], [4, 8], [3, 5]].map(([start, end], idx) => {
+            const range = {
+                type: 'test',
+                start,
+                end,
+                data: {
+                    idx
+                }
+            };
+            range.data.test = range.data;
+            return range;
+        });
+
+        it('range data', () => {
+            const actual = print(source, ranges, {
+                ranges: {
+                    test: {
+                        open({ data }) {
+                            return '[' + (data.test === data ? 'ok' : 'fail') + ']';
+                        },
+                        close({ data }) {
+                            return '[/' + (data.test === data ? 'ok' : 'fail') + ']';
+                        }
+                    }
+                }
+            });
+
+            assert.strictEqual(
+                actual,
+                'H[ok][ok]e[/ok]l[ok]l[/ok][/ok][ok][ok][ok]o[/ok][/ok], W[/ok]orld!'
+            );
+        });
+
+        it('range start/end', () => {
+            const actual = print(source, ranges, {
+                ranges: {
+                    test: {
+                        open({ data: { idx }, start, offset }) {
+                            return '[' + (start === offset ? 'start' : 'start-continue') + '-' + idx + ']';
+                        },
+                        close({ data: { idx }, end, offset }) {
+                            return '[/' + (end === offset ? 'end' : 'temp-end') + '-' + idx + ']';
+                        }
+                    }
+                }
+            });
+
+            assert.strictEqual(
+                actual,
+                'H[start-0][start-1]e[/end-1]l[start-3]l[/temp-end-3][/temp-end-0][start-2][start-continue-0][start-continue-3]o[/end-3][/end-0], W[/end-2]orld!'
+            );
+        });
+
+        it('location', () => {
+            const source = '1\n2\r3\r\n4';
+            const ranges = source.split('').map((c, idx) => ({ type: 'test', start: idx, end: idx + 1 }));
+            const actual = print(source, ranges, {
+                ranges: {
+                    test: {
+                        open({ offset, line, column }) {
+                            return '[' + [offset, line, column].join(':') + ']';
+                        },
+                        close({ offset, line, column }) {
+                            return '[/' + [offset, line, column].join(':') + ']';
+                        }
+                    }
+                }
+            });
+
+            assert.strictEqual(actual, [
+                '[0:1:1]1[/1:1:2][1:1:2]\n' +
+                '[/2:2:1][2:2:1]2[/3:2:2][3:2:2]\r' +
+                '[/4:3:1][4:3:1]3[/5:3:2][5:3:2]\r[/6:3:3][6:3:3]\n' +
+                '[/7:4:1][7:4:1]4[/8:4:2]'
+            ].join(''));
+        });
     });
 
     [

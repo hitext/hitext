@@ -58,7 +58,7 @@ const lineNumber = {
     ranges: hitext.genLines,
     printer: {
         html: {
-            open(num) { return num + ' | ' }
+            open({ line }) { return line + ' | ' }
         }
     }
 };
@@ -105,7 +105,7 @@ console.log(
     hitext()
         .use(hitext.genLines, {
             html: {
-                open: (num) => `<span title="line #${num}">`,
+                open: ({ line }) => `<span title="line #${line}">`,
                 close: () => '</span>'
             }
         })
@@ -123,7 +123,7 @@ console.log(
     hitext()
         .use(hitext.genLineContents, {
             html: {
-                open: (num) => `<span title="line #${num}">`,
+                open: ({ line }) => `<span title="line #${line}">`,
                 close: () => '</span>'
             }
         })
@@ -141,7 +141,7 @@ console.log(
     hitext()
         .use(hitext.genNewLines, {
             html: {
-                open: (num) => `<span title="line #${num}">`,
+                open: ({ line }) => `<span title="line #${line}">`,
                 close: () => '</span>'
             }
         })
@@ -156,7 +156,7 @@ console.log(
 const hitext = require('hitext');
 const matchPrinter = {
     html: {
-        open: (num) => `<span class="match">`,
+        open: () => `<span class="match">`,
         close: () => '</span>'
     }
 };
@@ -184,8 +184,8 @@ console.log(
 hitext
     .use(whatever, {
         html: {
-            open: data => '<span class="example">',
-            close: data => '</span>'
+            open: () => '<span class="example">',
+            close: () => '</span>'
         }
     })
     .printer('html');
@@ -208,9 +208,9 @@ hitext
         tty({ createStyleMap }) => createStyleMap({
             foo: 'green',
             bar: ['bgWhite', 'red']
-        }, data => {
+        }, ({ data }) => {
             // specify the way how to transform data to map key
-            // when this argument is not specified `data => data` is using
+            // when this argument is not specified `({ data }) => data` is using
             return data.magickField;
         })
     })

@@ -7,8 +7,8 @@ const genA = (source, createRange) => createRange(0, 4, 'a');
 const genB = (source, createRange) => createRange(4, 8, 'b');
 const printer = {
     html: {
-        open: marker => '<' + marker + '>',
-        close: marker => '</' + marker + '>'
+        open: ({ data: marker }) => '<' + marker + '>',
+        close: ({ data: marker }) => '</' + marker + '>'
     }
 };
 const pluginA = {

@@ -7,13 +7,28 @@ function ensureFunction(value, alt) {
 
 module.exports = function print(source, ranges, printer) {
     const print = ensureFunction(printer.print, chunk => chunk);
-    const context = ensureFunction(printer.createContext)();
+    const printContext = Object.assign(
+        Object.defineProperties(Object.create(null), {
+            offset: { get: () => printedOffset },
+            line: {   get: () => line },
+            column: { get: () => column },
+            start: {  get: () => currentRange.start },
+            end: {    get: () => currentRange.end },
+            data: {   get: () => currentRange.data }
+        }),
+        ensureFunction(printer.createContext)()
+    );
     const openedRanges = [];
+    let currentRange = { start: 0, end: source.length };
     let rangeHooks = printer.ranges || {};
-    let hookPriority = [];
-    let buffer = ensureFunction(printer.open, emptyString)(context);
+    let rangePriority = [];
     let closingOffset = Infinity;
     let printedOffset = 0;
+    let line = 1;
+    let column = 1;
+    let buffer = '';
+
+    buffer += ensureFunction(printer.open, emptyString)(printContext);
 
     // preprocess range hooks
     rangeHooks = [].concat(
@@ -27,7 +42,7 @@ module.exports = function print(source, ranges, printer) {
         }
 
         if (rangeHook) {
-            hookPriority.push(type);
+            rangePriority.push(type);
             result[type] = {
                 open: ensureFunction(rangeHook.open, emptyString),
                 close: ensureFunction(rangeHook.close, emptyString),
@@ -43,22 +58,35 @@ module.exports = function print(source, ranges, printer) {
         (a, b) =>
             a.start - b.start ||
             b.end - a.end ||
-            hookPriority.indexOf(a.type) - hookPriority.indexOf(b.type)
+            rangePriority.indexOf(a.type) - rangePriority.indexOf(b.type)
     );
 
     // main part
-    const open = index => rangeHooks[openedRanges[index].type].open(openedRanges[index].data, context) || '';
-    const close = index => rangeHooks[openedRanges[index].type].close(openedRanges[index].data, context) || '';
-    const printSource = (offset) => {
+    const open = index => rangeHooks[(currentRange = openedRanges[index]).type].open(printContext) || '';
+    const close = index => rangeHooks[(currentRange = openedRanges[index]).type].close(printContext) || '';
+    const printChunk = (offset) => {
         if (printedOffset !== offset) {
+            const substring = source.substring(printedOffset, offset);
             const printSubstr = openedRanges.length ? rangeHooks[openedRanges[openedRanges.length - 1].type].print : print;
-            buffer += printSubstr(source.substring(printedOffset, offset), context);
+
+            for (let i = printedOffset; i < offset; i++) {
+                const ch = source.charCodeAt(i);
+
+                if (ch === 0x0a /* \n */ || (ch === 0x0d /* \r */ && (i >= source.length || source.charCodeAt(i + 1) !== 0x0a))) {
+                    line++;
+                    column = 1;
+                } else {
+                    column++;
+                }
+            }
+
+            buffer += printSubstr(substring, printContext);
             printedOffset = offset;
         }
     };
     const closeRanges = (offset) => {
         while (closingOffset <= offset) {
-            printSource(closingOffset);
+            printChunk(closingOffset);
 
             for (let j = openedRanges.length - 1; j >= 0; j--) {
                 if (openedRanges[j].end !== closingOffset) {
@@ -93,7 +121,7 @@ module.exports = function print(source, ranges, printer) {
         }
 
         closeRanges(range.start);
-        printSource(range.start);
+        printChunk(range.start);
 
         for (j = 0; j < openedRanges.length; j++) {
             if (openedRanges[j].end < range.end) {
@@ -116,7 +144,7 @@ module.exports = function print(source, ranges, printer) {
     }
 
     closeRanges(source.length);
-    printSource(source.length);
+    printChunk(source.length);
 
     // print ranges out of source boundaries
     for (let i = openedRanges.length - 1; i >= 0; i--) {
@@ -124,7 +152,7 @@ module.exports = function print(source, ranges, printer) {
     }
 
     // finish printing
-    buffer += ensureFunction(printer.close, emptyString)(context) || '';
+    buffer += ensureFunction(printer.close, emptyString)(printContext) || '';
 
     return buffer;
 };

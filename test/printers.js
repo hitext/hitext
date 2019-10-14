@@ -40,13 +40,13 @@ describe('build-in printers', () => {
                     ],
                     hitext.printer.tty.fork({
                         ranges: {
+                            spotlight({ createStyle }) {
+                                return createStyle('bgBlue', 'white');
+                            },
                             syntax({ createStyleMap }) {
                                 return createStyleMap(
                                     { 'value': 'cyan' }
                                 );
-                            },
-                            spotlight({ createStyle }) {
-                                return createStyle('bgBlue', 'white');
                             },
                             color({ createStyleMap }) {
                                 return createStyleMap([
@@ -54,7 +54,7 @@ describe('build-in printers', () => {
                                     'red',
                                     'yellow',
                                     'blue'
-                                ], data => data.length - 1);
+                                ], ({ data }) => data.length - 1);
                             }
                         }
                     })
