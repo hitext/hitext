@@ -22,12 +22,12 @@ const pluginB = {
 
 describe('basic', () => {
     it('should print', () => {
-        assert.equal(hitext().decorate('Hi!'), 'Hi!');
+        assert.equal(hitext().print('Hi!'), 'Hi!');
     });
 
     it('hitext(plugins, printerType)', () => {
         assert.equal(
-            hitext([pluginA, pluginB], 'html').decorate(source),
+            hitext([pluginA, pluginB], 'html').print(source),
             expected
         );
     });
@@ -36,7 +36,7 @@ describe('basic', () => {
         assert.equal(
             hitext([pluginA, pluginB])
                 .printer('html')
-                .decorate(source),
+                .print(source),
             expected
         );
     });
@@ -44,7 +44,7 @@ describe('basic', () => {
     it('hitext(generators) as arrays', () => {
         assert.equal(
             hitext([[genA, printer], [{ ranges: genB, printer }]])
-                .decorate(source, 'html'),
+                .print(source, 'html'),
             expected
         );
     });
@@ -54,7 +54,7 @@ describe('basic', () => {
             hitext
                 .use(pluginA)
                 .use(pluginB)
-                .decorate(source, 'html'),
+                .print(source, 'html'),
             expected
         );
     });
@@ -65,19 +65,19 @@ describe('basic', () => {
                 .use(pluginA)
                 .use(pluginB)
                 .printer('html')
-                .decorate(source),
+                .print(source),
             expected
         );
     });
 
     describe('hitext.use()', () => {
         it('should return a decorate function', () => {
-            const decorate = hitext
+            const print = hitext
                 .use({ ranges: genA, printer })
                 .use(pluginB);
 
             assert.equal(
-                decorate(source, 'html'),
+                print(source, 'html'),
                 expected
             );
         });
@@ -88,34 +88,34 @@ describe('basic', () => {
                 .use(pluginB);
 
             assert.equal(
-                pipeline.decorate(source, 'html'),
+                pipeline.print(source, 'html'),
                 expected
             );
         });
 
         it('should take two arguments', () => {
-            const decorate = hitext
+            const print = hitext
                 .use(genA, printer)
                 .use(pluginB);
 
             assert.equal(
-                decorate(source, 'html'),
+                print(source, 'html'),
                 expected
             );
         });
 
         it('should take an array as first argument', () => {
-            const decorate = hitext
+            const print = hitext
                 .use([[0, 4, 'a'], [4, 8, 'b']], printer);
 
             assert.equal(
-                decorate(source, 'html'),
+                print(source, 'html'),
                 expected
             );
         });
 
         it('second argument should override plugin\'s default printer', () => {
-            const decorate = hitext
+            const print = hitext
                 .use(pluginA, {
                     html: {
                         open: () => '!!',
@@ -124,24 +124,24 @@ describe('basic', () => {
                 });
 
             assert.equal(
-                decorate(source, 'html'),
+                print(source, 'html'),
                 '!!1234!/!5678'
             );
         });
 
         it('functional printer\'s extension should be lazy', () => {
             let called = 0;
-            const decorate = hitext
+            const print = hitext
                 .use(genA, {
                     html: () => called++
                 });
 
             assert.equal(called, 0);
 
-            decorate('asd', 'html');
+            print('asd', 'html');
             assert.equal(called, 1);
 
-            decorate('asd', 'html');
+            print('asd', 'html');
             assert.equal(called, 1);
         });
 
@@ -167,7 +167,7 @@ describe('basic', () => {
                 });
 
             assert.equal(
-                pipeline.decorate('abc', 'html'),
+                pipeline.print('abc', 'html'),
                 'a<foo><bar>b</bar></foo>c'
             );
         });

@@ -109,7 +109,7 @@ console.log(
                 close: () => '</span>'
             }
         })
-        .decorate('foo\nbar', 'html')
+        .print('foo\nbar', 'html')
 );
 // '<span title="line #1">foo\n</span><span title="line #2">foo</span>'
 ```
@@ -127,7 +127,7 @@ console.log(
                 close: () => '</span>'
             }
         })
-        .decorate('foo\nbar', 'html')
+        .print('foo\nbar', 'html')
 );
 // '<span title="line #1">foo</span>\n<span title="line #2">foo</span>'
 ```
@@ -145,7 +145,7 @@ console.log(
                 close: () => '</span>'
             }
         })
-        .decorate('foo\nbar', 'html')
+        .print('foo\nbar', 'html')
 );
 // 'foo<span title="line #1">\n</span>foo'
 ```
@@ -164,14 +164,14 @@ const matchPrinter = {
 console.log(
     hitext()
         .use(hitext.genMatches('world'), matchPrinter)
-        .decorate('Hello world! Hello world!', 'html')
+        .print('Hello world! Hello world!', 'html')
 );
 // Hello <span class="match">world</span>! Hello <span class="match">world</span>!
 
 console.log(
     hitext()
         .use(hitext.genMatches(/\w+/), matchPrinter)
-        .decorate('Hello world!', 'html')
+        .print('Hello world!', 'html')
 );
 // <span class="match">Hello</span> <span class="match">world</span>!
 ```

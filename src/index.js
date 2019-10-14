@@ -25,7 +25,7 @@ function preprocessPrinter(marker, printer) {
 }
 
 function pipelineChain(generators, printerSet, defaultPrinterType) {
-    const decorate = (source, printerType) => {
+    const pipeline = (source, printerType) => {
         const printer = printerSet[printerType || defaultPrinterType] || printers.noop;
         const ranges = generateRanges(source, generators);
         const result = print(source, ranges, printer);
@@ -33,8 +33,8 @@ function pipelineChain(generators, printerSet, defaultPrinterType) {
         return result;
     };
 
-    return Object.assign(decorate, {
-        decorate,
+    return Object.assign(pipeline, {
+        print: pipeline,
         generateRanges(source) {
             return generateRanges(source, generators);
         },
@@ -46,7 +46,7 @@ function pipelineChain(generators, printerSet, defaultPrinterType) {
                 : ranges;
 
             if (typeof generate !== 'function') {
-                return decorate; // exception?
+                return pipeline; // exception?
             }
 
             if (!printer) {
@@ -54,7 +54,7 @@ function pipelineChain(generators, printerSet, defaultPrinterType) {
             }
 
             if (!printer) {
-                return decorate; // exception?
+                return pipeline; // exception?
             }
 
             return pipelineChain(
