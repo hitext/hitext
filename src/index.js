@@ -2,41 +2,56 @@ const generators = require('./generator');
 const printers = require('./printer');
 const generateRanges = require('./generateRanges');
 const print = require('./print');
+const emptyString = () => '';
+const defaultPipeline = hitext();
 
-function preprocessGenerator(marker, generate) {
-    return {
-        marker,
-        generate
-    };
+function ensureFunction(value, alt) {
+    return typeof value === 'function' ? value : alt || (() => {});
 }
 
-function preprocessPrinter(marker, printer) {
-    const newPrinter = {};
+function printerFromPipeline(pipeline, printer, printerType) {
+    if (!pipeline.printer) {
+        pipeline.forEach(item => {
+            let rangeHook = item.printers[printerType];
 
-    for (let key in printer) {
-        newPrinter[key] = {
-            ranges: {
-                [marker]: printer[key]
+            if (rangeHook && !rangeHook.norm) {
+                if (typeof rangeHook === 'function') {
+                    rangeHook = printer.createHook(rangeHook);
+                }
+
+                if (rangeHook) {
+                    rangeHook = {
+                        norm: true,
+                        open: ensureFunction(rangeHook.open, emptyString),
+                        close: ensureFunction(rangeHook.close, emptyString),
+                        print: ensureFunction(rangeHook.print, printer.print || (x => x))
+                    };
+                }
+
+                item.printers[printerType] = rangeHook;
             }
-        };
+        });
     }
 
-    return newPrinter;
+    return pipeline.printer;
 }
 
-function pipelineChain(generators, printerSet, defaultPrinterType) {
-    const pipeline = (source, printerType) => {
+function pipelineChain(pipeline, printerSet, defaultPrinterType) {
+    const performAction = (source, printerType) => {
         const printer = printerSet[printerType || defaultPrinterType] || printers.noop;
-        const ranges = generateRanges(source, generators);
-        const result = print(source, ranges, printer);
+        const ranges = generateRanges(source, pipeline, printerType || defaultPrinterType);
+        const result = print(source, ranges, {
+            ...printer,
+            ranges: printerFromPipeline(pipeline, printer, printerType || defaultPrinterType)
+        });
 
         return result;
     };
 
-    return Object.assign(pipeline, {
-        print: pipeline,
-        generateRanges(source) {
-            return generateRanges(source, generators);
+    return Object.assign(performAction, {
+        print: performAction,
+        generateRanges(source, printerType) {
+            return generateRanges(source, pipeline, printerType || defaultPrinterType);
         },
         use(plugin, printer) {
             const marker = Symbol(plugin.name);
@@ -46,7 +61,7 @@ function pipelineChain(generators, printerSet, defaultPrinterType) {
                 : ranges;
 
             if (typeof generate !== 'function') {
-                return pipeline; // exception?
+                return performAction; // exception?
             }
 
             if (!printer) {
@@ -54,17 +69,21 @@ function pipelineChain(generators, printerSet, defaultPrinterType) {
             }
 
             if (!printer) {
-                return pipeline; // exception?
+                return performAction; // exception?
             }
 
             return pipelineChain(
-                generators.concat(preprocessGenerator(marker, generate)),
-                printerSet.fork(preprocessPrinter(marker, printer)),
+                pipeline.concat({
+                    marker,
+                    generate,
+                    printers: Object.assign({}, printer)
+                }),
+                printerSet,
                 defaultPrinterType
             );
         },
         printer(selectedPrinter) {
-            return pipelineChain(generators, printerSet, selectedPrinter);
+            return pipelineChain(pipeline, printerSet, selectedPrinter);
         }
     });
 }
@@ -82,10 +101,7 @@ function hitext(plugins, printerType, printerSet) {
     return pipeline;
 }
 
-module.exports = Object.assign(hitext, {
+module.exports = Object.assign(hitext, defaultPipeline, {
     gen: generators,
-    printer: Object.assign((...args) => hitext().printer(...args), printers),
-    use(...args) {
-        return hitext().use(...args);
-    }
+    printer: Object.assign(defaultPipeline.printer, printers)
 });

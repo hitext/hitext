@@ -1,20 +1,18 @@
 const assert = require('assert');
 const print = require('../src/print');
 
-const testPrinter = {
-    ranges: {
-        test: {
-            open: ({ data: x }) => `<${x}>`,
-            close: ({ data: x }) => `</${x}>`
-        }
-    }
+const testPrinter = {};
+const rangePrinter = {
+    open: ({ data: x }) => `<${x}>`,
+    close: ({ data: x }) => `</${x}>`,
+    print: x => x
 };
 
 const generateRanges = lines =>
     lines.map(line => {
         const m = line.match(/(\S)(\1*)/);
         return {
-            type: 'test',
+            printer: rangePrinter,
             start: m.index,
             end: m.index + m[0].length,
             data: m[1]
@@ -27,9 +25,9 @@ describe('print', () => {
             print(
                 'abc',
                 [
-                    { type: 'test', start: 0, end: 1, data: 'a' },
-                    { type: 'test', start: 1, end: 2, data: 'b' },
-                    { type: 'test', start: 2, end: 3, data: 'c' }
+                    { printer: rangePrinter, start: 0, end: 1, data: 'a' },
+                    { printer: rangePrinter, start: 1, end: 2, data: 'b' },
+                    { printer: rangePrinter, start: 2, end: 3, data: 'c' }
                 ],
                 testPrinter
             ),
@@ -43,7 +41,7 @@ describe('print', () => {
                 'abc',
                 [
                     { type: 'unknown', start: 0, end: 1, data: 'a' },
-                    { type: 'test', start: 1, end: 2, data: 'b' },
+                    { printer: rangePrinter, start: 1, end: 2, data: 'b' },
                     { type: 'uncomplete', start: 2, end: 3, data: 'c' }
                 ],
                 {
@@ -63,9 +61,9 @@ describe('print', () => {
                 print(
                     'abc',
                     [
-                        { type: 'test', start: -9, end: 9, data: 'a' },
-                        { type: 'test', start: -8, end: 1, data: 'b' },
-                        { type: 'test', start: 2, end: 9, data: 'c' }
+                        { printer: rangePrinter, start: -9, end: 9, data: 'a' },
+                        { printer: rangePrinter, start: -8, end: 1, data: 'b' },
+                        { printer: rangePrinter, start: 2, end: 9, data: 'c' }
                     ],
                     testPrinter
                 ),
@@ -78,9 +76,9 @@ describe('print', () => {
                 print(
                     'abc',
                     [
-                        { type: 'test', start: -9, end: -5, data: 'a' },
-                        { type: 'test', start: 1, end: 2, data: 'b' },
-                        { type: 'test', start: 5, end: 9, data: 'c' }
+                        { printer: rangePrinter, start: -9, end: -5, data: 'a' },
+                        { printer: rangePrinter, start: 1, end: 2, data: 'b' },
+                        { printer: rangePrinter, start: 5, end: 9, data: 'c' }
                     ],
                     testPrinter
                 ),
@@ -94,19 +92,19 @@ describe('print', () => {
             print(
                 '1234567890',
                 [
-                    { type: 'test', start: NaN, end: 2, data: 'a' },
-                    { type: 'test', start: undefined, end: 2, data: 'a' },
-                    { type: 'test', start: null, end: 2, data: 'a' },
-                    { type: 'test', start: false, end: 2, data: 'a' },
-                    { type: 'test', start: '1', end: 2, data: 'a' },
-                    { type: 'test', start: 6, end: 3, data: 'b' },
-                    { type: 'test', start: 8, end: NaN, data: 'c' },
-                    { type: 'test', start: 8, end: undefined, data: 'c' },
-                    { type: 'test', start: 8, end: null, data: 'c' },
-                    { type: 'test', start: 8, end: false, data: 'c' },
-                    { type: 'test', start: 8, end: '1', data: 'c' },
-                    { type: 'test', start: NaN, end: NaN, data: 'd' },
-                    { type: 'test', start: 3, end: 6, data: 'e' }
+                    { printer: rangePrinter, start: NaN, end: 2, data: 'a' },
+                    { printer: rangePrinter, start: undefined, end: 2, data: 'a' },
+                    { printer: rangePrinter, start: null, end: 2, data: 'a' },
+                    { printer: rangePrinter, start: false, end: 2, data: 'a' },
+                    { printer: rangePrinter, start: '1', end: 2, data: 'a' },
+                    { printer: rangePrinter, start: 6, end: 3, data: 'b' },
+                    { printer: rangePrinter, start: 8, end: NaN, data: 'c' },
+                    { printer: rangePrinter, start: 8, end: undefined, data: 'c' },
+                    { printer: rangePrinter, start: 8, end: null, data: 'c' },
+                    { printer: rangePrinter, start: 8, end: false, data: 'c' },
+                    { printer: rangePrinter, start: 8, end: '1', data: 'c' },
+                    { printer: rangePrinter, start: NaN, end: NaN, data: 'd' },
+                    { printer: rangePrinter, start: 3, end: 6, data: 'e' }
                 ],
                 testPrinter
             ),
@@ -187,7 +185,7 @@ describe('print', () => {
         const source = 'Hello, World!';
         const ranges = [[1, 5], [1, 2], [4, 8], [3, 5]].map(([start, end], idx) => {
             const range = {
-                type: 'test',
+                printer: rangePrinter,
                 start,
                 end,
                 data: {
@@ -240,7 +238,7 @@ describe('print', () => {
 
         it('location', () => {
             const source = '1\n2\r3\r\n4';
-            const ranges = source.split('').map((c, idx) => ({ type: 'test', start: idx, end: idx + 1 }));
+            const ranges = source.split('').map((c, idx) => ({ printer: rangePrinter, start: idx, end: idx + 1 }));
             const actual = print(source, ranges, {
                 ranges: {
                     test: {

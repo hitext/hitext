@@ -5,6 +5,7 @@ function ensureFunction(value, alt) {
     return typeof value === 'function' ? value : alt || noop;
 }
 
+// NOTE: ranges must be sorted
 module.exports = function print(source, ranges, printer) {
     const print = ensureFunction(printer.print, chunk => chunk);
     const printContext = Object.assign(
@@ -20,54 +21,22 @@ module.exports = function print(source, ranges, printer) {
     );
     const openedRanges = [];
     let currentRange = { start: 0, end: source.length };
-    let rangeHooks = printer.ranges || {};
-    let rangePriority = [];
     let closingOffset = Infinity;
     let printedOffset = 0;
     let line = 1;
     let column = 1;
     let buffer = '';
 
+    // start printing
     buffer += ensureFunction(printer.open, emptyString)(printContext);
 
-    // preprocess range hooks
-    rangeHooks = [].concat(
-        Object.getOwnPropertyNames(rangeHooks),
-        Object.getOwnPropertySymbols(rangeHooks)
-    ).reduce((result, type) => {
-        let rangeHook = rangeHooks[type];
-
-        if (typeof rangeHook === 'function') {
-            rangeHooks[type] = rangeHook = printer.createHook(rangeHook);
-        }
-
-        if (rangeHook) {
-            rangePriority.push(type);
-            result[type] = {
-                open: ensureFunction(rangeHook.open, emptyString),
-                close: ensureFunction(rangeHook.close, emptyString),
-                print: ensureFunction(rangeHook.print, print)
-            };
-        }
-
-        return result;
-    }, {});
-
-    // sort ranges
-    ranges = ranges.slice().sort(
-        (a, b) =>
-            a.start - b.start ||
-            b.end - a.end ||
-            rangePriority.indexOf(a.type) - rangePriority.indexOf(b.type)
-    );
-
     // main part
-    const open = index => rangeHooks[(currentRange = openedRanges[index]).type].open(printContext) || '';
-    const close = index => rangeHooks[(currentRange = openedRanges[index]).type].close(printContext) || '';
+    const open = index => (currentRange = openedRanges[index]).printer.open(printContext) || '';
+    const close = index => (currentRange = openedRanges[index]).printer.close(printContext) || '';
     const printChunk = (offset) => {
         if (printedOffset !== offset) {
             const substring = source.substring(printedOffset, offset);
-            const printSubstr = openedRanges.length ? rangeHooks[openedRanges[openedRanges.length - 1].type].print : print;
+            const printSubstr = openedRanges.length ? openedRanges[openedRanges.length - 1].printer.print : print;
 
             for (let i = printedOffset; i < offset; i++) {
                 const ch = source.charCodeAt(i);
@@ -109,11 +78,6 @@ module.exports = function print(source, ranges, printer) {
     for (let i = 0; i < ranges.length; i++) {
         const range = ranges[i];
         let j = 0;
-
-        // ignore ranges without a type hook
-        if (rangeHooks.hasOwnProperty(range.type) === false) {
-            continue;
-        }
 
         // ignore ranges with wrong start/end values
         if (range.start > range.end || !Number.isFinite(range.start) || !Number.isFinite(range.end)) {
