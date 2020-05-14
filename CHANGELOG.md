@@ -1,4 +1,4 @@
-## next
+## 1.0.0-beta.1 (May 14, 2020)
 
 - Added `hitext.printer.fork()` method to extend/overload a printer set
 - Changed `hitext()` pipeline to return a decorate function (i.e. `hitext(...).use(...).decorate(...)` -> `hitext(...).use(...)(...)`)

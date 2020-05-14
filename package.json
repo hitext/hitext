@@ -1,6 +1,6 @@
 {
   "name": "hitext",
-  "version": "1.0.0-alpha.2",
+  "version": "1.0.0-beta.1",
   "description": "Text decoration done right",
   "repository": "hitext/hitext",
   "author": "Roman Dvornov <rdvornov@gmail.com> (https://github.com/lahmatiy)",
