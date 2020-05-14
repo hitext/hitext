@@ -18,7 +18,7 @@
     "lint-and-test": "npm run lint && npm test",
     "test": "mocha --reporter progress",
     "build": "rollup --config && terser dist/hitext.js --compress --mangle --ecma 6 -o dist/hitext.min.js",
-    "prepublish": "npm run build",
+    "prepublishOnly": "npm run build",
     "coverage": "nyc npm test",
     "travis": "nyc npm run lint-and-test && npm run coveralls",
     "coveralls": "nyc report --reporter=text-lcov | coveralls"
