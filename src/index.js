@@ -85,7 +85,5 @@ function hitext(plugins, printerType, printerSet) {
 module.exports = Object.assign(hitext, {
     gen: generators,
     printer: Object.assign((...args) => hitext().printer(...args), printers),
-    use(...args) {
-        return hitext().use(...args);
-    }
+    use: (...args) => hitext().use(...args)
 });

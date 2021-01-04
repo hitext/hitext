@@ -17,10 +17,10 @@
     "lint": "eslint src test",
     "lint-and-test": "npm run lint && npm test",
     "test": "mocha --reporter ${REPORTER:-progress}",
-    "build": "rollup --config",
     "test:all": "npm run test:src && npm run test:dist",
     "test:src": "npm test",
     "test:dist": "MODE=dist npm test && MODE=dist-min npm test",
+    "build": "node build",
     "build-and-test": "npm run build && npm run test:dist",
     "prepublishOnly": "npm run build",
     "coverage": "nyc npm test",
@@ -31,14 +31,11 @@
     "ansi-styles": "^3.2.1"
   },
   "devDependencies": {
-    "@rollup/plugin-commonjs": "^11.0.2",
-    "@rollup/plugin-node-resolve": "^7.1.1",
     "coveralls": "^3.0.11",
+    "esbuild": "^0.8.29",
     "eslint": "^6.5.1",
     "mocha": "^7.2.0",
-    "nyc": "^15.1.0",
-    "rollup": "^1.32.1",
-    "rollup-plugin-terser": "^5.3.1"
+    "nyc": "^15.1.0"
   },
   "engines": {
     "node": ">=8.0.0"

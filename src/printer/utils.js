@@ -1,11 +1,14 @@
+const printers = new WeakSet();
+
 function createPrinter(base) {
     return forkPrinter.call(null, base);
 }
 
 function forkPrinter(extension) {
-    const base = this === global ? {} : this || {};
+    const base = printers.has(this) ? this : {};
     const newPrinter = {};
 
+    printers.add(newPrinter);
     Object.assign(newPrinter, base, extension, {
         fork: forkPrinter.bind(newPrinter),
         ranges: Object.assign({}, base.ranges, extension && extension.ranges)
