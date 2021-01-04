@@ -1,5 +1,6 @@
 const assert = require('assert');
-const hitext = require('../src');
+const mode = require('./helpers/mode');
+const hitext = require('./helpers/lib');
 const print = require('../src/print');
 
 describe('build-in printers', () => {
@@ -25,9 +26,40 @@ describe('build-in printers', () => {
                 '&lt;br&gt;&amp;amp;'
             );
         });
+
+        it('should be extendable', () => {
+            const ranges = [
+                { type: 'syntax', start: 0, end: 1, data: 'value' },
+                { type: 'spotlight', start: 1, end: 2 },
+                { type: 'match', start: 2, end: 3 }
+            ];
+            const htmlPrinter = hitext.printer.html;
+            const customHtmlPrinter = htmlPrinter.fork({
+                ranges: {
+                    match: {
+                        open() {
+                            return '<custom>';
+                        },
+                        close() {
+                            return '</custom>';
+                        }
+                    }
+                }
+            });
+
+            assert.equal(
+                print('123', ranges, htmlPrinter),
+                '123'
+            );
+            assert.equal(
+                print('123', ranges, customHtmlPrinter),
+                '12<custom>3</custom>'
+            );
+            assert.equal(typeof customHtmlPrinter.fork, 'function');
+        });
     });
 
-    describe('tty', () => {
+    (mode === 'src' ? describe : describe.skip)('tty', () => {
         it('basic', () =>
             assert.equal(
                 print(
@@ -80,37 +112,6 @@ describe('build-in printers', () => {
                 hitext.printer.html.fork();
                 hitext.printer.html.fork({});
             });
-        });
-
-        it('extend html printer', () => {
-            const ranges = [
-                { type: 'syntax', start: 0, end: 1, data: 'value' },
-                { type: 'spotlight', start: 1, end: 2 },
-                { type: 'match', start: 2, end: 3 }
-            ];
-            const htmlPrinter = hitext.printer.html;
-            const customHtmlPrinter = htmlPrinter.fork({
-                ranges: {
-                    match: {
-                        open() {
-                            return '<custom>';
-                        },
-                        close() {
-                            return '</custom>';
-                        }
-                    }
-                }
-            });
-
-            assert.equal(
-                print('123', ranges, htmlPrinter),
-                '123'
-            );
-            assert.equal(
-                print('123', ranges, customHtmlPrinter),
-                '12<custom>3</custom>'
-            );
-            assert.equal(typeof customHtmlPrinter.fork, 'function');
         });
     });
 });

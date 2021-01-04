@@ -1,5 +1,5 @@
 const assert = require('assert');
-const hitext = require('../src');
+const hitext = require('./helpers/lib');
 const generateRanges = require('../src/generateRanges');
 
 function gen(source, generate) {

@@ -1,5 +1,5 @@
 const assert = require('assert');
-const hitext = require('../src');
+const hitext = require('./helpers/lib');
 
 const source = '12345678';
 const expected = '<a>1234</a><b>5678</b>';

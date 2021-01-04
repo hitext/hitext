@@ -1,4 +1,5 @@
 const assert = require('assert');
+const mode = require('./helpers/mode');
 const print = require('../src/print');
 
 const testPrinter = {
@@ -22,6 +23,10 @@ const generateRanges = lines =>
     });
 
 describe('print', () => {
+    if (mode !== 'src') {
+        return;
+    }
+
     it('basic', () => {
         assert.equal(
             print(

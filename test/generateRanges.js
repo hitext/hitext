@@ -1,4 +1,5 @@
 const assert = require('assert');
+const mode = require('./helpers/mode');
 const generateRanges = require('../src/generateRanges');
 const stubGeneratorFactory = (marker, ranges) => ({
     marker,
@@ -7,6 +8,10 @@ const stubGeneratorFactory = (marker, ranges) => ({
 });
 
 describe('genRanges', () => {
+    if (mode !== 'src') {
+        return;
+    }
+
     it('no generators', () => {
         assert.deepEqual(generateRanges('abc', []), []);
     });
