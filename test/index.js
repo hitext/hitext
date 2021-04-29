@@ -1,5 +1,5 @@
-const assert = require('assert');
-const hitext = require('./helpers/lib');
+import { equal } from 'assert';
+import hitext, { use } from './helpers/lib';
 
 const source = '12345678';
 const expected = '<a>1234</a><b>5678</b>';
@@ -22,18 +22,18 @@ const pluginB = {
 
 describe('basic', () => {
     it('should print', () => {
-        assert.equal(hitext().print('Hi!'), 'Hi!');
+        equal(hitext().print('Hi!'), 'Hi!');
     });
 
     it('hitext(plugins, printerType)', () => {
-        assert.equal(
+        equal(
             hitext([pluginA, pluginB], 'html').print(source),
             expected
         );
     });
 
     it('hitext(generators).printer()', () => {
-        assert.equal(
+        equal(
             hitext([pluginA, pluginB])
                 .printer('html')
                 .print(source),
@@ -42,7 +42,7 @@ describe('basic', () => {
     });
 
     it('hitext(generators) as arrays', () => {
-        assert.equal(
+        equal(
             hitext([[genA, printer], [{ ranges: genB, printer }]])
                 .print(source, 'html'),
             expected
@@ -50,9 +50,8 @@ describe('basic', () => {
     });
 
     it('hitext.use()', () => {
-        assert.equal(
-            hitext
-                .use(pluginA)
+        equal(
+            use(pluginA)
                 .use(pluginB)
                 .print(source, 'html'),
             expected
@@ -60,9 +59,8 @@ describe('basic', () => {
     });
 
     it('hitext().use().printer()', () => {
-        assert.equal(
-            hitext
-                .use(pluginA)
+        equal(
+            use(pluginA)
                 .use(pluginB)
                 .printer('html')
                 .print(source),
@@ -72,58 +70,53 @@ describe('basic', () => {
 
     describe('hitext.use()', () => {
         it('should return a decorate function', () => {
-            const print = hitext
-                .use({ ranges: genA, printer })
+            const print = use({ ranges: genA, printer })
                 .use(pluginB);
 
-            assert.equal(
+            equal(
                 print(source, 'html'),
                 expected
             );
         });
 
         it('with set { generator, printer }', () => {
-            const pipeline = hitext
-                .use({ ranges: genA, printer })
+            const pipeline = use({ ranges: genA, printer })
                 .use(pluginB);
 
-            assert.equal(
+            equal(
                 pipeline.print(source, 'html'),
                 expected
             );
         });
 
         it('should take two arguments', () => {
-            const print = hitext
-                .use(genA, printer)
+            const print = use(genA, printer)
                 .use(pluginB);
 
-            assert.equal(
+            equal(
                 print(source, 'html'),
                 expected
             );
         });
 
         it('should take an array as first argument', () => {
-            const print = hitext
-                .use([[0, 4, 'a'], [4, 8, 'b']], printer);
+            const print = use([[0, 4, 'a'], [4, 8, 'b']], printer);
 
-            assert.equal(
+            equal(
                 print(source, 'html'),
                 expected
             );
         });
 
         it('second argument should override plugin\'s default printer', () => {
-            const print = hitext
-                .use(pluginA, {
-                    html: {
-                        open: () => '!!',
-                        close: () => '!/!'
-                    }
-                });
+            const print = use(pluginA, {
+                html: {
+                    open: () => '!!',
+                    close: () => '!/!'
+                }
+            });
 
-            assert.equal(
+            equal(
                 print(source, 'html'),
                 '!!1234!/!5678'
             );
@@ -131,31 +124,29 @@ describe('basic', () => {
 
         it('functional printer\'s extension should be lazy', () => {
             let called = 0;
-            const print = hitext
-                .use(genA, {
-                    html: () => called++
-                });
+            const print = use(genA, {
+                html: () => called++
+            });
 
-            assert.equal(called, 0);
-
-            print('asd', 'html');
-            assert.equal(called, 1);
+            equal(called, 0);
 
             print('asd', 'html');
-            assert.equal(called, 1);
+            equal(called, 1);
+
+            print('asd', 'html');
+            equal(called, 1);
         });
 
         it('compose printers', () => {
-            const pipeline = hitext
-                .use({
-                    ranges: [[1, 2]],
-                    printer: {
-                        html: {
-                            open: () => '<foo>',
-                            close: () => '</foo>'
-                        }
+            const pipeline = use({
+                ranges: [[1, 2]],
+                printer: {
+                    html: {
+                        open: () => '<foo>',
+                        close: () => '</foo>'
                     }
-                })
+                }
+            })
                 .use({
                     ranges: [[1, 2]],
                     printer: {
@@ -166,7 +157,7 @@ describe('basic', () => {
                     }
                 });
 
-            assert.equal(
+            equal(
                 pipeline.print('abc', 'html'),
                 'a<foo><bar>b</bar></foo>c'
             );

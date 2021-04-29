@@ -1,13 +1,15 @@
+import type { Printer, Range, PrinterRangeHooksMap, PrinterHookContext } from './types.d.js';
+
 const emptyString = () => '';
 const noop = function() {};
 
-function ensureFunction(value, alt) {
+function ensureFunction(value: any, alt?: Function): Function {
     return typeof value === 'function' ? value : alt || noop;
 }
 
-module.exports = function print(source, ranges, printer) {
-    const print = ensureFunction(printer.print, chunk => chunk);
-    const printContext = Object.assign(
+export default function print(source: string, ranges: Range[], printer: Printer) {
+    const print = ensureFunction(printer.print, (chunk: string) => chunk);
+    const printContext: PrinterHookContext = Object.assign(
         Object.defineProperties(Object.create(null), {
             offset: { get: () => printedOffset },
             line: {   get: () => line },
@@ -18,10 +20,10 @@ module.exports = function print(source, ranges, printer) {
         }),
         ensureFunction(printer.createContext)()
     );
-    const openedRanges = [];
-    let currentRange = { start: 0, end: source.length };
-    let rangeHooks = printer.ranges || {};
-    let rangePriority = [];
+    const openedRanges: Array<Range> = [];
+    let currentRange = { type: Symbol(), start: 0, end: source.length, data: undefined };
+    let rangeHooks2 = printer.ranges || {};
+    let rangePriority: Array<symbol | string> = [];
     let closingOffset = Infinity;
     let printedOffset = 0;
     let line = 1;
@@ -31,11 +33,11 @@ module.exports = function print(source, ranges, printer) {
     buffer += ensureFunction(printer.open, emptyString)(printContext);
 
     // preprocess range hooks
-    rangeHooks = [].concat(
-        Object.getOwnPropertyNames(rangeHooks),
-        Object.getOwnPropertySymbols(rangeHooks)
+    const rangeHooks: PrinterRangeHooksMap = [].concat(
+        Object.getOwnPropertyNames(rangeHooks2),
+        Object.getOwnPropertySymbols(rangeHooks2)
     ).reduce((result, type) => {
-        let rangeHook = rangeHooks[type];
+        let rangeHook = rangeHooks2[type];
 
         if (typeof rangeHook === 'function') {
             rangeHooks[type] = rangeHook = printer.createHook(rangeHook);
@@ -51,7 +53,7 @@ module.exports = function print(source, ranges, printer) {
         }
 
         return result;
-    }, {});
+    }, Object.create(null) as PrinterRangeHooksMap);
 
     // sort ranges
     ranges = ranges.slice().sort(
@@ -62,7 +64,7 @@ module.exports = function print(source, ranges, printer) {
     );
 
     // main part
-    const open = index => rangeHooks[(currentRange = openedRanges[index]).type].open(printContext) || '';
+    const open = (index: number) => rangeHooks[(currentRange = openedRanges[index]).type].open(printContext) || '';
     const close = index => rangeHooks[(currentRange = openedRanges[index]).type].close(printContext) || '';
     const printChunk = (offset) => {
         if (printedOffset !== offset) {

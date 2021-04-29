@@ -1,6 +1,6 @@
-const assert = require('assert');
-const hitext = require('./helpers/lib');
-const generateRanges = require('../src/generateRanges');
+import { deepEqual } from 'assert';
+import { gen as _gen } from './helpers/lib.js';
+import generateRanges from '../lib/generateRanges.mjs';
 
 function gen(source, generate) {
     return generateRanges(source, [{
@@ -12,10 +12,10 @@ function gen(source, generate) {
 describe('build-in generators', () => {
     describe('match', () => {
         it('using string', () =>
-            assert.deepEqual(
+            deepEqual(
                 gen(
                     'Hello world! Hello world!',
-                    hitext.gen.matches('world')
+                    _gen.matches('world')
                 ),
                 [
                     { type: 'test', start: 6, end: 11, data: undefined },
@@ -25,10 +25,10 @@ describe('build-in generators', () => {
         );
 
         it('using regexp', () =>
-            assert.deepEqual(
+            deepEqual(
                 gen(
                     'Hello world!',
-                    hitext.gen.matches(/\w+/)
+                    _gen.matches(/\w+/)
                 ),
                 [
                     { type: 'test', start: 0, end: 5, data: undefined },
@@ -38,10 +38,10 @@ describe('build-in generators', () => {
         );
 
         it('using regexp with flags', () =>
-            assert.deepEqual(
+            deepEqual(
                 gen(
                     'Hello world!',
-                    hitext.gen.matches(/hello|world/ig)
+                    _gen.matches(/hello|world/ig)
                 ),
                 [
                     { type: 'test', start: 0, end: 5, data: undefined },
@@ -51,10 +51,10 @@ describe('build-in generators', () => {
         );
 
         it('using non-string and non-regexp value', () =>
-            assert.deepEqual(
+            deepEqual(
                 gen(
                     '1234567890',
-                    hitext.gen.matches(234)
+                    _gen.matches(234)
                 ),
                 [
                     { type: 'test', start: 1, end: 4, data: undefined }
@@ -65,10 +65,10 @@ describe('build-in generators', () => {
 
     describe('line', () => {
         it('new-line ending input', () =>
-            assert.deepEqual(
+            deepEqual(
                 gen(
                     '\na\rbb\r\nccc\n\r',
-                    hitext.gen.lines
+                    _gen.lines
                 ),
                 [
                     { type: 'test', start: 0, end: 1, data: 1 },
@@ -82,10 +82,10 @@ describe('build-in generators', () => {
         );
 
         it('non-new-line ending input', () =>
-            assert.deepEqual(
+            deepEqual(
                 gen(
                     '\na\rbb\r\nccc\n\rdddd',
-                    hitext.gen.lines
+                    _gen.lines
                 ),
                 [
                     { type: 'test', start: 0, end: 1, data: 1 },
@@ -101,10 +101,10 @@ describe('build-in generators', () => {
 
     describe('lineContent', () => {
         it('new-line ending input', () =>
-            assert.deepEqual(
+            deepEqual(
                 gen(
                     '\na\rbb\r\nccc\n\r',
-                    hitext.gen.lineContents
+                    _gen.lineContents
                 ),
                 [
                     { type: 'test', start: 0, end: 0, data: 1 },
@@ -118,10 +118,10 @@ describe('build-in generators', () => {
         );
 
         it('non-new-line ending input', () =>
-            assert.deepEqual(
+            deepEqual(
                 gen(
                     '\na\rbb\r\nccc\n\rdddd',
-                    hitext.gen.lineContents
+                    _gen.lineContents
                 ),
                 [
                     { type: 'test', start: 0, end: 0, data: 1 },
@@ -137,10 +137,10 @@ describe('build-in generators', () => {
 
     describe('newLine', () => {
         it('new-line ending input', () =>
-            assert.deepEqual(
+            deepEqual(
                 gen(
                     '\na\rbb\r\nccc\n\r',
-                    hitext.gen.newlines
+                    _gen.newlines
                 ),
                 [
                     { type: 'test', start: 0, end: 1, data: 1 },
@@ -153,10 +153,10 @@ describe('build-in generators', () => {
         );
 
         it('non-new-line ending input', () =>
-            assert.deepEqual(
+            deepEqual(
                 gen(
                     '\na\rbb\r\nccc\n\rdddd',
-                    hitext.gen.newlines
+                    _gen.newlines
                 ),
                 [
                     { type: 'test', start: 0, end: 1, data: 1 },

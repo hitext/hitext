@@ -1,6 +1,6 @@
-const assert = require('assert');
-const mode = require('./helpers/mode');
-const print = require('../src/print');
+import { equal, strictEqual } from 'assert';
+import mode from './helpers/mode.js';
+import print from '../lib/print';
 
 const testPrinter = {
     ranges: {
@@ -28,7 +28,7 @@ describe('print', () => {
     }
 
     it('basic', () => {
-        assert.equal(
+        equal(
             print(
                 'abc',
                 [
@@ -43,7 +43,7 @@ describe('print', () => {
     });
 
     it('should be tolerant to unknown token types', () => {
-        assert.equal(
+        equal(
             print(
                 'abc',
                 [
@@ -64,7 +64,7 @@ describe('print', () => {
 
     describe('ranges out of source boundaries', () => {
         it('intersect with boundaries', () => {
-            assert.equal(
+            equal(
                 print(
                     'abc',
                     [
@@ -79,7 +79,7 @@ describe('print', () => {
         });
 
         it('intersect with boundaries', () => {
-            assert.equal(
+            equal(
                 print(
                     'abc',
                     [
@@ -95,7 +95,7 @@ describe('print', () => {
     });
 
     it('should ignore ranges with bad start/end', () => {
-        assert.equal(
+        equal(
             print(
                 '1234567890',
                 [
@@ -129,12 +129,12 @@ describe('print', () => {
         const a = { type: 'a', start: 1, end: 2, data: 'a' };
         const b = { type: 'b', start: 1, end: 2, data: 'b' };
 
-        assert.equal(
+        equal(
             print('123', [a, b], printer),
             print('123', [b, a], printer)
         );
 
-        assert.equal(
+        equal(
             print('123', [b, a], printer),
             '1<a><b>2</b></a>3'
         );
@@ -145,7 +145,7 @@ describe('print', () => {
         const b = { type: 'b', start: 2, end: 3 };
         const c = { type: 'c', start: 3, end: 4 };
 
-        assert.equal(
+        equal(
             print('123456', [a, b, c], {
                 ranges: {
                     a: {
@@ -171,7 +171,7 @@ describe('print', () => {
             { type: 'a', start: 8, end: 10 }
         ];
 
-        assert.equal(
+        equal(
             print('1234567890', ranges, {
                 print: chunk => chunk.replace(/./g, '_'),
                 ranges: {
@@ -217,7 +217,7 @@ describe('print', () => {
                 }
             });
 
-            assert.strictEqual(
+            strictEqual(
                 actual,
                 'H[ok][ok]e[/ok]l[ok]l[/ok][/ok][ok][ok][ok]o[/ok][/ok], W[/ok]orld!'
             );
@@ -237,7 +237,7 @@ describe('print', () => {
                 }
             });
 
-            assert.strictEqual(
+            strictEqual(
                 actual,
                 'H[start-0][start-1]e[/end-1]l[start-3]l[/temp-end-3][/temp-end-0][start-2][start-continue-0][start-continue-3]o[/end-3][/end-0], W[/end-2]orld!'
             );
@@ -259,7 +259,7 @@ describe('print', () => {
                 }
             });
 
-            assert.strictEqual(actual, [
+            strictEqual(actual, [
                 '[0:1:1]1[/1:1:2][1:1:2]\n' +
                 '[/2:2:1][2:2:1]2[/3:2:2][3:2:2]\r' +
                 '[/4:3:1][4:3:1]3[/5:3:2][5:3:2]\r[/6:3:3][6:3:3]\n' +
@@ -382,7 +382,7 @@ describe('print', () => {
         }
     ].forEach(test =>
         it('case\n|' + test.ranges.join('|\n|') + '|', () => {
-            assert.equal(
+            equal(
                 print(
                     '1234567890',
                     generateRanges(test.ranges),

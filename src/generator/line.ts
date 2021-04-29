@@ -1,6 +1,6 @@
-const { newLineLength } = require('./utils');
+import { newLineLength } from './utils';
 
-module.exports = (source, createRange) => {
+export default (source: string, createRange: (start: number, end: number, data: number) => void) => {
     let line = 1;
     let lineStart = 0;
 

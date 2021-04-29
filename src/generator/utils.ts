@@ -1,4 +1,4 @@
-function newLineLength(source, i) {
+export function newLineLength(source: string, i: number) {
     switch (source.charCodeAt(i)) {
         default:
             return 0;
@@ -12,7 +12,3 @@ function newLineLength(source, i) {
                 : 1; // \r
     }
 }
-
-module.exports = {
-    newLineLength
-};

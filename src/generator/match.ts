@@ -1,10 +1,10 @@
-module.exports = function(pattern) {
+export default function(pattern: string | RegExp) {
     if (pattern instanceof RegExp) {
         const flags = pattern.flags.indexOf('g') !== -1 ? pattern.flags : pattern.flags + 'g';
         const matchRx = new RegExp(pattern, flags);
 
-        return function(source, createRange) {
-            let match;
+        return function(source: string, createRange: (start: number, end: number) => void) {
+            let match: RegExpExecArray;
 
             while (match = matchRx.exec(source)) {
                 createRange(match.index, match.index + match[0].length);
@@ -13,7 +13,7 @@ module.exports = function(pattern) {
     }
 
     pattern = String(pattern);
-    return function(source, createRange) {
+    return function(source: string, createRange: (start: number, end: number) => void) {
         let index = -1;
 
         while (true) {

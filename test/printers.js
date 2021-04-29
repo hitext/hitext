@@ -1,12 +1,12 @@
-const assert = require('assert');
-const mode = require('./helpers/mode');
-const hitext = require('./helpers/lib');
-const print = require('../src/print');
+import { equal, doesNotThrow } from 'assert';
+import mode from './helpers/mode.js';
+import { printer as _printer } from './helpers/lib';
+import print from '../lib/print';
 
 describe('build-in printers', () => {
     describe('html', () => {
         it('basic', () =>
-            assert.equal(
+            equal(
                 print(
                     'abc',
                     [
@@ -14,15 +14,15 @@ describe('build-in printers', () => {
                         { type: 'spotlight', start: 1, end: 2 },
                         { type: 'match', start: 2, end: 3 }
                     ],
-                    hitext.printer.html
+                    _printer.html
                 ),
                 'abc'
             )
         );
 
         it('should escape special chars', () => {
-            assert.equal(
-                print('<br>&amp;', [], hitext.printer.html),
+            equal(
+                print('<br>&amp;', [], _printer.html),
                 '&lt;br&gt;&amp;amp;'
             );
         });
@@ -33,7 +33,7 @@ describe('build-in printers', () => {
                 { type: 'spotlight', start: 1, end: 2 },
                 { type: 'match', start: 2, end: 3 }
             ];
-            const htmlPrinter = hitext.printer.html;
+            const htmlPrinter = _printer.html;
             const customHtmlPrinter = htmlPrinter.fork({
                 ranges: {
                     match: {
@@ -47,21 +47,21 @@ describe('build-in printers', () => {
                 }
             });
 
-            assert.equal(
+            equal(
                 print('123', ranges, htmlPrinter),
                 '123'
             );
-            assert.equal(
+            equal(
                 print('123', ranges, customHtmlPrinter),
                 '12<custom>3</custom>'
             );
-            assert.equal(typeof customHtmlPrinter.fork, 'function');
+            equal(typeof customHtmlPrinter.fork, 'function');
         });
     });
 
     (mode === 'src' ? describe : describe.skip)('tty', () => {
         it('basic', () =>
-            assert.equal(
+            equal(
                 print(
                     '1234',
                     [
@@ -70,7 +70,7 @@ describe('build-in printers', () => {
                         { type: 'match', start: 2, end: 3 },
                         { type: 'color', start: 3, end: 4, data: 'foo' }
                     ],
-                    hitext.printer.tty.fork({
+                    _printer.tty.fork({
                         ranges: {
                             spotlight({ createStyle }) {
                                 return createStyle('bgBlue', 'white');
@@ -98,19 +98,19 @@ describe('build-in printers', () => {
 
     describe('fork printer', () => {
         it('all default printers have a fork method', () => {
-            for (var name in hitext.printer) {
-                const printer = hitext.printer[name];
+            for (var name in _printer) {
+                const printer = _printer[name];
 
                 if (typeof printer !== 'function') {
-                    assert.equal(typeof printer.fork, 'function');
+                    equal(typeof printer.fork, 'function');
                 }
             }
         });
 
         it('should support a fork with no changes', () => {
-            assert.doesNotThrow(() => {
-                hitext.printer.html.fork();
-                hitext.printer.html.fork({});
+            doesNotThrow(() => {
+                _printer.html.fork();
+                _printer.html.fork({});
             });
         });
     });

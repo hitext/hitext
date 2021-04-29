@@ -1,6 +1,7 @@
-const assert = require('assert');
-const mode = require('./helpers/mode');
-const generateRanges = require('../src/generateRanges');
+import { deepEqual } from 'assert';
+import mode from './helpers/mode.js';
+import generateRanges from '../lib/generateRanges.mjs';
+
 const stubGeneratorFactory = (marker, ranges) => ({
     marker,
     generate: (source, createRange) =>
@@ -13,11 +14,11 @@ describe('genRanges', () => {
     }
 
     it('no generators', () => {
-        assert.deepEqual(generateRanges('abc', []), []);
+        deepEqual(generateRanges('abc', []), []);
     });
 
     it('single decorator', () => {
-        assert.deepEqual(
+        deepEqual(
             generateRanges('abc', [
                 stubGeneratorFactory(0, [
                     [0, 1, '1'],
@@ -30,7 +31,7 @@ describe('genRanges', () => {
     });
 
     it('several generators', () => {
-        assert.deepEqual(
+        deepEqual(
             generateRanges('abc', [
                 stubGeneratorFactory(0, [
                     [0, 1, '1'],

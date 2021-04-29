@@ -3,3 +3,5 @@
 /.cache/
 /node_modules/
 /coverage/
+/lib/
+/tsc/

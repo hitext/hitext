@@ -1,1 +1,1 @@
-module.exports = process.env.MODE || 'src';
+export default process.env.MODE || 'src';
