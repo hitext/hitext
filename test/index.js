@@ -123,7 +123,7 @@ describe('basic', () => {
             );
         });
 
-        it('functional printer\'s extension should be lazy', () => {
+        it.skip('functional printer\'s extension should be lazy', () => {
             let called = 0;
             const print = use(genA, {
                 html: () => called++

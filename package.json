@@ -31,23 +31,20 @@
     "test:esm": "npm test -- lib-test/*.js",
     "test:dist": "npm test -- dist/test",
     "transpile": "node scripts/transpile.cjs",
-    "transpile-and-test": "npm run transpile && npm run test:esm",
-    "build": "node scripts/build",
-    "build-and-test": "npm run build && npm run test:dist",
-    "prepublishOnly": "npm run build",
-    "coverage": "nyc npm test",
-    "travis": "nyc npm run lint-and-test && npm run coveralls",
-    "coveralls": "nyc report --reporter=text-lcov | coveralls"
+    "transpile-and-test": "npm run transpile && npm run test:all",
+    "bundle": "node scripts/bundle",
+    "bundle-and-test": "npm run bundle && npm run test:dist",
+    "prepublishOnly": "npm run transpile-and-test && npm run bundle-and-test",
+    "coverage": "c8 --reporter=lcovonly npm run test:all"
   },
   "dependencies": {
     "ansi-styles": "^5.2.0"
   },
   "devDependencies": {
-    "coveralls": "^3.0.11",
+    "c8": "^7.11.0",
     "esbuild": "^0.18.16",
     "eslint": "^8.45.0",
-    "mocha": "^10.2.0",
-    "nyc": "^15.1.0",
+    "mocha": "^9.2.2",
     "rollup": "^2.67.3",
     "sucrase": "^3.34.0",
     "typescript": "^5.1.6"

@@ -20,8 +20,8 @@ export function forkPrinter<Context>(from: Printer | null, extension: PrinterExt
             : fn => fn(),
         fork: (extension?: PrinterExtension) => forkPrinter(newPrinter, extension),
         ranges: {
-            ...base?.ranges,
-            ...extension?.ranges
+            ...base && base.ranges,
+            ...extension && extension.ranges
         }
     };
 

@@ -66,8 +66,8 @@ export default function print(source: string, ranges: Range[], printer: Printer)
     );
 
     // main part
-    const open = (index: number) => rangeHooks[(currentRange = openedRanges[index]).type].open?.(printContext) || '';
-    const close = (index: number) => rangeHooks[(currentRange = openedRanges[index]).type].close?.(printContext) || '';
+    const open = (index: number) => rangeHooks[(currentRange = openedRanges[index]).type].open(printContext) || '';
+    const close = (index: number) => rangeHooks[(currentRange = openedRanges[index]).type].close(printContext) || '';
     const printChunk = (offset) => {
         if (printedOffset !== offset) {
             const substring = source.substring(printedOffset, offset);
