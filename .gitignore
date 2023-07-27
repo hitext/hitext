@@ -4,4 +4,4 @@
 /node_modules/
 /coverage/
 /lib/
-/tsc/
+/lib-test/

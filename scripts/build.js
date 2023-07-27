@@ -18,10 +18,10 @@ const log = async (outfile, fn) => {
 const banner = { js: `(function (global, factory) {
   typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
   typeof define === 'function' && define.amd ? define(factory) :
-  (global = global || self, global.hitext = factory());
-}(this, (function () { 'use strict';` };
+  (global.hitext = factory());
+}(typeof globalThis != 'undefined' ? globalThis : typeof window != 'undefined' ? window : typeof global != 'undefined' ? global : typeof self != 'undefined' ? self : this, (function () {` };
 const footer = { js: `
-  return exports;
+  return exports.default;
 })));` };
 const plugins = [{
     name: 'replace',
@@ -38,14 +38,14 @@ async function build() {
     // bundle
     await log('dist/hitext.js', (outfile) => esbuild.build({
         entryPoints: ['src/index.ts'],
-        target: ['es2018'],
+        target: ['es2020'],
         format: 'iife',
         globalName: 'exports',
         outfile,
+        // write: false,
         banner,
         footer,
         bundle: true,
-        // metafile: 'dist/hitext.meta.json',
         plugins
     }));
 
@@ -53,27 +53,8 @@ async function build() {
     await log('dist/hitext.min.js', (outfile) => esbuild.build({
         entryPoints: ['dist/hitext.js'],
         outfile,
-        format: 'cjs',
+        format: 'iife',
         minify: true
-    }));
-
-    // commonjs modules
-    const meta = JSON.parse(fs.readFileSync('./dist/hitext.meta.json'));
-    await log('lib', () => esbuild.build({
-        entryPoints: Object.keys(meta.inputs),
-        format: 'cjs',
-        target: ['es2018'],
-        outdir: 'lib'
-    }));
-
-    await log('lib', () => esbuild.build({
-        entryPoints: Object.keys(meta.inputs),
-        format: 'esm',
-        target: ['es2018'],
-        outdir: 'lib',
-        outExtension: {
-            '.js': '.mjs'
-        }
     }));
 }
 

@@ -10,12 +10,13 @@
     "decoration"
   ],
   "type": "module",
-  "main": "./lib/index.js",
-  "module": "./lib/index.mjs",
+  "main": "./lib/index.cjs",
+  "module": "./lib/index.js",
   "exports": {
-    "esm": "./lib/index.mjs",
-    "import": "./lib/index.mjs",
-    "require": "./lib/index.cjs"
+    ".": {
+      "import": "./lib/index.js",
+      "require": "./lib/index.cjs"
+    }
   },
   "browser": {
     "./src/printer/tty.ts": "./src/printer/noop.ts"
@@ -23,11 +24,15 @@
   "scripts": {
     "lint": "eslint src test",
     "lint-and-test": "npm run lint && npm test",
+    "ts-check": "tsc --noEmit",
     "test": "mocha --reporter ${REPORTER:-progress}",
-    "test:all": "npm run test:src && npm run test:dist",
-    "test:src": "npm test",
-    "test:dist": "MODE=dist npm test && MODE=dist-min npm test",
-    "build": "node build",
+    "test:all": "npm run test:cjs && npm run test:esm",
+    "test:cjs": "npm test -- lib-test/*.cjs",
+    "test:esm": "npm test -- lib-test/*.js",
+    "test:dist": "npm test -- dist/test",
+    "transpile": "node scripts/transpile.cjs",
+    "transpile-and-test": "npm run transpile && npm run test:esm",
+    "build": "node scripts/build",
     "build-and-test": "npm run build && npm run test:dist",
     "prepublishOnly": "npm run build",
     "coverage": "nyc npm test",
@@ -39,18 +44,19 @@
   },
   "devDependencies": {
     "coveralls": "^3.0.11",
-    "esbuild": "^0.14.23",
-    "eslint": "^8.9.0",
-    "mocha": "^9.2.1",
+    "esbuild": "^0.18.16",
+    "eslint": "^8.45.0",
+    "mocha": "^10.2.0",
     "nyc": "^15.1.0",
-    "typescript": "^4.5.5"
+    "rollup": "^2.67.3",
+    "sucrase": "^3.34.0",
+    "typescript": "^5.1.6"
   },
   "engines": {
     "node": ">=8.0.0"
   },
   "files": [
     "dist",
-    "lib",
-    "src"
+    "lib"
   ]
 }
