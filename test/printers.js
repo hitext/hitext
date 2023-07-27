@@ -1,7 +1,6 @@
 import { equal, doesNotThrow } from 'assert';
-import mode from './helpers/mode.js';
-import { printer as _printer } from './helpers/lib';
-import print from '../lib/print';
+import hitext from 'hitext';
+import print from '../src/print.js';
 
 describe('build-in printers', () => {
     describe('html', () => {
@@ -14,7 +13,7 @@ describe('build-in printers', () => {
                         { type: 'spotlight', start: 1, end: 2 },
                         { type: 'match', start: 2, end: 3 }
                     ],
-                    _printer.html
+                    hitext.printer.html
                 ),
                 'abc'
             )
@@ -22,7 +21,7 @@ describe('build-in printers', () => {
 
         it('should escape special chars', () => {
             equal(
-                print('<br>&amp;', [], _printer.html),
+                print('<br>&amp;', [], hitext.printer.html),
                 '&lt;br&gt;&amp;amp;'
             );
         });
@@ -33,7 +32,7 @@ describe('build-in printers', () => {
                 { type: 'spotlight', start: 1, end: 2 },
                 { type: 'match', start: 2, end: 3 }
             ];
-            const htmlPrinter = _printer.html;
+            const htmlPrinter = hitext.printer.html;
             const customHtmlPrinter = htmlPrinter.fork({
                 ranges: {
                     match: {
@@ -59,7 +58,7 @@ describe('build-in printers', () => {
         });
     });
 
-    (mode === 'src' ? describe : describe.skip)('tty', () => {
+    describe('tty', () => {
         it('basic', () =>
             equal(
                 print(
@@ -70,7 +69,7 @@ describe('build-in printers', () => {
                         { type: 'match', start: 2, end: 3 },
                         { type: 'color', start: 3, end: 4, data: 'foo' }
                     ],
-                    _printer.tty.fork({
+                    hitext.printer.tty.fork({
                         ranges: {
                             spotlight({ createStyle }) {
                                 return createStyle('bgBlue', 'white');
@@ -98,8 +97,8 @@ describe('build-in printers', () => {
 
     describe('fork printer', () => {
         it('all default printers have a fork method', () => {
-            for (var name in _printer) {
-                const printer = _printer[name];
+            for (var name in hitext.printer) {
+                const printer = hitext.printer[name];
 
                 if (typeof printer !== 'function') {
                     equal(typeof printer.fork, 'function');
@@ -109,8 +108,8 @@ describe('build-in printers', () => {
 
         it('should support a fork with no changes', () => {
             doesNotThrow(() => {
-                _printer.html.fork();
-                _printer.html.fork({});
+                hitext.printer.html.fork();
+                hitext.printer.html.fork({});
             });
         });
     });

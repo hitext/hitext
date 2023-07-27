@@ -1,31 +1,39 @@
-import type { Printer, PrinterExtension, PrinterSet } from '../types.d.js';
+import type { Printer, PrinterExtension, PrinterHookContext, PrinterSet } from '../types.d.js';
 
 const hasOwnProperty = Object.hasOwnProperty;
 const printers: WeakSet<Printer> = new WeakSet();
 
-export function createPrinter(base: PrinterExtension = null): Printer {
-    return forkPrinter.call(null, base);
+export function createPrinter<Context>(base: PrinterExtension | null = null): Printer {
+    return forkPrinter<Context>(null, base);
 }
 
-export function forkPrinter(this: Printer | null, extension: PrinterExtension): Printer {
-    const base = printers.has(this) ? this : {} as PrinterExtension;
-    const newPrinter: PrinterExtension = {};
+export function forkPrinter<Context>(from: Printer | null, extension: PrinterExtension | null = null): Printer {
+    const base = from && printers.has(from) ? from : null;
+    const adoptedExtension = {
+        ...base,
+        ...extension
+    };
+    const newPrinter: Printer<PrinterHookContext & Context> = {
+        ...adoptedExtension,
+        createHook: typeof adoptedExtension.createHook === 'function'
+            ? adoptedExtension.createHook
+            : fn => fn(),
+        fork: (extension?: PrinterExtension) => forkPrinter(newPrinter, extension),
+        ranges: {
+            ...base?.ranges,
+            ...extension?.ranges
+        }
+    };
 
-    Object.assign(newPrinter, base, extension, {
-        fork: forkPrinter.bind(newPrinter),
-        ranges: Object.assign({}, base.ranges, extension && extension.ranges)
+    printers.add(newPrinter);
+
+    return newPrinter;
+}
+
+export function forkPrinterSet(this: PrinterSet | void, extension: { [key: string]: Printer | PrinterExtension; }) {
+    const newPrinterSet: PrinterSet = Object.assign(Object.create(null), this, {
+        fork: (extension) => forkPrinterSet.call(newPrinterSet, extension)
     });
-
-    if (typeof newPrinter.createHook !== 'function') {
-        newPrinter.createHook = fn => fn();
-    }
-
-    printers.add(newPrinter as Printer);
-    return newPrinter as Printer;
-}
-
-export function forkPrinterSet(extension: { [key: string]: Printer | PrinterExtension; }) {
-    const newPrinterSet: PrinterSet = Object.assign(Object.create(null), this);
 
     for (let key in extension) {
         const typePrinter = extension[key];
@@ -37,14 +45,12 @@ export function forkPrinterSet(extension: { [key: string]: Printer | PrinterExte
         if (hasOwnProperty.call(newPrinterSet, key)) {
             const existing = newPrinterSet[key];
             newPrinterSet[key] = existing && typeof existing.fork === 'function'
-                ? existing.fork(extension[key])
+                ? existing.fork(typePrinter)
                 : existing;
         } else {
-            newPrinterSet[key] = createPrinter(extension[key]);
+            newPrinterSet[key] = createPrinter(typePrinter);
         }
     }
-
-    newPrinterSet.fork = forkPrinterSet.bind(newPrinterSet);
 
     return newPrinterSet;
 }

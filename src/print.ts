@@ -3,8 +3,8 @@ import type { Printer, Range, PrinterRangeHooksMap, PrinterHookContext } from '.
 const emptyString = () => '';
 const noop = function() {};
 
-function ensureFunction(value: any, alt?: Function): Function {
-    return typeof value === 'function' ? value : alt || noop;
+function ensureFunction<T extends Function>(value: T | undefined, alt: T) {
+    return typeof value === 'function' ? value : alt;
 }
 
 export default function print(source: string, ranges: Range[], printer: Printer) {
@@ -12,16 +12,17 @@ export default function print(source: string, ranges: Range[], printer: Printer)
     const printContext: PrinterHookContext = Object.assign(
         Object.defineProperties(Object.create(null), {
             offset: { get: () => printedOffset },
-            line: {   get: () => line },
+            line:   { get: () => line },
             column: { get: () => column },
-            start: {  get: () => currentRange.start },
-            end: {    get: () => currentRange.end },
-            data: {   get: () => currentRange.data }
+            start:  { get: () => currentRange.start },
+            end:    { get: () => currentRange.end },
+            data:   { get: () => currentRange.data }
         }),
-        ensureFunction(printer.createContext)()
+        ensureFunction(printer.createContext, noop)()
     );
     const openedRanges: Array<Range> = [];
-    let currentRange = { type: Symbol(), start: 0, end: source.length, data: undefined };
+    const nullType = Symbol('root');
+    let currentRange: Range = { type: nullType, start: 0, end: source.length, data: undefined };
     let rangeHooks2 = printer.ranges || {};
     let rangePriority: Array<symbol | string> = [];
     let closingOffset = Infinity;
@@ -33,14 +34,15 @@ export default function print(source: string, ranges: Range[], printer: Printer)
     buffer += ensureFunction(printer.open, emptyString)(printContext);
 
     // preprocess range hooks
-    const rangeHooks: PrinterRangeHooksMap = [].concat(
-        Object.getOwnPropertyNames(rangeHooks2),
-        Object.getOwnPropertySymbols(rangeHooks2)
-    ).reduce((result, type) => {
+    const rangeHooks: PrinterRangeHooksMap = [
+        ...Object.getOwnPropertyNames(rangeHooks2),
+        ...Object.getOwnPropertySymbols(rangeHooks2)
+    ].reduce((result, type) => {
         let rangeHook = rangeHooks2[type];
 
         if (typeof rangeHook === 'function') {
-            rangeHooks[type] = rangeHook = printer.createHook(rangeHook);
+            console.log('???', rangeHook);
+            rangeHook = printer.createHook(rangeHook);
         }
 
         if (rangeHook) {
@@ -64,12 +66,14 @@ export default function print(source: string, ranges: Range[], printer: Printer)
     );
 
     // main part
-    const open = (index: number) => rangeHooks[(currentRange = openedRanges[index]).type].open(printContext) || '';
-    const close = index => rangeHooks[(currentRange = openedRanges[index]).type].close(printContext) || '';
+    const open = (index: number) => rangeHooks[(currentRange = openedRanges[index]).type].open?.(printContext) || '';
+    const close = (index: number) => rangeHooks[(currentRange = openedRanges[index]).type].close?.(printContext) || '';
     const printChunk = (offset) => {
         if (printedOffset !== offset) {
             const substring = source.substring(printedOffset, offset);
-            const printSubstr = openedRanges.length ? rangeHooks[openedRanges[openedRanges.length - 1].type].print : print;
+            const printSubstr = openedRanges.length
+                ? rangeHooks[openedRanges[openedRanges.length - 1].type].print
+                : print;
 
             for (let i = printedOffset; i < offset; i++) {
                 const ch = source.charCodeAt(i);
@@ -113,7 +117,7 @@ export default function print(source: string, ranges: Range[], printer: Printer)
         let j = 0;
 
         // ignore ranges without a type hook
-        if (rangeHooks.hasOwnProperty(range.type) === false) {
+        if (hasOwnProperty.call(rangeHooks, range.type) === false) {
             continue;
         }
 

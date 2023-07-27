@@ -1,4 +1,4 @@
-import { newLineLength } from './utils';
+import { newLineLength } from './utils.js';
 
 export default (source: string, createRange: (start: number, end: number, data: number) => void) => {
     let line = 1;

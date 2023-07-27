@@ -1,6 +1,5 @@
 import { equal, strictEqual } from 'assert';
-import mode from './helpers/mode.js';
-import print from '../lib/print';
+import print from '../src/print.js';
 
 const testPrinter = {
     ranges: {
@@ -23,10 +22,6 @@ const generateRanges = lines =>
     });
 
 describe('print', () => {
-    if (mode !== 'src') {
-        return;
-    }
-
     it('basic', () => {
         equal(
             print(

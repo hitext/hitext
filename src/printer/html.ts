@@ -1,4 +1,4 @@
-import { createPrinter } from './utils';
+import { createPrinter } from './utils.js';
 
 export default createPrinter({
     print: (chunk: string) => chunk

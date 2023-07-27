@@ -1,6 +1,6 @@
 import { deepEqual } from 'assert';
-import { gen as _gen } from './helpers/lib.js';
-import generateRanges from '../lib/generateRanges.mjs';
+import hitext from '../src/index.js';
+import generateRanges from '../src/generateRanges.js';
 
 function gen(source, generate) {
     return generateRanges(source, [{
@@ -15,7 +15,7 @@ describe('build-in generators', () => {
             deepEqual(
                 gen(
                     'Hello world! Hello world!',
-                    _gen.matches('world')
+                    hitext.gen.matches('world')
                 ),
                 [
                     { type: 'test', start: 6, end: 11, data: undefined },
@@ -28,7 +28,7 @@ describe('build-in generators', () => {
             deepEqual(
                 gen(
                     'Hello world!',
-                    _gen.matches(/\w+/)
+                    hitext.gen.matches(/\w+/)
                 ),
                 [
                     { type: 'test', start: 0, end: 5, data: undefined },
@@ -41,7 +41,7 @@ describe('build-in generators', () => {
             deepEqual(
                 gen(
                     'Hello world!',
-                    _gen.matches(/hello|world/ig)
+                    hitext.gen.matches(/hello|world/ig)
                 ),
                 [
                     { type: 'test', start: 0, end: 5, data: undefined },
@@ -54,7 +54,7 @@ describe('build-in generators', () => {
             deepEqual(
                 gen(
                     '1234567890',
-                    _gen.matches(234)
+                    hitext.gen.matches(234)
                 ),
                 [
                     { type: 'test', start: 1, end: 4, data: undefined }
@@ -68,7 +68,7 @@ describe('build-in generators', () => {
             deepEqual(
                 gen(
                     '\na\rbb\r\nccc\n\r',
-                    _gen.lines
+                    hitext.gen.lines
                 ),
                 [
                     { type: 'test', start: 0, end: 1, data: 1 },
@@ -85,7 +85,7 @@ describe('build-in generators', () => {
             deepEqual(
                 gen(
                     '\na\rbb\r\nccc\n\rdddd',
-                    _gen.lines
+                    hitext.gen.lines
                 ),
                 [
                     { type: 'test', start: 0, end: 1, data: 1 },
@@ -104,7 +104,7 @@ describe('build-in generators', () => {
             deepEqual(
                 gen(
                     '\na\rbb\r\nccc\n\r',
-                    _gen.lineContents
+                    hitext.gen.lineContents
                 ),
                 [
                     { type: 'test', start: 0, end: 0, data: 1 },
@@ -121,7 +121,7 @@ describe('build-in generators', () => {
             deepEqual(
                 gen(
                     '\na\rbb\r\nccc\n\rdddd',
-                    _gen.lineContents
+                    hitext.gen.lineContents
                 ),
                 [
                     { type: 'test', start: 0, end: 0, data: 1 },
@@ -140,7 +140,7 @@ describe('build-in generators', () => {
             deepEqual(
                 gen(
                     '\na\rbb\r\nccc\n\r',
-                    _gen.newlines
+                    hitext.gen.newlines
                 ),
                 [
                     { type: 'test', start: 0, end: 1, data: 1 },
@@ -156,7 +156,7 @@ describe('build-in generators', () => {
             deepEqual(
                 gen(
                     '\na\rbb\r\nccc\n\rdddd',
-                    _gen.newlines
+                    hitext.gen.newlines
                 ),
                 [
                     { type: 'test', start: 0, end: 1, data: 1 },

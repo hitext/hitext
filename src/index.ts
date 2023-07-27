@@ -1,9 +1,19 @@
-import * as generators from './generator/index';
-import printers from './printer/index';
-import type { createRange, Plugin, PluginRef, Marker, Generator, Range, PrinterSet, generateRanges as GenerateRanges } from './types.d.js';
-import noop from './printer/noop';
-import generateRanges from './generateRanges';
-import print from './print';
+import * as generators from './generator/index.js';
+import printers from './printer/index.js';
+import noop from './printer/noop.js';
+import generateRanges from './generateRanges.js';
+import print from './print.js';
+import type {
+    createRange,
+    Plugin,
+    PluginRef,
+    Marker,
+    Generator,
+    Range,
+    PrinterSet,
+    GenerateRanges,
+    PrinterSetExtension
+} from './types.d.js';
 
 function preprocessGenerator(marker: Marker, generate: GenerateRanges): Generator {
     return {
@@ -12,10 +22,10 @@ function preprocessGenerator(marker: Marker, generate: GenerateRanges): Generato
     };
 }
 
-function preprocessPrinter(marker: Marker, printer) {
-    const newPrinter = {};
+function preprocessPrinter(marker: Marker, printer: PrinterSetExtension) {
+    const newPrinter: PrinterSetExtension = {};
 
-    for (let key in printer) {
+    for (const key in printer) {
         newPrinter[key] = {
             ranges: {
                 [marker]: printer[key]
@@ -26,27 +36,27 @@ function preprocessPrinter(marker: Marker, printer) {
     return newPrinter;
 }
 
-interface Pipeline {
-    (source: string, printerType?: string): string;
-    print(source: string, printerType?: string): string;
+interface Pipeline<T, K> {
+    (source: string, printerType?: K): string;
+    use(plugin: Plugin | GenerateRanges, printer?: PrinterSetExtension): Pipeline<T, K>;
+    printer(printerType: K): Pipeline<T, K>;
+    print(source: string, printerType?: K): string;
     generateRanges(source: string): Range[];
-    use(plugin: Plugin | GenerateRanges, printer?: string): Pipeline;
-    printer(selectedPrinter: string): Pipeline;
 };
 
-function pipelineChain(
+function pipelineChain<T extends PrinterSet, K extends Extract<keyof T, string>>(
     generators: Generator[],
-    printerSet: PrinterSet,
-    defaultPrinterType: keyof typeof printerSet
-): Pipeline {
-    const pipeline = (source: string, printerType?: string) => {
-        const printer = printerSet[printerType || defaultPrinterType] || noop;
+    printerSet: T,
+    defaultPrinterType: K
+): Pipeline<T, K> {
+    const printSource = (source: string, printerType = defaultPrinterType) => {
+        const printer = printerSet[printerType] || noop;
         const ranges = generateRanges(source, generators);
         const result = print(source, ranges, printer);
 
         return result;
     };
-    const use = (plugin: Plugin | GenerateRanges, printer?: string) => {
+    const use = (plugin: Plugin | GenerateRanges, printer?: PrinterSetExtension) => {
         if (typeof plugin === 'function') {
             plugin = { name: undefined, ranges: plugin };
         }
@@ -58,7 +68,7 @@ function pipelineChain(
             : ranges;
 
         if (typeof generate !== 'function') {
-            return pipeline as Pipeline; // exception?
+            return printSource as Pipeline; // exception?
         }
 
         if (!printer) {
@@ -66,7 +76,7 @@ function pipelineChain(
         }
 
         if (!printer) {
-            return pipeline as Pipeline; // exception?
+            return printSource as Pipeline; // exception?
         }
 
         return pipelineChain(
@@ -76,14 +86,14 @@ function pipelineChain(
         );
     }
 
-    return Object.assign(pipeline, {
-        print: pipeline,
+    return Object.assign(printSource, {
+        use,
+        printer(printerType: K) {
+            return pipelineChain(generators, printerSet, printerType);
+        },
+        print: printSource,
         generateRanges(source: string) {
             return generateRanges(source, generators);
-        },
-        use,
-        printer(selectedPrinter: string) {
-            return pipelineChain(generators, printerSet, selectedPrinter);
         }
     });
 }
@@ -93,7 +103,9 @@ function hitext(plugins?: PluginRef[], printerType?: string, printerSet?: Printe
 
     if (Array.isArray(plugins)) {
         pipeline = plugins.reduce(
-            (pipeline, plugin) => Array.isArray(plugin) ? pipeline.use(...plugin) : pipeline.use(plugin),
+            (pipeline, plugin) => Array.isArray(plugin)
+                ? pipeline.use(...plugin as [Plugin, PrinterSetExtension])
+                : pipeline.use(plugin),
             pipeline
         );
     }

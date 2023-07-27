@@ -1,6 +1,7 @@
 import { equal } from 'assert';
-import hitext, { use } from './helpers/lib';
+import hitext from 'hitext';
 
+const use = hitext.use;
 const source = '12345678';
 const expected = '<a>1234</a><b>5678</b>';
 const genA = (source, createRange) => createRange(0, 4, 'a');

@@ -1,6 +1,5 @@
 import { deepEqual } from 'assert';
-import mode from './helpers/mode.js';
-import generateRanges from '../lib/generateRanges.mjs';
+import generateRanges from '../src/generateRanges.js';
 
 const stubGeneratorFactory = (marker, ranges) => ({
     marker,
@@ -9,10 +8,6 @@ const stubGeneratorFactory = (marker, ranges) => ({
 });
 
 describe('genRanges', () => {
-    if (mode !== 'src') {
-        return;
-    }
-
     it('no generators', () => {
         deepEqual(generateRanges('abc', []), []);
     });

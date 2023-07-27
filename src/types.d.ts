@@ -1,6 +1,6 @@
 export type Marker = symbol;
 export type createRange = (start: number, end: number, data?: any) => void;
-export type generateRanges = (source: string, createRange: createRange) => void;
+export type GenerateRanges = (source: string, createRange: createRange) => void;
 export type RangeTuple = [start: number, end: number, data?: any];
 export interface Range {
     type: Marker;
@@ -10,14 +10,14 @@ export interface Range {
 }
 export interface Generator {
     marker: Marker,
-    generate: generateRanges
+    generate: GenerateRanges
 }
 
-export type PluginRef = Plugin | generateRanges | [Plugin, Printer];
+export type PluginRef = Plugin | GenerateRanges | [Plugin, PrinterSetExtension];
 export interface Plugin {
     name: string | undefined;
-    ranges: generateRanges | RangeTuple[];
-    printer?(): void;
+    ranges: GenerateRanges | RangeTuple[];
+    printer?: PrinterSetExtension;
 }
 
 export interface PrinterHook {
@@ -35,12 +35,12 @@ export interface PrinterHookContext {
 }
 export type PrinterExtension = Partial<Printer>;
 export type PrinterRangeHooksMap = {
-    [key: string | symbol]: PrinterHook | Function;
+    [key: string | symbol]: PrinterHook;
 };
-export interface Printer {
-    open(context: PrinterHookContext): string;
-    close(context: PrinterHookContext): string;
-    print?(chunk: string, context: PrinterHookContext): string;
+export interface Printer<T = PrinterHookContext> {
+    open?(context: T): string;
+    close?(context: T): string;
+    print?(chunk: string, context: T): string;
     createContext?(): any;
     fork: (extension?: PrinterExtension) => Printer;
     ranges: PrinterRangeHooksMap;

@@ -1,6 +1,5 @@
-import { color, bgColor } from 'ansi-styles';
-import type { EscapeCode } from 'ansi-styles/escape-code';
-import { createPrinter } from './utils';
+import ansiStyles from 'ansi-styles';
+import { createPrinter } from './utils.js';
 import type { PrinterHookContext } from '../types.d.js';
 
 const initialStyle = createStyle('reset');
@@ -15,7 +14,7 @@ const createStyleFetcherUtils = {
     }
 };
 
-type StyleMod = keyof EscapeCode.Color | keyof EscapeCode.BackgroundColor | 'reset';
+type StyleMod = keyof ansiStyles.ForegroundColor | keyof ansiStyles.BackgroundColor | 'reset';
 type StyleModMap = { [key: string]: StyleMod | StyleMod[] };
 type Style = {
     color?: string;
@@ -25,12 +24,12 @@ type Style = {
 function createStyle(...style: StyleMod[]): Style {
     return style.reduce((result: Style, name) => {
         switch (true) {
-            case name in color:
-                result.color = color[name].open;
+            case name in ansiStyles.color:
+                result.color = ansiStyles.color[name].open;
                 break;
 
-            case name in bgColor:
-                result.bgColor = bgColor[name].open;
+            case name in ansiStyles.bgColor:
+                result.bgColor = ansiStyles.bgColor[name].open;
                 break;
 
             case name === 'reset':
@@ -83,7 +82,7 @@ interface TtyPrinterContext extends PrinterHookContext {
 export default createPrinter({
     createContext() {
         const stack: Style[] = [];
-        let currentStyle: Style | undefined = initialStyle;
+        let currentStyle: Style = initialStyle;
         let printedStyle = {};
 
         return {
@@ -92,7 +91,7 @@ export default createPrinter({
                 currentStyle = Object.assign({}, currentStyle, style);
             },
             popStyle() {
-                currentStyle = stack.pop();
+                currentStyle = stack.pop() || currentStyle;
             },
             styleToPrint() {
                 if (printedStyle !== currentStyle) {
