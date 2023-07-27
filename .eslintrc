@@ -1,4 +1,4 @@
-{
+{    
     "env": {
         "node": true,
         "mocha": true,
@@ -6,18 +6,26 @@
     },
     "parserOptions": {
         "sourceType": "module",
-        "ecmaVersion": 2018
+        "ecmaVersion": 2020
     },
+    "parser": "@typescript-eslint/parser",
+    "plugins": ["@typescript-eslint"],
+    "extends": [
+        "plugin:@typescript-eslint/eslint-recommended",
+        "plugin:@typescript-eslint/recommended"
+      ],
     "rules": {
         "no-duplicate-case": 2,
-        "no-undef": 2,
-        "no-unused-vars": [
+        "@typescript-eslint/ban-types": "off",
+        "@typescript-eslint/no-explicit-any": "off",
+        "@typescript-eslint/no-unused-vars": [
             2,
             {
                 "vars": "all",
                 "args": "after-used"
             }
         ],
+        "no-undef": 2,
         "no-empty": [
             2,
             {

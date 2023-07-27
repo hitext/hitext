@@ -84,7 +84,7 @@ function pipelineChain<T extends PrinterSet, K extends Extract<keyof T, string>>
             printerSet.fork(preprocessPrinter(marker, printer)),
             defaultPrinterType
         );
-    }
+    };
 
     return Object.assign(printSource, {
         use,

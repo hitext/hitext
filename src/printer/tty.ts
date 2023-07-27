@@ -48,7 +48,7 @@ function createStyle(...style: StyleMod[]): Style {
 function createStyleMap(map: StyleModMap): { [key: string]: Style } {
     const result = {};
 
-    for (let key in map) {
+    for (const key in map) {
         const value = map[key];
         result[key] = Array.isArray(value) ? createStyle(...value) : createStyle(value);
     }
@@ -59,7 +59,7 @@ function createStyleMap(map: StyleModMap): { [key: string]: Style } {
 function styleToPrint(current: Style, next: Style = {}) {
     let modifiers = '';
 
-    for (let key in current) {
+    for (const key in current) {
         if (current[key] !== next[key]) {
             switch (key) {
                 case 'color':
@@ -123,7 +123,7 @@ export default createPrinter({
 
     createHook(createStyleFetcherFn) {
         const styleFetcher = createStyleFetcherFn(createStyleFetcherUtils);
-    
+
         return {
             open(context: TtyPrinterContext) {
                 context.pushStyle(styleFetcher(context) || {});

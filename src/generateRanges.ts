@@ -6,7 +6,7 @@ export default function generateRanges(source: string, generators: Generator[]) 
     generators.forEach(({ generate, marker }) =>
         generate(
             source,
-            (start: number, end: number, data: any) => ranges.push({ type: marker, start, end, data })
+            (start: number, end: number, data: unknown) => ranges.push({ type: marker, start, end, data })
         )
     );
 

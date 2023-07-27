@@ -12,19 +12,19 @@ export default function print(source: string, ranges: Range[], printer: Printer)
     const printContext: PrinterHookContext = Object.assign(
         Object.defineProperties(Object.create(null), {
             offset: { get: () => printedOffset },
-            line:   { get: () => line },
+            line: { get: () => line },
             column: { get: () => column },
-            start:  { get: () => currentRange.start },
-            end:    { get: () => currentRange.end },
-            data:   { get: () => currentRange.data }
+            start: { get: () => currentRange.start },
+            end: { get: () => currentRange.end },
+            data: { get: () => currentRange.data }
         }),
         ensureFunction(printer.createContext, noop)()
     );
     const openedRanges: Array<Range> = [];
     const nullType = Symbol('root');
     let currentRange: Range = { type: nullType, start: 0, end: source.length, data: undefined };
-    let rangeHooks2 = printer.ranges || {};
-    let rangePriority: Array<symbol | string> = [];
+    const rangeHooks2 = printer.ranges || {};
+    const rangePriority: Array<symbol | string> = [];
     let closingOffset = Infinity;
     let printedOffset = 0;
     let line = 1;

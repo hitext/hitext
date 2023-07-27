@@ -35,7 +35,7 @@ export function forkPrinterSet(this: PrinterSet | void, extension: { [key: strin
         fork: (extension) => forkPrinterSet.call(newPrinterSet, extension)
     });
 
-    for (let key in extension) {
+    for (const key in extension) {
         const typePrinter = extension[key];
 
         if (!typePrinter || typeof typePrinter !== 'object') {

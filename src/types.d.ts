@@ -52,5 +52,5 @@ export type PrinterSetExtension = {
 export type PrinterSet = {
     [key: string]: Printer;
 } & {
-    fork(extension: PrinterSetExtension): PrinterSet; 
+    fork(extension: PrinterSetExtension): PrinterSet;
 };
