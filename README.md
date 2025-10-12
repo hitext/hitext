@@ -5,10 +5,11 @@
 # HiText
 
 [![NPM version](https://img.shields.io/npm/v/hitext.svg)](https://www.npmjs.com/package/hitext)
-[![Build Status](https://travis-ci.org/hitext/hitext.svg?branch=master)](https://travis-ci.org/hitext/hitext)
 [![Coverage Status](https://coveralls.io/repos/github/hitext/hitext/badge.svg?branch=master)](https://coveralls.io/github/hitext/hitext?branch=master)
 
-HiText is a basis for a text (source code) decoration. The main goal is to provide a universal way to combine libraries decorating text and an output in the required format (HTML, TTY etc). The only prerequsites you need are a source text and set of ranges with some options, the rest will be done by HiText.
+HiText is a basis for a text (source code) decoration. The main goal is to provide a universal way to combine libraries decorating text and an output in the required format (HTML, TTY etc). The only prerequisites you need are a source text and set of ranges with some options, the rest will be done by HiText.
+
+> **Note:** This package is ESM-only and requires Node.js 14.14.0 or higher.
 
 <!-- TOC depthfrom:2 -->
 
@@ -45,15 +46,16 @@ The approach allows to combine any number of decorators (which became range gene
 ## Example
 
 ```js
-const hitext = require('hitext');
-const prism = require('hitext-prism');
+import hitext from 'hitext';
+import prism from 'hitext-prism';
+
 const spotlightRanges = [[6, 11], [19, 24]];
 const spotlightPrinter = {
     html: {
         open() { return '<span class="spotlight">'; },
         close() { return '</span>'; }
     }
-}
+};
 const lineNumber = {
     ranges: hitext.gen.lines,
     printer: {
@@ -99,7 +101,7 @@ Output:
 ### lines
 
 ```js
-const hitext = require('hitext');
+import hitext from 'hitext';
 
 console.log(
     hitext()
@@ -111,13 +113,13 @@ console.log(
         })
         .print('foo\nbar', 'html')
 );
-// '<span title="line #1">foo\n</span><span title="line #2">foo</span>'
+// '<span title="line #1">foo\n</span><span title="line #2">bar</span>'
 ```
 
 ### lineContents
 
 ```js
-const hitext = require('hitext');
+import hitext from 'hitext';
 
 console.log(
     hitext()
@@ -129,13 +131,13 @@ console.log(
         })
         .print('foo\nbar', 'html')
 );
-// '<span title="line #1">foo</span>\n<span title="line #2">foo</span>'
+// '<span title="line #1">foo</span>\n<span title="line #2">bar</span>'
 ```
 
 ### newlines
 
 ```js
-const hitext = require('hitext');
+import hitext from 'hitext';
 
 console.log(
     hitext()
@@ -147,13 +149,14 @@ console.log(
         })
         .print('foo\nbar', 'html')
 );
-// 'foo<span title="line #1">\n</span>foo'
+// 'foo<span title="line #1">\n</span>bar'
 ```
 
 ### matches(pattern)
 
 ```js
-const hitext = require('hitext');
+import hitext from 'hitext';
+
 const matchPrinter = {
     html: {
         open: () => `<span class="match">`,
