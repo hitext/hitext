@@ -29,6 +29,7 @@ This separation makes it trivial to combine any number of decorations without co
     - [Search highlighting](#search-highlighting)
     - [Line numbers](#line-numbers)
     - [Combining decorators](#combining-decorators)
+- [Setup Patterns](#setup-patterns)
 - [Built-in generators](#built-in-generators)
     - [lines](#lines)
     - [lineContents](#linecontents)
@@ -114,17 +115,26 @@ function highlightNumbers(source, createRange) {
 
 ### Printers
 
-A **printer** defines how to render ranges for a specific output format:
+A **printer** defines how to render ranges for a specific output format. Each printer has three hooks:
+
+- `open(context)` - Returns the opening markup/tag for a range
+- `close(context)` - Returns the closing markup/tag for a range
+- `print(chunk, context)` - **Important**: Transforms/escapes text content before output
 
 ```js
 const printer = {
     html: {
         open: (context) => '<span class="number">',
         close: (context) => '</span>',
-        print: (chunk) => chunk  // Optional: transform text chunks
+        print: (chunk) => chunk
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')  // Escape HTML entities!
     }
 };
 ```
+
+> **Why `print` matters:** The `print` hook processes the actual text content. For HTML output, this is where you escape special characters (`<`, `>`, `&`) to prevent breaking your markup. The built-in HTML printer does this automatically.
 
 ### Pipeline
 
@@ -137,6 +147,31 @@ const pipeline = hitext()
     .printer('html');
 
 const result = pipeline(sourceText);
+```
+
+### Plugins
+
+A **plugin** is an object that combines a generator with its printer configuration:
+
+```js
+const myPlugin = {
+    name: 'my-plugin',           // Optional: plugin name for debugging
+    ranges: generatorFunction,   // Generator function or array of ranges
+    printer: {                   // Printer configuration
+        html: { /* ... */ },
+        tty: { /* ... */ }
+    }
+};
+```
+
+You can also use range tuples instead of a generator:
+
+```js
+const plugin = {
+    name: 'highlight-specific',
+    ranges: [[0, 5], [10, 15]],  // Array of [start, end, data?] tuples
+    printer: { /* ... */ }
+};
 ```
 
 ## Examples
@@ -278,6 +313,152 @@ const highlighter = hitext()
 
 const code = '// TODO: Add error handling\n// FIXME: Memory leak here\n// NOTE: Optimize later';
 console.log(highlighter.print(code, 'html'));
+```
+
+## Setup Patterns
+
+HiText supports multiple ways to set up a pipeline, giving you flexibility based on your needs.
+
+### Pattern 1: Direct initialization with plugins array
+
+Pass plugins directly when creating the pipeline:
+
+```js
+import hitext from 'hitext';
+
+const pluginA = {
+    name: 'keywords',
+    ranges: keywordGenerator,
+    printer: keywordPrinter
+};
+
+const pluginB = {
+    name: 'strings',
+    ranges: stringGenerator,
+    printer: stringPrinter
+};
+
+// Initialize with plugins array and printer type
+const pipeline = hitext([pluginA, pluginB], 'html');
+const result = pipeline(sourceCode);
+```
+
+### Pattern 2: Chaining with `.use()`
+
+Build the pipeline step by step:
+
+```js
+import hitext from 'hitext';
+
+const pipeline = hitext()
+    .use(pluginA)
+    .use(pluginB)
+    .printer('html');
+
+const result = pipeline(sourceCode);
+```
+
+### Pattern 3: Using `hitext.use()` shorthand
+
+Skip the empty initialization:
+
+```js
+import hitext from 'hitext';
+
+const pipeline = hitext.use(pluginA)
+    .use(pluginB)
+    .printer('html');
+
+const result = pipeline(sourceCode);
+```
+
+### Pattern 4: Separate generator and printer
+
+Pass generator and printer as separate arguments:
+
+```js
+import hitext from 'hitext';
+
+const pipeline = hitext()
+    .use(generatorFunction, printerConfig)
+    .use(anotherGenerator, anotherPrinter)
+    .printer('html');
+```
+
+### Pattern 5: Plugin with inline configuration
+
+Create plugins on the fly:
+
+```js
+import hitext from 'hitext';
+
+const pipeline = hitext([
+    // Plugin as array: [generator, printer]
+    [myGenerator, myPrinter],
+    
+    // Plugin as object
+    {
+        name: 'inline-plugin',
+        ranges: anotherGenerator,
+        printer: anotherPrinter
+    },
+    
+    // Plugin with range tuples
+    {
+        name: 'static-ranges',
+        ranges: [[0, 10], [20, 30]],
+        printer: highlightPrinter
+    }
+], 'html');
+```
+
+### Pattern 6: Override plugin printer
+
+Override a plugin's default printer when using it:
+
+```js
+import hitext from 'hitext';
+
+// Plugin with default printer
+const plugin = {
+    name: 'my-plugin',
+    ranges: myGenerator,
+    printer: {
+        html: {
+            open: () => '<span>',
+            close: () => '</span>'
+        }
+    }
+};
+
+// Override the printer when using the plugin
+const pipeline = hitext()
+    .use(plugin, {
+        html: {
+            open: () => '<strong>',
+            close: () => '</strong>'
+        }
+    })
+    .printer('html');
+```
+
+### Pattern 7: Set printer later
+
+Define the printer type after building the pipeline:
+
+```js
+import hitext from 'hitext';
+
+// Build pipeline without specifying printer
+const basePipeline = hitext([pluginA, pluginB]);
+
+// Create variants with different printers
+const htmlPipeline = basePipeline.printer('html');
+const ttyPipeline = basePipeline.printer('tty');
+
+// Or specify when calling
+const result1 = basePipeline(sourceCode, 'html');
+const result2 = basePipeline(sourceCode, 'tty');
 ```
 
 ## Built-in generators
