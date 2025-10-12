@@ -1,62 +1,62 @@
 {
-  "name": "hitext",
-  "version": "1.0.0-beta.1",
-  "description": "Text decoration done right",
-  "repository": "hitext/hitext",
-  "author": "Roman Dvornov <rdvornov@gmail.com> (https://github.com/lahmatiy)",
-  "license": "MIT",
-  "keywords": [
-    "text",
-    "decoration"
-  ],
-  "type": "module",
-  "main": "./lib/index.cjs",
-  "module": "./lib/index.js",
-  "exports": {
-    ".": {
-      "import": "./lib/index.js",
-      "require": "./lib/index.cjs"
-    }
-  },
-  "browser": {
-    "./src/printer/tty.ts": "./src/printer/noop.ts"
-  },
-  "scripts": {
-    "lint": "eslint src test",
-    "lint-and-test": "npm run lint && npm test",
-    "ts-check": "tsc --noEmit",
-    "test": "mocha --reporter ${REPORTER:-progress}",
-    "test:all": "npm run test:cjs && npm run test:esm",
-    "test:cjs": "npm test -- lib-test/*.cjs",
-    "test:esm": "npm test -- lib-test/*.js",
-    "test:dist": "npm test -- dist/test",
-    "watch": "npm run transpile -- --watch",
-    "transpile": "node scripts/transpile.cjs",
-    "transpile-and-test": "npm run transpile && npm run test:all",
-    "bundle": "node scripts/bundle",
-    "bundle-and-test": "npm run bundle && npm run test:dist",
-    "prepublishOnly": "npm run transpile-and-test && npm run bundle-and-test",
-    "coverage": "c8 --reporter=lcovonly npm run test:all"
-  },
-  "dependencies": {
-    "ansi-styles": "^5.2.0"
-  },
-  "devDependencies": {
-    "@typescript-eslint/eslint-plugin": "^6.2.0",
-    "@typescript-eslint/parser": "^6.2.0",
-    "c8": "^7.11.0",
-    "esbuild": "^0.25.5",
-    "eslint": "^8.45.0",
-    "mocha": "^9.2.2",
-    "rollup": "^2.67.3",
-    "sucrase": "^3.34.0",
-    "typescript": "^5.8.3"
-  },
-  "engines": {
-    "node": ">=12.20.0"
-  },
-  "files": [
-    "dist",
-    "lib"
-  ]
+    "name": "hitext",
+    "version": "1.0.0-beta.1",
+    "description": "Text decoration done right",
+    "repository": "hitext/hitext",
+    "author": "Roman Dvornov <rdvornov@gmail.com> (https://github.com/lahmatiy)",
+    "license": "MIT",
+    "keywords": [
+        "text",
+        "decoration"
+    ],
+    "type": "module",
+    "main": "./lib/index.cjs",
+    "module": "./lib/index.js",
+    "exports": {
+        ".": {
+            "import": "./lib/index.js",
+            "require": "./lib/index.cjs"
+        }
+    },
+    "browser": {
+        "./src/printer/tty.ts": "./src/printer/noop.ts"
+    },
+    "scripts": {
+        "lint": "eslint src test",
+        "lint-and-test": "npm run lint && npm test",
+        "ts-check": "tsc --noEmit",
+        "test": "mocha --reporter ${REPORTER:-progress}",
+        "test:all": "npm run test:cjs && npm run test:esm",
+        "test:cjs": "npm test -- lib-test/*.cjs",
+        "test:esm": "npm test -- lib-test/*.js",
+        "test:dist": "npm test -- dist/test",
+        "watch": "npm run transpile -- --watch",
+        "transpile": "node scripts/transpile.cjs",
+        "transpile-and-test": "npm run transpile && npm run test:all",
+        "bundle": "node scripts/bundle",
+        "bundle-and-test": "npm run bundle && npm run test:dist",
+        "prepublishOnly": "npm run transpile-and-test && npm run bundle-and-test",
+        "coverage": "c8 --reporter=lcovonly npm run test:all"
+    },
+    "dependencies": {
+        "ansi-styles": "^5.2.0"
+    },
+    "devDependencies": {
+        "@typescript-eslint/eslint-plugin": "^6.2.0",
+        "@typescript-eslint/parser": "^6.2.0",
+        "c8": "^9.1.0",
+        "esbuild": "^0.25.10",
+        "eslint": "^8.45.0",
+        "mocha": "^9.2.2",
+        "rollup": "^2.67.3",
+        "sucrase": "^3.34.0",
+        "typescript": "^5.9.3"
+    },
+    "engines": {
+        "node": ">=14.14.0"
+    },
+    "files": [
+        "dist",
+        "lib"
+    ]
 }
