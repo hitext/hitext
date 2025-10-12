@@ -1,23 +1,26 @@
 import { equal, strictEqual } from 'assert';
 import print from '../src/print.js';
+import type { Printer, Range } from '../src/types.d.js';
 
-const testPrinter = {
+const testPrinter: Printer = {
     ranges: {
         test: {
             open: ({ data: x }) => `<${x}>`,
             close: ({ data: x }) => `</${x}>`
         }
-    }
+    },
+    fork: function(extension) { return testPrinter; },
+    createHook: fn => fn()
 };
 
-const generateRanges = lines =>
+const generateRanges = (lines: string[]): Range[] =>
     lines.map(line => {
         const m = line.match(/(\S)(\1*)/);
         return {
             type: 'test',
-            start: m.index,
-            end: m.index + m[0].length,
-            data: m[1]
+            start: m!.index!,
+            end: m!.index! + m![0].length,
+            data: m![1]
         };
     });
 
@@ -50,7 +53,9 @@ describe('print', () => {
                     ranges: {
                         test: testPrinter.ranges.test,
                         uncomplete: {}
-                    }
+                    },
+                    fork: function(extension) { return testPrinter; },
+                    createHook: (fn: Function) => fn()
                 }
             ),
             'a<b>b</b>c'
@@ -95,16 +100,16 @@ describe('print', () => {
                 '1234567890',
                 [
                     { type: 'test', start: NaN, end: 2, data: 'a' },
-                    { type: 'test', start: undefined, end: 2, data: 'a' },
-                    { type: 'test', start: null, end: 2, data: 'a' },
-                    { type: 'test', start: false, end: 2, data: 'a' },
-                    { type: 'test', start: '1', end: 2, data: 'a' },
+                    { type: 'test', start: undefined as any, end: 2, data: 'a' },
+                    { type: 'test', start: null as any, end: 2, data: 'a' },
+                    { type: 'test', start: false as any, end: 2, data: 'a' },
+                    { type: 'test', start: '1' as any, end: 2, data: 'a' },
                     { type: 'test', start: 6, end: 3, data: 'b' },
                     { type: 'test', start: 8, end: NaN, data: 'c' },
-                    { type: 'test', start: 8, end: undefined, data: 'c' },
-                    { type: 'test', start: 8, end: null, data: 'c' },
-                    { type: 'test', start: 8, end: false, data: 'c' },
-                    { type: 'test', start: 8, end: '1', data: 'c' },
+                    { type: 'test', start: 8, end: undefined as any, data: 'c' },
+                    { type: 'test', start: 8, end: null as any, data: 'c' },
+                    { type: 'test', start: 8, end: false as any, data: 'c' },
+                    { type: 'test', start: 8, end: '1' as any, data: 'c' },
                     { type: 'test', start: NaN, end: NaN, data: 'd' },
                     { type: 'test', start: 3, end: 6, data: 'e' }
                 ],
@@ -115,14 +120,16 @@ describe('print', () => {
     });
 
     it('order of ranges should be independant of generator order', () => {
-        const printer = {
+        const printer: Printer = {
             ranges: {
                 'a': testPrinter.ranges.test,
                 'b': testPrinter.ranges.test
-            }
+            },
+            fork: function(extension) { return printer; },
+            createHook: (fn: Function) => fn()
         };
-        const a = { type: 'a', start: 1, end: 2, data: 'a' };
-        const b = { type: 'b', start: 1, end: 2, data: 'b' };
+        const a: Range = { type: 'a', start: 1, end: 2, data: 'a' };
+        const b: Range = { type: 'b', start: 1, end: 2, data: 'b' };
 
         equal(
             print('123', [a, b], printer),
@@ -136,9 +143,9 @@ describe('print', () => {
     });
 
     it('should be fine when open/close is omitted in printer range hook', () => {
-        const a = { type: 'a', start: 1, end: 2 };
-        const b = { type: 'b', start: 2, end: 3 };
-        const c = { type: 'c', start: 3, end: 4 };
+        const a: Range = { type: 'a', start: 1, end: 2 };
+        const b: Range = { type: 'b', start: 2, end: 3 };
+        const c: Range = { type: 'c', start: 3, end: 4 };
 
         equal(
             print('123456', [a, b, c], {
@@ -148,18 +155,20 @@ describe('print', () => {
                         close: () => '</a>'
                     },
                     b: {
-                        open() {},
-                        close() {}
+                        open() { return ''; },
+                        close() { return ''; }
                     },
                     c: {}
-                }
+                },
+                fork: function(extension) { return testPrinter; },
+                createHook: (fn: Function) => fn()
             }),
             '1<a>2</a>3456'
         );
     });
 
     it('should use range hook print method when defined', () => {
-        const ranges = [
+        const ranges: Range[] = [
             { type: 'a', start: 1, end: 6 },
             { type: 'b', start: 2, end: 5 },
             { type: 'c', start: 3, end: 4 },
@@ -168,16 +177,18 @@ describe('print', () => {
 
         equal(
             print('1234567890', ranges, {
-                print: chunk => chunk.replace(/./g, '_'),
+                print: (chunk: string) => chunk.replace(/./g, '_'),
                 ranges: {
                     a: {
-                        print: chunk => chunk.replace(/./g, 'a')
+                        print: (chunk: string) => chunk.replace(/./g, 'a')
                     },
                     b: {
-                        print: chunk => chunk.replace(/./g, 'b')
+                        print: (chunk: string) => chunk.replace(/./g, 'b')
                     },
                     c: {}
-                }
+                },
+                fork: function(extension) { return testPrinter; },
+                createHook: (fn: Function) => fn()
             }),
             '_ab_ba__aa'
         );
@@ -186,15 +197,15 @@ describe('print', () => {
     describe('print context', () => {
         const source = 'Hello, World!';
         const ranges = [[1, 5], [1, 2], [4, 8], [3, 5]].map(([start, end], idx) => {
-            const range = {
+            const range: Range = {
                 type: 'test',
                 start,
                 end,
                 data: {
                     idx
-                }
+                } as any
             };
-            range.data.test = range.data;
+            (range.data as any).test = range.data;
             return range;
         });
 
@@ -202,14 +213,16 @@ describe('print', () => {
             const actual = print(source, ranges, {
                 ranges: {
                     test: {
-                        open({ data }) {
+                        open({ data }: any) {
                             return '[' + (data.test === data ? 'ok' : 'fail') + ']';
                         },
-                        close({ data }) {
+                        close({ data }: any) {
                             return '[/' + (data.test === data ? 'ok' : 'fail') + ']';
                         }
                     }
-                }
+                },
+                fork: function(extension) { return testPrinter; },
+                createHook: (fn: Function) => fn()
             });
 
             strictEqual(
@@ -222,14 +235,16 @@ describe('print', () => {
             const actual = print(source, ranges, {
                 ranges: {
                     test: {
-                        open({ data: { idx }, start, offset }) {
-                            return '[' + (start === offset ? 'start' : 'start-continue') + '-' + idx + ']';
+                        open({ data, start, offset }: any) {
+                            return '[' + (start === offset ? 'start' : 'start-continue') + '-' + data.idx + ']';
                         },
-                        close({ data: { idx }, end, offset }) {
-                            return '[/' + (end === offset ? 'end' : 'temp-end') + '-' + idx + ']';
+                        close({ data, end, offset }: any) {
+                            return '[/' + (end === offset ? 'end' : 'temp-end') + '-' + data.idx + ']';
                         }
                     }
-                }
+                },
+                fork: function(extension) { return testPrinter; },
+                createHook: (fn: Function) => fn()
             });
 
             strictEqual(
@@ -240,18 +255,24 @@ describe('print', () => {
 
         it('location', () => {
             const source = '1\n2\r3\r\n4';
-            const ranges = source.split('').map((c, idx) => ({ type: 'test', start: idx, end: idx + 1 }));
+            const ranges = source.split('').map((c, idx) => ({ 
+                type: 'test', 
+                start: idx, 
+                end: idx + 1 
+            }));
             const actual = print(source, ranges, {
                 ranges: {
                     test: {
-                        open({ offset, line, column }) {
+                        open({ offset, line, column }: any) {
                             return '[' + [offset, line, column].join(':') + ']';
                         },
-                        close({ offset, line, column }) {
+                        close({ offset, line, column }: any) {
                             return '[/' + [offset, line, column].join(':') + ']';
                         }
                     }
-                }
+                },
+                fork: function(extension) { return testPrinter; },
+                createHook: (fn: Function) => fn()
             });
 
             strictEqual(actual, [

@@ -1,22 +1,25 @@
 import { equal } from 'assert';
-import hitext from 'hitext';
+import hitext from '../src/index.js';
+import type { GenerateRanges, createRange, PrinterSetExtension } from '../src/types.d.js';
 
 const use = hitext.use;
 const source = '12345678';
 const expected = '<a>1234</a><b>5678</b>';
-const genA = (source, createRange) => createRange(0, 4, 'a');
-const genB = (source, createRange) => createRange(4, 8, 'b');
-const printer = {
+const genA: GenerateRanges = (source: string, createRange: createRange) => createRange(0, 4, 'a');
+const genB: GenerateRanges = (source: string, createRange: createRange) => createRange(4, 8, 'b');
+const printer: PrinterSetExtension = {
     html: {
-        open: ({ data: marker }) => '<' + marker + '>',
-        close: ({ data: marker }) => '</' + marker + '>'
+        open: ({ data: marker }: any) => '<' + marker + '>',
+        close: ({ data: marker }: any) => '</' + marker + '>'
     }
 };
 const pluginA = {
+    name: 'pluginA',
     ranges: genA,
     printer
 };
 const pluginB = {
+    name: 'pluginB',
     ranges: genB,
     printer
 };
@@ -44,7 +47,7 @@ describe('basic', () => {
 
     it('hitext(generators) as arrays', () => {
         equal(
-            hitext([[genA, printer], [{ ranges: genB, printer }]])
+            hitext([{ name: 'a', ranges: genA, printer }, { name: undefined, ranges: genB, printer }])
                 .print(source, 'html'),
             expected
         );
@@ -71,7 +74,7 @@ describe('basic', () => {
 
     describe('hitext.use()', () => {
         it('should return a decorate function', () => {
-            const print = use({ ranges: genA, printer })
+            const print = use({ name: 'a', ranges: genA, printer })
                 .use(pluginB);
 
             equal(
@@ -81,7 +84,7 @@ describe('basic', () => {
         });
 
         it('with set { generator, printer }', () => {
-            const pipeline = use({ ranges: genA, printer })
+            const pipeline = use({ name: 'a', ranges: genA, printer })
                 .use(pluginB);
 
             equal(
@@ -91,7 +94,7 @@ describe('basic', () => {
         });
 
         it('should take two arguments', () => {
-            const print = use(genA, printer)
+            const print = use({ name: 'a', ranges: genA, printer })
                 .use(pluginB);
 
             equal(
@@ -101,7 +104,7 @@ describe('basic', () => {
         });
 
         it('should take an array as first argument', () => {
-            const print = use([[0, 4, 'a'], [4, 8, 'b']], printer);
+            const print = use({ name: 'a', ranges: [[0, 4, 'a'], [4, 8, 'b']], printer });
 
             equal(
                 print(source, 'html'),
@@ -127,7 +130,7 @@ describe('basic', () => {
             let called = 0;
             const print = use(genA, {
                 html: () => called++
-            });
+            } as any);
 
             equal(called, 0);
 
@@ -140,6 +143,7 @@ describe('basic', () => {
 
         it('compose printers', () => {
             const pipeline = use({
+                name: 'foo',
                 ranges: [[1, 2]],
                 printer: {
                     html: {
@@ -149,6 +153,7 @@ describe('basic', () => {
                 }
             })
                 .use({
+                    name: 'bar',
                     ranges: [[1, 2]],
                     printer: {
                         html: {

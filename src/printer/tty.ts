@@ -4,7 +4,7 @@ import type { PrinterHookContext, PrinterHook } from '../types.d.js';
 
 const initialStyle = createStyle('reset');
 const createStyleFetcherUtils = {
-    createStyleMap(map: StyleModMap, fetcher = ({ data }) => data) {
+    createStyleMap(map: StyleModMap, fetcher = ({ data }: { data: any }) => data) {
         const styleMap = createStyleMap(map);
         return (context: { data: any }) => styleMap[fetcher(context)];
     },
@@ -14,31 +14,32 @@ const createStyleFetcherUtils = {
     }
 };
 
-type StyleMod = keyof ansiStyles.ForegroundColor | keyof ansiStyles.BackgroundColor | 'reset';
+type ForegroundColorName = keyof ansiStyles.ForegroundColor;
+type BackgroundColorName = keyof ansiStyles.BackgroundColor;
+type StyleMod = ForegroundColorName | BackgroundColorName | 'reset';
 type StyleModMap = { [key: string]: StyleMod | StyleMod[] };
 type Style = {
     color?: string;
     bgColor?: string;
 };
 
+function isForegroundColor(name: StyleMod): name is ForegroundColorName {
+    return name in ansiStyles.color;
+}
+
+function isBackgroundColor(name: StyleMod): name is BackgroundColorName {
+    return name in ansiStyles.bgColor;
+}
+
 function createStyle(...style: StyleMod[]): Style {
     return style.reduce((result: Style, name) => {
-        switch (true) {
-            case name in ansiStyles.color:
-                result.color = ansiStyles.color[name].open;
-                break;
-
-            case name in ansiStyles.bgColor:
-                result.bgColor = ansiStyles.bgColor[name].open;
-                break;
-
-            case name === 'reset':
-                result.color = '\u001B[39m';
-                result.bgColor = '\u001B[49m';
-                break;
-
-            // default:
-            //     console.error('Unknown modifier:', name);
+        if (name === 'reset') {
+            result.color = '\u001B[39m';
+            result.bgColor = '\u001B[49m';
+        } else if (isForegroundColor(name)) {
+            result.color = ansiStyles.color[name].open;
+        } else if (isBackgroundColor(name)) {
+            result.bgColor = ansiStyles.bgColor[name].open;
         }
 
         return result;
@@ -46,7 +47,7 @@ function createStyle(...style: StyleMod[]): Style {
 }
 
 function createStyleMap(map: StyleModMap): { [key: string]: Style } {
-    const result = {};
+    const result: { [key: string]: Style } = {};
 
     for (const key in map) {
         const value = map[key];
@@ -60,12 +61,11 @@ function styleToPrint(current: Style, next: Style = {}) {
     let modifiers = '';
 
     for (const key in current) {
-        if (current[key] !== next[key]) {
-            switch (key) {
-                case 'color':
-                case 'bgColor':
-                    modifiers += next[key] || '';
-                    break;
+        const styleKey = key as keyof Style;
+        if (current[styleKey] !== next[styleKey]) {
+            const nextValue = next[styleKey];
+            if (nextValue) {
+                modifiers += nextValue;
             }
         }
     }

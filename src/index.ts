@@ -116,6 +116,6 @@ function hitext(plugins?: PluginRef[], printerType?: string, printerSet?: Printe
 
 export default Object.assign(hitext, {
     gen: generators,
-    printer: Object.assign(printerType => hitext().printer(printerType), printers),
-    use: (plugin, printer) => hitext().use(plugin, printer)
+    printer: Object.assign((printerType: string) => hitext().printer(printerType), printers),
+    use: (plugin: Plugin | GenerateRanges, printer?: PrinterSetExtension) => hitext().use(plugin, printer)
 });

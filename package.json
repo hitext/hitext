@@ -25,7 +25,7 @@
         "lint": "eslint src test",
         "lint-and-test": "npm run lint && npm test",
         "ts-check": "tsc --noEmit",
-        "test": "mocha --import=tsx --reporter ${REPORTER:-progress} test/**/*.js",
+        "test": "mocha --import=tsx --reporter ${REPORTER:-progress} test/**/*.ts",
         "test:all": "npm run test:cjs && npm run test:esm",
         "test:cjs": "mocha --reporter ${REPORTER:-progress} lib-test/*.cjs",
         "test:esm": "mocha --reporter ${REPORTER:-progress} lib-test/*.js",
@@ -42,6 +42,8 @@
         "ansi-styles": "^5.2.0"
     },
     "devDependencies": {
+        "@types/mocha": "^10.0.10",
+        "@types/node": "^24.7.2",
         "@typescript-eslint/eslint-plugin": "^6.2.0",
         "@typescript-eslint/parser": "^6.2.0",
         "c8": "^9.1.0",

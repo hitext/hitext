@@ -1,6 +1,7 @@
 import { equal, doesNotThrow } from 'assert';
-import hitext from 'hitext';
+import hitext from '../src/index.js';
 import print from '../src/print.js';
+import type { Range } from '../src/types.d.js';
 
 describe('build-in printers', () => {
     describe('html', () => {
@@ -27,7 +28,7 @@ describe('build-in printers', () => {
         });
 
         it('should be extendable', () => {
-            const ranges = [
+            const ranges: Range[] = [
                 { type: 'syntax', start: 0, end: 1, data: 'value' },
                 { type: 'spotlight', start: 1, end: 2 },
                 { type: 'match', start: 2, end: 3 }
@@ -71,24 +72,24 @@ describe('build-in printers', () => {
                     ],
                     hitext.printer.tty.fork({
                         ranges: {
-                            spotlight({ createStyle }) {
+                            spotlight({ createStyle }: any): any {
                                 return createStyle('bgBlue', 'white');
                             },
-                            syntax({ createStyleMap }) {
+                            syntax({ createStyleMap }: any): any {
                                 return createStyleMap(
                                     { 'value': 'cyan' }
                                 );
                             },
-                            color({ createStyleMap }) {
+                            color({ createStyleMap }: any): any {
                                 return createStyleMap([
                                     'green',
                                     'red',
                                     'yellow',
                                     'blue'
-                                ], ({ data }) => data.length - 1);
+                                ], ({ data }: any) => data.length - 1);
                             }
                         }
-                    })
+                    } as any)
                 ),
                 '\u001b[36m1\u001b[37m\u001b[44m2\u001b[39m\u001b[49m3\u001b[33m4\u001b[39m'
             )
@@ -97,8 +98,8 @@ describe('build-in printers', () => {
 
     describe('fork printer', () => {
         it('all default printers have a fork method', () => {
-            for (var name in hitext.printer) {
-                const printer = hitext.printer[name];
+            for (const name in hitext.printer) {
+                const printer = (hitext.printer as any)[name];
 
                 if (typeof printer !== 'function') {
                     equal(typeof printer.fork, 'function');

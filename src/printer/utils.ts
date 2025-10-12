@@ -1,4 +1,4 @@
-import type { Printer, PrinterExtension, PrinterHookContext, PrinterSet } from '../types.d.js';
+import type { Printer, PrinterExtension, PrinterHookContext, PrinterSet, PrinterSetExtension } from '../types.d.js';
 
 const hasOwnProperty = Object.hasOwnProperty;
 const printers: WeakSet<Printer> = new WeakSet();
@@ -32,7 +32,7 @@ export function forkPrinter<Context>(from: Printer | null, extension: PrinterExt
 
 export function forkPrinterSet(this: PrinterSet | void, extension: { [key: string]: Printer | PrinterExtension; }) {
     const newPrinterSet: PrinterSet = Object.assign(Object.create(null), this, {
-        fork: (extension) => forkPrinterSet.call(newPrinterSet, extension)
+        fork: (extension: PrinterSetExtension) => forkPrinterSet.call(newPrinterSet, extension)
     });
 
     for (const key in extension) {

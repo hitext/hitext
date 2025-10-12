@@ -1,4 +1,4 @@
-export type Marker = symbol;
+export type Marker = symbol | string | number;
 export type createRange = (start: number, end: number, data?: any) => void;
 export type GenerateRanges = (source: string, createRange: createRange) => void;
 export type RangeTuple = [start: number, end: number, data?: any];

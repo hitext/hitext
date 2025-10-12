@@ -25,7 +25,7 @@ export default function print(source: string, ranges: Range[], printer: Printer)
     const nullType = Symbol('root');
     let currentRange: Range = { type: nullType, start: 0, end: source.length, data: undefined };
     const rangeHooks2 = printer.ranges || {};
-    const rangePriority: Array<symbol | string> = [];
+    const rangePriority: Array<symbol | string | number> = [];
     let closingOffset = Infinity;
     let printedOffset = 0;
     let line = 1;
@@ -90,7 +90,7 @@ export default function print(source: string, ranges: Range[], printer: Printer)
             printedOffset = offset;
         }
     };
-    const closeRanges = (offset) => {
+    const closeRanges = (offset: number) => {
         while (closingOffset <= offset) {
             printChunk(closingOffset);
 
