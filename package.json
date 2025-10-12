@@ -22,7 +22,7 @@
         "./src/printer/tty.ts": "./src/printer/noop.ts"
     },
     "scripts": {
-        "lint": "eslint src test",
+        "lint": "eslint scripts src test",
         "lint-and-test": "npm run lint && npm test",
         "ts-check": "tsc --noEmit",
         "ts-emit-types": "tsc --declaration --emitDeclarationOnly --outDir lib",

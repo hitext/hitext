@@ -9,7 +9,7 @@ const testPrinter: Printer = {
             close: ({ data: x }) => `</${x}>`
         }
     },
-    fork: function(extension) { return testPrinter; },
+    fork: () => testPrinter,
     createHook: fn => fn()
 };
 
@@ -54,7 +54,7 @@ describe('print', () => {
                         test: testPrinter.ranges.test,
                         uncomplete: {}
                     },
-                    fork: function(extension) { return testPrinter; },
+                    fork: () => testPrinter,
                     createHook: (fn: Function) => fn()
                 }
             ),
@@ -125,7 +125,7 @@ describe('print', () => {
                 'a': testPrinter.ranges.test,
                 'b': testPrinter.ranges.test
             },
-            fork: function(extension) { return printer; },
+            fork: () => printer,
             createHook: (fn: Function) => fn()
         };
         const a: Range = { type: 'a', start: 1, end: 2, data: 'a' };
@@ -155,12 +155,12 @@ describe('print', () => {
                         close: () => '</a>'
                     },
                     b: {
-                        open() { return ''; },
-                        close() { return ''; }
+                        open: () => '',
+                        close: () => ''
                     },
                     c: {}
                 },
-                fork: function(extension) { return testPrinter; },
+                fork: () => testPrinter,
                 createHook: (fn: Function) => fn()
             }),
             '1<a>2</a>3456'
@@ -187,7 +187,7 @@ describe('print', () => {
                     },
                     c: {}
                 },
-                fork: function(extension) { return testPrinter; },
+                fork: () => testPrinter,
                 createHook: (fn: Function) => fn()
             }),
             '_ab_ba__aa'
@@ -203,9 +203,9 @@ describe('print', () => {
                 end,
                 data: {
                     idx
-                } as any
+                }
             };
-            (range.data as any).test = range.data;
+            range.data.test = range.data;
             return range;
         });
 
@@ -213,15 +213,15 @@ describe('print', () => {
             const actual = print(source, ranges, {
                 ranges: {
                     test: {
-                        open({ data }: any) {
+                        open({ data }) {
                             return '[' + (data.test === data ? 'ok' : 'fail') + ']';
                         },
-                        close({ data }: any) {
+                        close({ data }) {
                             return '[/' + (data.test === data ? 'ok' : 'fail') + ']';
                         }
                     }
                 },
-                fork: function(extension) { return testPrinter; },
+                fork: () => testPrinter,
                 createHook: (fn: Function) => fn()
             });
 
@@ -235,15 +235,15 @@ describe('print', () => {
             const actual = print(source, ranges, {
                 ranges: {
                     test: {
-                        open({ data, start, offset }: any) {
+                        open({ data, start, offset }) {
                             return '[' + (start === offset ? 'start' : 'start-continue') + '-' + data.idx + ']';
                         },
-                        close({ data, end, offset }: any) {
+                        close({ data, end, offset }) {
                             return '[/' + (end === offset ? 'end' : 'temp-end') + '-' + data.idx + ']';
                         }
                     }
                 },
-                fork: function(extension) { return testPrinter; },
+                fork: () => testPrinter,
                 createHook: (fn: Function) => fn()
             });
 
@@ -255,23 +255,23 @@ describe('print', () => {
 
         it('location', () => {
             const source = '1\n2\r3\r\n4';
-            const ranges = source.split('').map((c, idx) => ({ 
-                type: 'test', 
-                start: idx, 
-                end: idx + 1 
+            const ranges = source.split('').map((c, idx) => ({
+                type: 'test',
+                start: idx,
+                end: idx + 1
             }));
             const actual = print(source, ranges, {
                 ranges: {
                     test: {
-                        open({ offset, line, column }: any) {
+                        open({ offset, line, column }) {
                             return '[' + [offset, line, column].join(':') + ']';
                         },
-                        close({ offset, line, column }: any) {
+                        close({ offset, line, column }) {
                             return '[/' + [offset, line, column].join(':') + ']';
                         }
                     }
                 },
-                fork: function(extension) { return testPrinter; },
+                fork: () => testPrinter,
                 createHook: (fn: Function) => fn()
             });
 

@@ -1,6 +1,6 @@
 import { deepEqual } from 'assert';
 import generateRanges from '../src/generateRanges.js';
-import type { Generator, Range } from '../src/types.d.js';
+import type { Generator } from '../src/types.d.js';
 
 const stubGeneratorFactory = (marker: symbol | number, ranges: Array<[number, number, string]>): Generator => ({
     marker,
@@ -29,7 +29,7 @@ describe('genRanges', () => {
     it('several generators', () => {
         const marker0 = 0;
         const marker1 = 1;
-        
+
         deepEqual(
             generateRanges('abc', [
                 stubGeneratorFactory(marker0, [

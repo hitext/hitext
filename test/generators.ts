@@ -57,7 +57,7 @@ describe('build-in generators', () => {
             deepEqual(
                 gen(
                     '1234567890',
-                    hitext.gen.matches(234 as any)
+                    hitext.gen.matches('234')
                 ),
                 [
                     { type: testMarker, start: 1, end: 4, data: undefined }

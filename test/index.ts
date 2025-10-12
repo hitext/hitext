@@ -9,8 +9,8 @@ const genA: GenerateRanges = (source: string, createRange: createRange) => creat
 const genB: GenerateRanges = (source: string, createRange: createRange) => createRange(4, 8, 'b');
 const printer: PrinterSetExtension = {
     html: {
-        open: ({ data: marker }: any) => '<' + marker + '>',
-        close: ({ data: marker }: any) => '</' + marker + '>'
+        open: ({ data: marker }) => '<' + marker + '>',
+        close: ({ data: marker }) => '</' + marker + '>'
     }
 };
 const pluginA = {
