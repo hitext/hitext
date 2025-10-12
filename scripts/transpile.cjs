@@ -187,7 +187,7 @@ async function transpileAll(options) {
         ts: true,
         onSuccess: async () => {
             if (types) {
-                generateTypes(!watch);
+                await generateTypes(!watch);
             }
 
             await transpile({

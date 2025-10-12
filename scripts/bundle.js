@@ -33,7 +33,6 @@ async function build() {
         format: 'iife',
         globalName: 'exports',
         outfile,
-        // write: false,
         banner,
         footer,
         bundle: true,
@@ -45,7 +44,10 @@ async function build() {
         entryPoints: ['dist/hitext.js'],
         outfile,
         format: 'iife',
-        minify: true
+        minify: true,
+        logOverride: {
+            'commonjs-variable-in-esm': 'silent'
+        }
     }));
 }
 

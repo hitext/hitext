@@ -25,6 +25,7 @@
         "lint": "eslint src test",
         "lint-and-test": "npm run lint && npm test",
         "ts-check": "tsc --noEmit",
+        "ts-emit-types": "tsc --declaration --emitDeclarationOnly --outDir lib",
         "test": "mocha --import=tsx --reporter ${REPORTER:-progress} test/**/*.ts",
         "test:all": "npm run test:cjs && npm run test:esm",
         "test:cjs": "mocha --reporter ${REPORTER:-progress} lib-test/*.cjs",
