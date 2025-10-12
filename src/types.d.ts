@@ -36,7 +36,7 @@ export interface PrinterHookContext {
 export type PrinterExtension = Partial<Printer>;
 export type PrinterRangeHooksMap = {
     [key: string | symbol]: PrinterHook;
-};
+}
 export interface Printer<T = PrinterHookContext> {
     open?(context: T): string;
     close?(context: T): string;

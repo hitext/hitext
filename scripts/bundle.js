@@ -23,16 +23,7 @@ const banner = { js: `(function (global, factory) {
 const footer = { js: `
   return exports.default;
 })));` };
-const plugins = [{
-    name: 'replace',
-    setup({ onLoad }) {
-        onLoad({ filter: /package\.json/ }, args => ({
-            contents: 'module.exports = ' + JSON.stringify({
-                version: require(args.path).version
-            })
-        }));
-    }
-}];
+const plugins = [];
 
 async function build() {
     // bundle

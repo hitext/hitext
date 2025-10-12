@@ -68,7 +68,7 @@ function pipelineChain<T extends PrinterSet, K extends Extract<keyof T, string>>
             : ranges;
 
         if (typeof generate !== 'function') {
-            return printSource as Pipeline; // exception?
+            return printSource as Pipeline<T, K>; // exception?
         }
 
         if (!printer) {
@@ -76,7 +76,7 @@ function pipelineChain<T extends PrinterSet, K extends Extract<keyof T, string>>
         }
 
         if (!printer) {
-            return printSource as Pipeline; // exception?
+            return printSource as Pipeline<T, K>; // exception?
         }
 
         return pipelineChain(
@@ -99,7 +99,8 @@ function pipelineChain<T extends PrinterSet, K extends Extract<keyof T, string>>
 }
 
 function hitext(plugins?: PluginRef[], printerType?: string, printerSet?: PrinterSet) {
-    let pipeline = pipelineChain([], printerSet || printers, printerType);
+    const _printerSet = printerSet || printers;
+    let pipeline = pipelineChain([], _printerSet, printerType || Object.keys(_printerSet)[0]);
 
     if (Array.isArray(plugins)) {
         pipeline = plugins.reduce(

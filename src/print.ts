@@ -1,5 +1,6 @@
 import type { Printer, Range, PrinterRangeHooksMap, PrinterHookContext } from './types.d.js';
 
+const hasOwn = Object.hasOwn || ((o, k) => Object.prototype.hasOwnProperty.call(o, k));
 const emptyString = () => '';
 const noop = function() {};
 
@@ -41,7 +42,6 @@ export default function print(source: string, ranges: Range[], printer: Printer)
         let rangeHook = rangeHooks2[type];
 
         if (typeof rangeHook === 'function') {
-            console.log('???', rangeHook);
             rangeHook = printer.createHook(rangeHook);
         }
 
@@ -66,9 +66,9 @@ export default function print(source: string, ranges: Range[], printer: Printer)
     );
 
     // main part
-    const open = (index: number) => rangeHooks[(currentRange = openedRanges[index]).type].open(printContext) || '';
-    const close = (index: number) => rangeHooks[(currentRange = openedRanges[index]).type].close(printContext) || '';
-    const printChunk = (offset) => {
+    const open = (index: number) => rangeHooks[(currentRange = openedRanges[index]).type].open?.(printContext) || '';
+    const close = (index: number) => rangeHooks[(currentRange = openedRanges[index]).type].close?.(printContext) || '';
+    const printChunk = (offset: number) => {
         if (printedOffset !== offset) {
             const substring = source.substring(printedOffset, offset);
             const printSubstr = openedRanges.length
@@ -86,7 +86,7 @@ export default function print(source: string, ranges: Range[], printer: Printer)
                 }
             }
 
-            buffer += printSubstr(substring, printContext);
+            buffer += printSubstr?.(substring, printContext) || '';
             printedOffset = offset;
         }
     };
@@ -117,7 +117,7 @@ export default function print(source: string, ranges: Range[], printer: Printer)
         let j = 0;
 
         // ignore ranges without a type hook
-        if (hasOwnProperty.call(rangeHooks, range.type) === false) {
+        if (hasOwn(rangeHooks, range.type) === false) {
             continue;
         }
 
