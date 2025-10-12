@@ -20,10 +20,10 @@ export interface Plugin {
     printer?: PrinterSetExtension;
 }
 
-export interface PrinterHook {
-    open?: (context: PrinterHookContext) => string;
-    close?: (context: PrinterHookContext) => string;
-    print?: (chunk: string, context: PrinterHookContext) => string;
+export interface PrinterHook<Context = PrinterHookContext> {
+    open?: (context: Context) => string;
+    close?: (context: Context) => string;
+    print?: (chunk: string, context: Context) => string;
 }
 export interface PrinterHookContext {
     offset: number;
@@ -35,7 +35,7 @@ export interface PrinterHookContext {
 }
 export type PrinterExtension = Partial<Printer>;
 export type PrinterRangeHooksMap = {
-    [key: string | symbol]: PrinterHook;
+    [key: string | symbol]: PrinterHook<any>;
 }
 export interface Printer<T = PrinterHookContext> {
     open?(context: T): string;
@@ -44,7 +44,7 @@ export interface Printer<T = PrinterHookContext> {
     createContext?(): any;
     fork: (extension?: PrinterExtension) => Printer;
     ranges: PrinterRangeHooksMap;
-    createHook: (fn: Function) => PrinterHook;
+    createHook: (fn: Function) => PrinterHook<any>;
 }
 export type PrinterSetExtension = {
     [key: string]: PrinterExtension;

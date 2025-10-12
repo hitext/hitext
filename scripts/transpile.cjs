@@ -11,7 +11,7 @@ const external = [
     'path',
     'assert',
     'ansi-colors',
-    // 'ansi-styles',
+    'ansi-styles',
     'hitext'
 ];
 

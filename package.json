@@ -25,11 +25,11 @@
         "lint": "eslint src test",
         "lint-and-test": "npm run lint && npm test",
         "ts-check": "tsc --noEmit",
-        "test": "mocha --reporter ${REPORTER:-progress}",
+        "test": "mocha --import=tsx --reporter ${REPORTER:-progress} test/**/*.js",
         "test:all": "npm run test:cjs && npm run test:esm",
-        "test:cjs": "npm test -- lib-test/*.cjs",
-        "test:esm": "npm test -- lib-test/*.js",
-        "test:dist": "npm test -- dist/test",
+        "test:cjs": "mocha --reporter ${REPORTER:-progress} lib-test/*.cjs",
+        "test:esm": "mocha --reporter ${REPORTER:-progress} lib-test/*.js",
+        "test:dist": "mocha --reporter ${REPORTER:-progress} dist/test",
         "watch": "npm run transpile -- --watch",
         "transpile": "node scripts/transpile.cjs",
         "transpile-and-test": "npm run transpile && npm run test:all",
@@ -50,6 +50,7 @@
         "mocha": "^9.2.2",
         "rollup": "^2.67.3",
         "sucrase": "^3.34.0",
+        "tsx": "^4.20.6",
         "typescript": "^5.9.3"
     },
     "engines": {

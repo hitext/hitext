@@ -1,6 +1,6 @@
 import ansiStyles from 'ansi-styles';
 import { createPrinter } from './utils.js';
-import type { PrinterHookContext } from '../types.d.js';
+import type { PrinterHookContext, PrinterHook } from '../types.d.js';
 
 const initialStyle = createStyle('reset');
 const createStyleFetcherUtils = {
@@ -121,7 +121,7 @@ export default createPrinter({
         return context.styleToPrint() + chunk;
     },
 
-    createHook(createStyleFetcherFn) {
+    createHook(createStyleFetcherFn): PrinterHook<TtyPrinterContext> {
         const styleFetcher = createStyleFetcherFn(createStyleFetcherUtils);
 
         return {
