@@ -12,8 +12,10 @@
     "type": "module",
     "main": "./lib/index.cjs",
     "module": "./lib/index.js",
+    "types": "./lib/index.d.ts",
     "exports": {
         ".": {
+            "types": "./lib/index.d.ts",
             "import": "./lib/index.js",
             "require": "./lib/index.cjs"
         }
@@ -25,7 +27,7 @@
         "lint": "eslint scripts src test",
         "lint-and-test": "npm run lint && npm test",
         "ts-check": "tsc --noEmit",
-        "ts-emit-types": "tsc --declaration --emitDeclarationOnly --outDir lib",
+        "ts-emit-types": "tsc --project tsconfig.types.json && cp src/types.d.ts lib/types.d.ts",
         "test": "mocha --import=tsx --reporter ${REPORTER:-progress} test/**/*.ts",
         "test:all": "npm run test:cjs && npm run test:esm",
         "test:cjs": "mocha --reporter ${REPORTER:-progress} lib-test/*.cjs",
@@ -36,7 +38,7 @@
         "transpile-and-test": "npm run transpile && npm run test:all",
         "bundle": "node scripts/bundle",
         "bundle-and-test": "npm run bundle && npm run test:dist",
-        "prepublishOnly": "npm run transpile-and-test && npm run bundle-and-test",
+        "prepublishOnly": "npm run transpile-and-test && npm run bundle-and-test && npm run ts-emit-types",
         "coverage": "c8 --reporter=lcovonly npm run test:all"
     },
     "dependencies": {

@@ -36,6 +36,7 @@ async function build() {
         banner,
         footer,
         bundle: true,
+        sourcemap: true,
         plugins
     }));
 
@@ -45,6 +46,7 @@ async function build() {
         outfile,
         format: 'iife',
         minify: true,
+        sourcemap: true,
         logOverride: {
             'commonjs-variable-in-esm': 'silent'
         }
