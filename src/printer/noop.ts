@@ -1,3 +1,3 @@
-import { createPrinter } from './utils.js';
+const noopPrinter = {};
 
-export default createPrinter();
+export default noopPrinter;

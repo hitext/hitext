@@ -1,14 +1,19 @@
-import type { Range, Generator } from './types.d.js';
+import type { GeneratedRange, Generator } from './types.d.js';
 
-export default function generateRanges(source: string, generators: Generator[]) {
-    const ranges: Range[] = [];
+export default function generateRanges<T>(
+    source: string,
+    generators: Generator<T>[],
+    layerOptions?: any
+): GeneratedRange<T>[] {
+    const ranges: GeneratedRange<T>[] = [];
 
-    generators.forEach(({ generate, marker }) =>
-        generate(
-            source,
-            (start: number, end: number, data: unknown) => ranges.push({ type: marker, start, end, data })
-        )
-    );
+    for (const { generate, marker } of generators) {
+        const createRange = (start: number, end: number, data?: T) => {
+            ranges.push({ type: marker, start, end, data });
+        };
+
+        generate(source, createRange, layerOptions);
+    }
 
     return ranges;
-};
+}

@@ -1,10 +1,4 @@
-import { forkPrinterSet } from './utils.js';
-import noop from './noop.js';
-import html from './html.js';
-import tty from './tty.js';
-
-export default forkPrinterSet({
-    noop,
-    html,
-    tty
-});
+export { createStringPrinter as string } from './string.js';
+export { createHtmlPrinter as html } from './html.js';
+export { createTTYPrinter as tty } from './tty.js';
+export { createDomPrinter as dom } from './dom.js';

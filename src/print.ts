@@ -1,51 +1,34 @@
-import type { Printer, Range, PrinterRangeHooksMap, PrinterHookContext } from './types.d.js';
+import { StringBuffer } from './string-buffer.js';
+import type { GeneratedRange, PrinterHookContext, RangeHooks, PrintHooks, RangeMarker } from './types.d.js';
 
 const hasOwn = Object.hasOwn || ((o, k) => Object.prototype.hasOwnProperty.call(o, k));
 const emptyString = () => '';
-
-// Hook name constants
-const HOOK_NODE = 'node';
-const HOOK_BEFORE = 'before';
-const HOOK_AFTER = 'after';
-const HOOK_TEXT = 'text';
-const HOOK_OPEN = 'open';
-const HOOK_CLOSE = 'close';
-const HOOK_PRINT = 'print';
 
 function ensureFunction<T extends Function>(value: T | undefined, alt: T) {
     return typeof value === 'function' ? value : alt;
 }
 
-class StringBuffer {
-    buffer = '';
-    append(child: string) {
-        this.buffer += child;
-    }
-    toString() {
-        return this.buffer;
-    }
-}
-
-export default function print(source: string, ranges: Range[], printer: Printer, options?: any) {
-    // Support both old (print) and new (text) API
-    const print = ensureFunction(printer[HOOK_TEXT] || printer[HOOK_PRINT], (chunk: string) => chunk);
-
+export default function print<T, R = T>(
+    source: string,
+    ranges: GeneratedRange[],
+    rangeHooksMap: Record<string | symbol, Partial<RangeHooks<any, any>>>,
+    printHooks: Partial<PrintHooks<T, R>> = {}
+) {
     // Printer output assembly methods
-    const createRoot = ensureFunction(printer.createRoot, () => new StringBuffer());
-    const appendFn = ensureFunction(printer.append, (buffer: any, child: any) => buffer.append(child));
-    const finalize = ensureFunction(printer.finalize, (buffer: any) => String(buffer));
+    const createBuffer = ensureFunction(printHooks.createBuffer, () => new StringBuffer() as any);
+    const printOpen = ensureFunction(printHooks.open, emptyString as any);
+    const printClose = ensureFunction(printHooks.close, emptyString as any);
+    const printText = ensureFunction(printHooks.text, (sourceChunk: string) => sourceChunk);
 
     // Helper to append only non-empty content
     const append = (child: any) => {
-        if ((child ?? '') !== '') {
-            appendFn(buffer, child);
+        if ((child ?? '') !== '') { // Skip null/undefined/empty string
+            buffer.append(child);
         }
     };
 
     // Create printer context with options
-    const printerContext = ensureFunction(printer.createContext, () => ({}))(options);
-
-    const printContext: PrinterHookContext = Object.assign(
+    const printContext: PrinterHookContext<any> =
         Object.defineProperties(Object.create(null), {
             offset: { get: () => printedOffset },
             line: { get: () => line },
@@ -53,51 +36,47 @@ export default function print(source: string, ranges: Range[], printer: Printer,
             start: { get: () => currentRange.start },
             end: { get: () => currentRange.end },
             data: { get: () => currentRange.data }
-        }),
-        printerContext
-    );
-
-    const openedRanges: Array<Range> = [];
-    const nullType = Symbol('root');
-    let currentRange: Range = { type: nullType, start: 0, end: source.length, data: undefined };
-    const rangeHooksSource = printer.ranges || {};
-    const rangePriority: Array<symbol | string | number> = [];
-    let closingOffset = Infinity;
+        });
     let printedOffset = 0;
     let line = 1;
     let column = 1;
 
+    const openedRanges: Array<GeneratedRange> = [];
+    const nullType = Symbol('root');
+    let currentRange: GeneratedRange = { type: nullType, start: 0, end: source.length, data: undefined };
+
+    // Get hooks from printer
+    const rangeHooksSource = rangeHooksMap || {};
+    const rangePriority: Array<symbol | string | number> = [];
+    let closingOffset = Infinity;
+
     // Track content accumulation - buffer stack with current buffer pointer
-    const rangeContentStack: any[] = [];
-    let buffer = createRoot(options);
+    const rangeContentStack: ReturnType<typeof createBuffer>[] = [];
+    let buffer = createBuffer();
 
-    // Support both old (open/close) and new (before/after) API at printer level
-    const beforeResult = ensureFunction(printer[HOOK_BEFORE] || printer[HOOK_OPEN], emptyString)(printContext);
-    append(beforeResult);
+    // Call printer open hook
+    append(printOpen(printContext));
 
-    // preprocess range hooks - normalize API (support both old and new names)
-    const rangeHooks: PrinterRangeHooksMap = [
+    // Normalize hooks to have all methods
+    const normRangeHooksMap: Record<RangeMarker, RangeHooks<any, any>> = [
         ...Object.getOwnPropertyNames(rangeHooksSource),
         ...Object.getOwnPropertySymbols(rangeHooksSource)
     ].reduce((result, type) => {
-        let rangeHook = rangeHooksSource[type];
+        const rangeHook = rangeHooksSource[type];
 
-        if (typeof rangeHook === 'function') {
-            rangeHook = printer.createHook(rangeHook);
-        }
-
-        if (rangeHook) {
+        if (rangeHook && typeof rangeHook === 'object') {
             rangePriority.push(type);
             result[type] = {
-                before: ensureFunction(rangeHook[HOOK_BEFORE] || rangeHook[HOOK_OPEN], emptyString),
-                after: ensureFunction(rangeHook[HOOK_AFTER] || rangeHook[HOOK_CLOSE], emptyString),
-                node: rangeHook[HOOK_NODE],
-                text: ensureFunction(rangeHook[HOOK_TEXT] || rangeHook[HOOK_PRINT], print)
+                // Support both before/open and after/close for compatibility
+                open: rangeHook.open || emptyString,
+                close: rangeHook.close || emptyString,
+                node: rangeHook.node,
+                text: rangeHook.text || printText
             };
         }
 
         return result;
-    }, Object.create(null) as PrinterRangeHooksMap);
+    }, Object.create(null));
 
     // sort ranges
     ranges = ranges.slice().sort(
@@ -107,35 +86,36 @@ export default function print(source: string, ranges: Range[], printer: Printer,
             rangePriority.indexOf(a.type) - rangePriority.indexOf(b.type)
     );
 
-    const open = (index: number) => {
+    const openRange = (index: number) => {
         currentRange = openedRanges[index];
-        const hook = rangeHooks[currentRange.type];
+        const hook = normRangeHooksMap[currentRange.type];
 
-        // Call before/open hook (goes to current buffer, or parent if node hook exists)
-        append(hook.before?.(printContext));
+        // Call open hook (goes to current buffer, or parent if node hook exists)
+        append(hook.open(printContext));
 
         // Check if this range uses node hook
         if (hook.node) {
             // Start accumulating content for this range
             rangeContentStack.push(buffer);
-            buffer = createRoot(options);
+            buffer = createBuffer();
         }
     };
 
-    const close = (index: number) => {
+    const closeRange = (index: number) => {
         currentRange = openedRanges[index];
-        const hook = rangeHooks[currentRange.type];
+        const hook = normRangeHooksMap[currentRange.type];
 
         if (hook.node) {
             const contentBuffer = buffer;
-            buffer = rangeContentStack.pop();
+            buffer = rangeContentStack.pop()!;
 
-            // Append node result
-            append(hook.node(contentBuffer, printContext));
+            // Emit the buffer content - check if buffer has emit method for backward compatibility
+            const content = contentBuffer.emit();
+            append(hook.node(content, printContext));
         }
 
-        // Call after/close hook (goes to current buffer, which is parent after node processing)
-        append(hook.after?.(printContext));
+        // Call close hook (goes to current buffer, which is parent after node processing)
+        append(hook.close(printContext));
     };
 
     const printChunk = (offset: number) => {
@@ -145,8 +125,8 @@ export default function print(source: string, ranges: Range[], printer: Printer,
 
         const substring = source.slice(printedOffset, offset);
         const printSubstr = openedRanges.length
-            ? rangeHooks[openedRanges[openedRanges.length - 1].type].text
-            : print;
+            ? normRangeHooksMap[openedRanges[openedRanges.length - 1].type].text
+            : printText;
 
         // Update line and column tracking
         for (let i = printedOffset; i < offset; i++) {
@@ -161,10 +141,11 @@ export default function print(source: string, ranges: Range[], printer: Printer,
         }
 
         // Always append to current buffer
-        append(printSubstr?.(substring, printContext));
+        append(printSubstr(substring, printContext));
 
         printedOffset = offset;
     };
+
     const closeRanges = (offset: number) => {
         while (closingOffset <= offset) {
             printChunk(closingOffset);
@@ -173,7 +154,7 @@ export default function print(source: string, ranges: Range[], printer: Printer,
                 if (openedRanges[j].end !== closingOffset) {
                     break;
                 }
-                close(j);
+                closeRange(j);
                 openedRanges.pop();
             }
 
@@ -193,7 +174,7 @@ export default function print(source: string, ranges: Range[], printer: Printer,
         let j = 0;
 
         // Ignore ranges without a type hook
-        if (!hasOwn(rangeHooks, range.type)) {
+        if (!hasOwn(normRangeHooksMap, range.type)) {
             continue;
         }
 
@@ -208,7 +189,7 @@ export default function print(source: string, ranges: Range[], printer: Printer,
         for (j = 0; j < openedRanges.length; j++) {
             if (openedRanges[j].end < range.end) {
                 for (let k = openedRanges.length - 1; k >= j; k--) {
-                    close(k);
+                    closeRange(k);
                 }
                 break;
             }
@@ -217,7 +198,7 @@ export default function print(source: string, ranges: Range[], printer: Printer,
         openedRanges.splice(j, 0, range);
 
         for (; j < openedRanges.length; j++) {
-            open(j);
+            openRange(j);
         }
 
         if (range.end < closingOffset) {
@@ -230,12 +211,11 @@ export default function print(source: string, ranges: Range[], printer: Printer,
 
     // Print ranges out of source boundaries
     for (let i = openedRanges.length - 1; i >= 0; i--) {
-        close(i);
+        closeRange(i);
     }
 
-    // Finish printing
-    const afterResult = ensureFunction(printer[HOOK_AFTER] || printer[HOOK_CLOSE], emptyString)(printContext);
-    append(afterResult);
+    // Finish printing - call printer close hook
+    append(printClose(printContext));
 
-    return finalize(buffer);
-};
+    return buffer.emit();
+}

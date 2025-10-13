@@ -1,5 +1,5 @@
 import { deepEqual } from 'assert';
-import hitext from '../src/index.js';
+import { generator } from '../src/index.js';
 import generateRanges from '../src/generateRanges.js';
 import type { GenerateRanges, Range } from '../src/types.d.js';
 
@@ -18,7 +18,7 @@ describe('build-in generators', () => {
             deepEqual(
                 gen(
                     'Hello world! Hello world!',
-                    hitext.gen.matches('world')
+                    generator.matches('world')
                 ),
                 [
                     { type: testMarker, start: 6, end: 11, data: undefined },
@@ -31,7 +31,7 @@ describe('build-in generators', () => {
             deepEqual(
                 gen(
                     'Hello world!',
-                    hitext.gen.matches(/\w+/)
+                    generator.matches(/\w+/)
                 ),
                 [
                     { type: testMarker, start: 0, end: 5, data: undefined },
@@ -44,7 +44,7 @@ describe('build-in generators', () => {
             deepEqual(
                 gen(
                     'Hello world!',
-                    hitext.gen.matches(/hello|world/ig)
+                    generator.matches(/hello|world/ig)
                 ),
                 [
                     { type: testMarker, start: 0, end: 5, data: undefined },
@@ -57,7 +57,7 @@ describe('build-in generators', () => {
             deepEqual(
                 gen(
                     '1234567890',
-                    hitext.gen.matches('234')
+                    generator.matches('234')
                 ),
                 [
                     { type: testMarker, start: 1, end: 4, data: undefined }
@@ -71,7 +71,7 @@ describe('build-in generators', () => {
             deepEqual(
                 gen(
                     '\na\rbb\r\nccc\n\r',
-                    hitext.gen.lines
+                    generator.lines
                 ),
                 [
                     { type: testMarker, start: 0, end: 1, data: 1 },
@@ -88,7 +88,7 @@ describe('build-in generators', () => {
             deepEqual(
                 gen(
                     '\na\rbb\r\nccc\n\rdddd',
-                    hitext.gen.lines
+                    generator.lines
                 ),
                 [
                     { type: testMarker, start: 0, end: 1, data: 1 },
@@ -107,7 +107,7 @@ describe('build-in generators', () => {
             deepEqual(
                 gen(
                     '\na\rbb\r\nccc\n\r',
-                    hitext.gen.lineContents
+                    generator.lineContents
                 ),
                 [
                     { type: testMarker, start: 0, end: 0, data: 1 },
@@ -124,7 +124,7 @@ describe('build-in generators', () => {
             deepEqual(
                 gen(
                     '\na\rbb\r\nccc\n\rdddd',
-                    hitext.gen.lineContents
+                    generator.lineContents
                 ),
                 [
                     { type: testMarker, start: 0, end: 0, data: 1 },
@@ -143,7 +143,7 @@ describe('build-in generators', () => {
             deepEqual(
                 gen(
                     '\na\rbb\r\nccc\n\r',
-                    hitext.gen.newlines
+                    generator.newlines
                 ),
                 [
                     { type: testMarker, start: 0, end: 1, data: 1 },
@@ -159,7 +159,7 @@ describe('build-in generators', () => {
             deepEqual(
                 gen(
                     '\na\rbb\r\nccc\n\rdddd',
-                    hitext.gen.newlines
+                    generator.newlines
                 ),
                 [
                     { type: testMarker, start: 0, end: 1, data: 1 },

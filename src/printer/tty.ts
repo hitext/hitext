@@ -1,6 +1,7 @@
+import type { RangeHooks } from '../types.d.js';
 import ansiStyles from 'ansi-styles';
-import { createPrinter } from './utils.js';
-import type { PrinterHookContext, PrinterHook } from '../types.d.js';
+import { createPipelineForPrinter } from '../pipeline.js';
+import { StringBuffer } from '../string-buffer.js';
 
 const initialStyle = createStyle('reset');
 const createStyleFetcherUtils = {
@@ -17,7 +18,7 @@ const createStyleFetcherUtils = {
 type ForegroundColorName = keyof ansiStyles.ForegroundColor;
 type BackgroundColorName = keyof ansiStyles.BackgroundColor;
 type StyleMod = ForegroundColorName | BackgroundColorName | 'reset';
-type StyleModMap = { [key: string]: StyleMod | StyleMod[] };
+type StyleModMap = { [key: string]: StyleMod | StyleMod[] } | Array<StyleMod | StyleMod[]>;
 type Style = {
     color?: string;
     bgColor?: string;
@@ -49,15 +50,14 @@ function createStyle(...style: StyleMod[]): Style {
 function createStyleMap(map: StyleModMap): { [key: string]: Style } {
     const result: { [key: string]: Style } = {};
 
-    for (const key in map) {
-        const value = map[key];
+    for (const [key, value] of Object.entries(map)) {
         result[key] = Array.isArray(value) ? createStyle(...value) : createStyle(value);
     }
 
     return result;
 }
 
-function styleToPrint(current: Style, next: Style = {}) {
+function _styleToPrint(current: Style, next: Style = {}) {
     let modifiers = '';
 
     for (const key in current) {
@@ -73,66 +73,62 @@ function styleToPrint(current: Style, next: Style = {}) {
     return modifiers;
 }
 
-interface TtyPrinterContext extends PrinterHookContext {
-    pushStyle(style: Style): void;
-    popStyle(): void;
-    styleToPrint(): string;
-};
-
-export default createPrinter({
-    createContext() {
+export function createTTYPrinter<LayerOptions>() {
+    return createPipelineForPrinter<LayerOptions, string>(() => {
         const stack: Style[] = [];
         let currentStyle: Style = initialStyle;
         let printedStyle = {};
 
         return {
-            pushStyle(style: Style) {
-                stack.push(currentStyle);
-                currentStyle = Object.assign({}, currentStyle, style);
-            },
-            popStyle() {
-                currentStyle = stack.pop() || currentStyle;
-            },
-            styleToPrint() {
-                if (printedStyle !== currentStyle) {
-                    const newStyle = styleToPrint(printedStyle, currentStyle);
+            createBuffer: () => new StringBuffer(),
+            open: styleToPrint,
+            close: styleToPrint,
+            text: (chunk) => styleToPrint() + chunk,
 
-                    printedStyle = currentStyle || {};
+            // Provide style utils to range hooks factories
+            rangeHooksContext: {
+                createStyle: wrap(createStyleFetcherUtils.createStyle),
+                createStyleMap: wrap(createStyleFetcherUtils.createStyleMap),
+                pushStyle,
+                popStyle
+            }
+        };
 
-                    if (newStyle) {
-                        return newStyle;
-                    }
+        function pushStyle(style: Style) {
+            stack.push(currentStyle);
+            currentStyle = Object.assign({}, currentStyle, style);
+        }
+        function popStyle() {
+            currentStyle = stack.pop() || currentStyle;
+        }
+        function styleToPrint() {
+            if (printedStyle !== currentStyle) {
+                const newStyle = _styleToPrint(printedStyle, currentStyle);
+
+                printedStyle = currentStyle || {};
+
+                if (newStyle) {
+                    return newStyle;
                 }
-
-                return '';
             }
+
+            return '';
+        }
+        function wrap<T extends(...args: any[]) => any>(fn: T) {
+            return (...args: Parameters<T>): Partial<RangeHooks<any, any>> => {
+                const styleFetcher = fn(...args);
+
+                return {
+                    open(context) {
+                        pushStyle(styleFetcher(context) || {});
+                        return '';
+                    },
+                    close() {
+                        popStyle();
+                        return '';
+                    }
+                };
+            };
         };
-    },
-
-    open(context: TtyPrinterContext) {
-        return context.styleToPrint();
-    },
-
-    close(context: TtyPrinterContext) {
-        return context.styleToPrint();
-    },
-
-    print(chunk: string, context: TtyPrinterContext) {
-        return context.styleToPrint() + chunk;
-    },
-
-    createHook(createStyleFetcherFn): PrinterHook<TtyPrinterContext> {
-        const styleFetcher = createStyleFetcherFn(createStyleFetcherUtils);
-
-        return {
-            open(context: TtyPrinterContext) {
-                context.pushStyle(styleFetcher(context) || {});
-                return '';
-            },
-            close(context: TtyPrinterContext) {
-                context.popStyle();
-                return '';
-            }
-        };
-    }
-});
+    });
+}

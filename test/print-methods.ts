@@ -1,13 +1,13 @@
 import { strictEqual } from 'assert';
-import print from '../src/print.js';
+import { print } from '../src/index.js';
 import type { Printer } from '../src/types.d.js';
 
 describe('print methods', () => {
-    describe('createRoot', () => {
-        it('should use createRoot to initialize output buffer', () => {
+    describe('createBuffer', () => {
+        it('should use createBuffer to initialize output buffer', () => {
             let rootCalled = false;
             const printer: Printer = {
-                createRoot: () => {
+                createBuffer: () => {
                     rootCalled = true;
                     return {
                         buffer: 'ROOT:',
@@ -19,7 +19,7 @@ describe('print methods', () => {
                         }
                     };
                 },
-                ranges: {},
+                hooks: {},
                 fork: () => printer,
                 createHook: fn => fn()
             };
@@ -31,10 +31,10 @@ describe('print methods', () => {
 
         it('should default to empty string when not provided', () => {
             const printer: Printer = {
-                ranges: {
+                hooks: {
                     test: {
-                        open: () => '<test>',
-                        close: () => '</test>'
+                        before: () => '<test>',
+                        after: () => '</test>'
                     }
                 },
                 fork: () => printer,
@@ -55,15 +55,15 @@ describe('print methods', () => {
         it('should use append to combine buffer parts', () => {
             const calls: string[] = [];
             const printer: Printer = {
-                createRoot: () => '',
+                createBuffer: () => '',
                 append: (buffer: string, content: string) => {
                     calls.push(`append(${JSON.stringify(content)})`);
                     return buffer + '[' + content + ']';
                 },
-                ranges: {
+                hooks: {
                     test: {
-                        open: () => 'OPEN',
-                        close: () => 'CLOSE'
+                        before: () => 'OPEN',
+                        after: () => 'CLOSE'
                     }
                 },
                 fork: () => printer,
@@ -84,16 +84,16 @@ describe('print methods', () => {
         it('should work with array-based buffers', () => {
             const parts: any[] = [];
             const printer: Printer = {
-                createRoot: () => [],
+                createBuffer: () => [],
                 append: (parent: any[], child: any) => {
                     parts.push(child);
                     parent.push(child);
                     return parent;
                 },
-                ranges: {
+                hooks: {
                     mark: {
-                        open: () => '<mark>',
-                        close: () => '</mark>'
+                        before: () => '<mark>',
+                        after: () => '</mark>'
                     }
                 },
                 fork: () => printer,
@@ -118,13 +118,13 @@ describe('print methods', () => {
             }
 
             const printer: Printer = {
-                createRoot: (): Node => ({ type: 'root', children: [] }),
+                createBuffer: (): Node => ({ type: 'root', children: [] }),
                 append: (parent: Node, child: Node | string) => {
                     parent.children.push(child);
                     return parent;
                 },
-                finalize: (root: Node) => root,
-                ranges: {
+                emit: (root: Node) => root,
+                hooks: {
                     paragraph: {
                         node: (content: any) => {
                             const p: Node = { type: 'p', children: [] };
@@ -154,10 +154,10 @@ describe('print methods', () => {
 
         it('should default to string concatenation when not provided', () => {
             const printer: Printer = {
-                ranges: {
+                hooks: {
                     test: {
-                        open: () => '<test>',
-                        close: () => '</test>'
+                        before: () => '<test>',
+                        after: () => '</test>'
                     }
                 },
                 fork: () => printer,
@@ -174,33 +174,33 @@ describe('print methods', () => {
         });
     });
 
-    describe('finalize', () => {
-        it('should use finalize to process final output', () => {
-            let finalizeCalled = false;
+    describe('emit', () => {
+        it('should use emit to process final output', () => {
+            let emitCalled = false;
             const printer: Printer = {
-                finalize: (buffer: any) => {
-                    finalizeCalled = true;
+                emit: (buffer: any) => {
+                    emitCalled = true;
                     return `FINAL[${buffer}]`;
                 },
-                ranges: {},
+                hooks: {},
                 fork: () => printer,
                 createHook: fn => fn()
             };
 
             const result = print('test', [], printer);
-            strictEqual(finalizeCalled, true);
+            strictEqual(emitCalled, true);
             strictEqual(result, 'FINAL[test]');
         });
 
         it('should transform array buffer to string', () => {
             const printer: Printer = {
-                createRoot: () => [],
+                createBuffer: () => [],
                 append: (parent: any[], child: any) => {
                     parent.push(child);
                     return parent;
                 },
-                finalize: (parts: any[]) => parts.join(''),
-                ranges: {},
+                emit: (parts: any[]) => parts.join(''),
+                hooks: {},
                 fork: () => printer,
                 createHook: fn => fn()
             };
@@ -212,7 +212,7 @@ describe('print methods', () => {
 
         it('should default to identity function when not provided', () => {
             const printer: Printer = {
-                ranges: {},
+                hooks: {},
                 fork: () => printer,
                 createHook: fn => fn()
             };
@@ -226,37 +226,37 @@ describe('print methods', () => {
         it('should call printer methods in correct order', () => {
             const calls: string[] = [];
             const printer: Printer = {
-                createRoot: () => {
-                    calls.push('createRoot');
+                createBuffer: () => {
+                    calls.push('createBuffer');
                     return '';
                 },
-                before: () => {
-                    calls.push('before');
+                open: () => {
+                    calls.push('open');
                     return '<doc>';
                 },
                 append: (buffer: string, content: string) => {
                     calls.push(`append:${content.substring(0, Math.min(10, content.length))}`);
                     return buffer + content;
                 },
-                after: () => {
-                    calls.push('after');
+                close: () => {
+                    calls.push('close');
                     return '</doc>';
                 },
-                finalize: (buffer: string) => {
-                    calls.push('finalize');
+                emit: (buffer: string) => {
+                    calls.push('emit');
                     return buffer;
                 },
-                ranges: {},
+                hooks: {},
                 fork: () => printer,
                 createHook: fn => fn()
             };
 
             print('test', [], printer);
 
-            strictEqual(calls[0], 'createRoot');
-            strictEqual(calls.includes('before'), true);
-            strictEqual(calls.includes('after'), true);
-            strictEqual(calls[calls.length - 1], 'finalize');
+            strictEqual(calls[0], 'createBuffer');
+            strictEqual(calls.includes('open'), true);
+            strictEqual(calls.includes('close'), true);
+            strictEqual(calls[calls.length - 1], 'emit');
         });
     });
 });

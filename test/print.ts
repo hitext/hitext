@@ -1,19 +1,19 @@
 import { equal, strictEqual } from 'assert';
-import print from '../src/print.js';
-import type { Printer, Range } from '../src/types.d.js';
+import { print } from '../src/index.js';
+import type { Printer, GeneratedRange, PrinterHookContext } from '../src/types.d.js';
 
 const testPrinter: Printer = {
-    ranges: {
+    hooks: {
         test: {
-            open: ({ data: x }) => `<${x}>`,
-            close: ({ data: x }) => `</${x}>`
+            before: ({ data: x }) => `<${x}>`,
+            after: ({ data: x }) => `</${x}>`
         }
     },
     fork: () => testPrinter,
     createHook: fn => fn()
 };
 
-const generateRanges = (lines: string[]): Range[] =>
+const generateRanges = (lines: string[]): GeneratedRange[] =>
     lines.map(line => {
         const m = line.match(/(\S)(\1*)/);
         return {
@@ -50,8 +50,8 @@ describe('print', () => {
                     { type: 'uncomplete', start: 2, end: 3, data: 'c' }
                 ],
                 {
-                    ranges: {
-                        test: testPrinter.ranges.test,
+                    hooks: {
+                        test: testPrinter.hooks.test,
                         uncomplete: {}
                     },
                     fork: () => testPrinter,
@@ -121,15 +121,15 @@ describe('print', () => {
 
     it('order of ranges should be independant of generator order', () => {
         const printer: Printer = {
-            ranges: {
-                'a': testPrinter.ranges.test,
-                'b': testPrinter.ranges.test
+            hooks: {
+                'a': testPrinter.hooks!.test,
+                'b': testPrinter.hooks!.test
             },
             fork: () => printer,
             createHook: (fn: Function) => fn()
         };
-        const a: Range = { type: 'a', start: 1, end: 2, data: 'a' };
-        const b: Range = { type: 'b', start: 1, end: 2, data: 'b' };
+        const a: GeneratedRange = { type: 'a', start: 1, end: 2, data: 'a' };
+        const b: GeneratedRange = { type: 'b', start: 1, end: 2, data: 'b' };
 
         equal(
             print('123', [a, b], printer),
@@ -143,20 +143,20 @@ describe('print', () => {
     });
 
     it('should be fine when open/close is omitted in printer range hook', () => {
-        const a: Range = { type: 'a', start: 1, end: 2 };
-        const b: Range = { type: 'b', start: 2, end: 3 };
-        const c: Range = { type: 'c', start: 3, end: 4 };
+        const a: GeneratedRange = { type: 'a', start: 1, end: 2, data: undefined };
+        const b: GeneratedRange = { type: 'b', start: 2, end: 3, data: undefined };
+        const c: GeneratedRange = { type: 'c', start: 3, end: 4, data: undefined };
 
         equal(
             print('123456', [a, b, c], {
-                ranges: {
+                hooks: {
                     a: {
-                        open: () => '<a>',
-                        close: () => '</a>'
+                        before: () => '<a>',
+                        after: () => '</a>'
                     },
                     b: {
-                        open: () => '',
-                        close: () => ''
+                        before: () => '',
+                        after: () => ''
                     },
                     c: {}
                 },
@@ -167,23 +167,23 @@ describe('print', () => {
         );
     });
 
-    it('should use range hook print method when defined', () => {
-        const ranges: Range[] = [
-            { type: 'a', start: 1, end: 6 },
-            { type: 'b', start: 2, end: 5 },
-            { type: 'c', start: 3, end: 4 },
-            { type: 'a', start: 8, end: 10 }
+    it('should use range hook text method when defined', () => {
+        const ranges: GeneratedRange[] = [
+            { type: 'a', start: 1, end: 6, data: undefined },
+            { type: 'b', start: 2, end: 5, data: undefined },
+            { type: 'c', start: 3, end: 4, data: undefined },
+            { type: 'a', start: 8, end: 10, data: undefined }
         ];
 
         equal(
             print('1234567890', ranges, {
-                print: (chunk: string) => chunk.replace(/./g, '_'),
-                ranges: {
+                text: (chunk: string) => chunk.replace(/./g, '_'),
+                hooks: {
                     a: {
-                        print: (chunk: string) => chunk.replace(/./g, 'a')
+                        text: (chunk: string) => chunk.replace(/./g, 'a')
                     },
                     b: {
-                        print: (chunk: string) => chunk.replace(/./g, 'b')
+                        text: (chunk: string) => chunk.replace(/./g, 'b')
                     },
                     c: {}
                 },
@@ -196,8 +196,12 @@ describe('print', () => {
 
     describe('print context', () => {
         const source = 'Hello, World!';
+        interface TestData {
+            idx: number;
+            test?: TestData;
+        }
         const ranges = [[1, 5], [1, 2], [4, 8], [3, 5]].map(([start, end], idx) => {
-            const range: Range = {
+            const range: GeneratedRange<TestData> = {
                 type: 'test',
                 start,
                 end,
@@ -205,23 +209,23 @@ describe('print', () => {
                     idx
                 }
             };
-            range.data.test = range.data;
+            range.data!.test = range.data;
             return range;
         });
 
         it('range data', () => {
             const actual = print(source, ranges, {
-                ranges: {
+                hooks: {
                     test: {
-                        open({ data }) {
+                        before({ data }: PrinterHookContext<TestData>) {
                             return '[' + (data.test === data ? 'ok' : 'fail') + ']';
                         },
-                        close({ data }) {
+                        after({ data }: PrinterHookContext<TestData>) {
                             return '[/' + (data.test === data ? 'ok' : 'fail') + ']';
                         }
                     }
                 },
-                fork: () => testPrinter,
+                fork: () => testPrinter as any,
                 createHook: (fn: Function) => fn()
             });
 
@@ -233,17 +237,17 @@ describe('print', () => {
 
         it('range start/end', () => {
             const actual = print(source, ranges, {
-                ranges: {
+                hooks: {
                     test: {
-                        open({ data, start, offset }) {
+                        before({ data, start, offset }: PrinterHookContext<TestData>) {
                             return '[' + (start === offset ? 'start' : 'start-continue') + '-' + data.idx + ']';
                         },
-                        close({ data, end, offset }) {
+                        after({ data, end, offset }: PrinterHookContext<TestData>) {
                             return '[/' + (end === offset ? 'end' : 'temp-end') + '-' + data.idx + ']';
                         }
                     }
                 },
-                fork: () => testPrinter,
+                fork: () => testPrinter as any,
                 createHook: (fn: Function) => fn()
             });
 
@@ -256,17 +260,17 @@ describe('print', () => {
         it('location', () => {
             const source = '1\n2\r3\r\n4';
             const ranges = source.split('').map((c, idx) => ({
-                type: 'test',
+                type: 'test' as const,
                 start: idx,
                 end: idx + 1
             }));
             const actual = print(source, ranges, {
-                ranges: {
+                hooks: {
                     test: {
-                        open({ offset, line, column }) {
+                        before({ offset, line, column }) {
                             return '[' + [offset, line, column].join(':') + ']';
                         },
-                        close({ offset, line, column }) {
+                        after({ offset, line, column }) {
                             return '[/' + [offset, line, column].join(':') + ']';
                         }
                     }
@@ -411,68 +415,50 @@ describe('print', () => {
 
     describe('node hook', () => {
         it('should work with node hook', () => {
-            const printer: Printer = {
-                ranges: {
-                    wrap: {
-                        node: (content) => `[${content}]`
-                    }
-                },
-                fork: () => printer,
-                createHook: (fn: Function) => fn()
-            };
-
             equal(
                 print('Hello world!', [
                     { type: 'wrap', start: 6, end: 11, data: null }
-                ], printer),
+                ], {
+                    wrap: {
+                        node: (content) => `[${content}]`
+                    }
+                }),
                 'Hello [world]!'
             );
         });
 
         it('should support node hook combined with before/after hooks', () => {
-            const printer: Printer = {
-                ranges: {
-                    wrap: {
-                        before: () => '<',
-                        after: () => '>',
-                        node: (content) => `[${content}]`
-                    }
-                },
-                fork: () => printer,
-                createHook: (fn: Function) => fn()
-            };
-
             equal(
                 print('Hello world!', [
                     { type: 'wrap', start: 6, end: 11, data: null }
-                ], printer),
+                ], {
+                    wrap: {
+                        open: () => '<',
+                        close: () => '>',
+                        node: (content) => `[${content}]`
+                    }
+                }),
                 'Hello <[world]>!'
             );
         });
 
         it('should support nested node hooks with before/after', () => {
-            const printer: Printer = {
-                ranges: {
-                    outer: {
-                        before: () => '(',
-                        after: () => ')',
-                        node: (content) => `{${content}}`
-                    },
-                    inner: {
-                        before: () => '<',
-                        after: () => '>',
-                        node: (content) => `[${content}]`
-                    }
-                },
-                fork: () => printer,
-                createHook: (fn: Function) => fn()
-            };
-
             equal(
                 print('Hello world!', [
                     { type: 'outer', start: 0, end: 12, data: null },
                     { type: 'inner', start: 6, end: 11, data: null }
-                ], printer),
+                ], {
+                    outer: {
+                        open: () => '(',
+                        close: () => ')',
+                        node: (content) => `{${content}}`
+                    },
+                    inner: {
+                        open: () => '<',
+                        close: () => '>',
+                        node: (content) => `[${content}]`
+                    }
+                }),
                 '({Hello <[world]>!})'
             );
         });

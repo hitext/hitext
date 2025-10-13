@@ -1,82 +1,104 @@
-export type Marker = symbol | string | number;
-export type createRange = (start: number, end: number, data?: any) => void;
-export type GenerateRanges = (source: string, createRange: createRange) => void;
-export type RangeTuple = [start: number, end: number, data?: any];
-export interface Range {
-    type: Marker;
+//
+// Pipeline
+//
+
+export interface PipelineNodeState {
+    createPrintHooks: () => Partial<PrintHooks<any, any>>;
+    layers: Array<{
+        marker: RangeMarker;
+        generate: GenerateRanges<any, any>;
+        hooks: Partial<RangeHooks>;
+    }>;
+}
+export interface PipelineNode<LayerOptions, T, R = T, HC = unknown> {
+    addLayer<D = unknown>(
+        ranges: Ranges<D, LayerOptions>,
+        hooks: Partial<RangeHooks<D, T, R>> | ((context: HC) => Partial<RangeHooks<D, T, R>>)
+    ): PipelineNode<LayerOptions, T, R, HC>;
+    render(source: string, options?: LayerOptions): R;
+}
+export interface Generator<Data = unknown, LayerOptions = unknown> {
+    marker: RangeMarker,
+    generate: GenerateRanges<Data, LayerOptions>
+}
+
+
+//
+// Ranges
+//
+
+// input
+export type Ranges<Data = unknown, LayerOptions = unknown> =
+    | Array<RangeTuple<Data> | Range<Data>>
+    | GenerateRanges<Data, LayerOptions>;
+export type RangeTuple<Data = unknown> = [start: number, end: number, data?: Data];
+export type Range<Data = unknown> = { start: number, end: number, data?: Data };
+export type CreateRange<Data> = (start: number, end: number, data?: Data) => void;
+export type GenerateRanges<Data = unknown, LayerOptions = unknown> = (
+    source: string,
+    createRange: CreateRange<Data>,
+    layerOptions?: LayerOptions
+) => void;
+
+// generated
+export type RangeMarker = symbol | string | number;
+export interface GeneratedRange<Data = unknown> {
+    type: RangeMarker;
     start: number;
     end: number;
-    data?: any;
-}
-export interface Generator {
-    marker: Marker,
-    generate: GenerateRanges
+    data: Data | undefined;
 }
 
-export type PluginRef = Plugin | GenerateRanges | [Plugin, PrinterSetExtension];
-export interface Plugin {
-    name: string | undefined;
-    ranges: GenerateRanges | RangeTuple[];
-    printer?: PrinterSetExtension;
-}
+//
+// Printer
+//
 
-export interface PrinterHook<Context = PrinterHookContext> {
-    // New API: content callback model
-    before?: (context: Context) => any;
-    after?: (context: Context) => any;
-    node?: (content: any, context: Context) => any;
-    text?: (chunk: string, context: Context) => any;
-
-    // Legacy API (deprecated but functional)
-    open?: (context: Context) => string;
-    close?: (context: Context) => string;
-    print?: (chunk: string, context: Context) => string;
-}
-export interface PrinterHookContext {
+export interface PrinterHookContext<T = unknown> {
     offset: number;
     line: number;
     column: number;
     start: number;
     end: number;
-    data: any;
+    data: T;
 }
-export type PrinterExtension = Partial<Printer>;
-export type PrinterRangeHooksMap = {
-    [key: string | symbol]: PrinterHook<any>;
+
+export interface RangeHooks<Data = unknown, T, R = T> {
+    open: (context: PrinterHookContext<Data>) => T | string;
+    close: (context: PrinterHookContext<Data>) => T | string;
+    node: ((content: T | R, context: PrinterHookContext<Data>) => T | string) | null;
+    text: (chunk: string, context: PrinterHookContext<Data>) => string | null;
 }
-export interface Printer<T = PrinterHookContext> {
-    // Output type discriminator
-    outputType?: string;  // 'string' | 'node' | 'jsx' | custom
 
-    // Root container creation
-    createRoot?(context?: any): any;
-
-    // Combine/append fragments
-    append?(parent: any, child: any): void;
-
-    // Finalize output
-    finalize?(accumulated: any): any;
-
-    // New API: before/after (replace open/close)
-    before?(context: T): any;
-    after?(context: T): any;
-    text?(chunk: string, context: T): any;
-
-    // Legacy API (deprecated but functional)
-    open?(context: T): string;
-    close?(context: T): string;
-    print?(chunk: string, context: T): string;
-
-    createContext?(options?: any): any;
-    fork: (extension?: PrinterExtension) => Printer;
-    ranges: PrinterRangeHooksMap;
-    createHook: (fn: Function) => PrinterHook<any>;
+export interface PrinterBuffer<ReturnValue, ChunkValue = ReturnValue> {
+    append(child: ChunkValue | PrinterBuffer<ReturnValue, ChunkValue>): void;
+    emit(): ReturnValue;
 }
-export type PrinterSetExtension = {
-    [key: string]: PrinterExtension;
+
+export interface Printer<
+    ReturnValue = string,
+    ChunkValue = ReturnValue,
+    Buffer extends PrinterBuffer<ReturnValue, ChunkValue> = PrinterBuffer<ReturnValue, ChunkValue>,
+    Options = any
+> {
+    // Buffer management
+    createBuffer?(options: Options): Buffer;
+
+    // Lifecycle hooks
+    open?(options: Options): ChunkValue;
+    close?(options: Options): ChunkValue;
+    text?(chunk: string): ChunkValue;
 }
-export type PrinterSet = {
-    [key: string]: Printer;
-} & {
-    fork(extension: PrinterSetExtension): PrinterSet;
-};
+
+export interface PrintBuffer<T, R = T> {
+    append(child: string | T | R): void;
+    emit(): R;
+}
+
+export interface PrintHooks<T, R = T, HC = unknown> {
+    createBuffer(): PrintBuffer<T, R>;
+    text(sourceChunk: string): string;
+    open(context: PrinterHookContext): T;
+    close(context: PrinterHookContext): T;
+
+    rangeHooksContext?: HC;
+}

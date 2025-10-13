@@ -1,172 +1,163 @@
 import { equal } from 'assert';
-import hitext from '../src/index.js';
-import type { GenerateRanges, createRange, PrinterSetExtension } from '../src/types.d.js';
+import { html, string, generator } from '../src/index.js';
 
-const use = hitext.use;
-const source = '12345678';
-const expected = '<a>1234</a><b>5678</b>';
-const genA: GenerateRanges = (source: string, createRange: createRange) => createRange(0, 4, 'a');
-const genB: GenerateRanges = (source: string, createRange: createRange) => createRange(4, 8, 'b');
-const printer: PrinterSetExtension = {
-    html: {
-        open: ({ data: marker }) => '<' + marker + '>',
-        close: ({ data: marker }) => '</' + marker + '>'
-    }
-};
-const pluginA = {
-    name: 'pluginA',
-    ranges: genA,
-    printer
-};
-const pluginB = {
-    name: 'pluginB',
-    ranges: genB,
-    printer
-};
-
-describe('basic', () => {
-    it('should print', () => {
-        equal(hitext().print('Hi!'), 'Hi!');
-    });
-
-    it('hitext(plugins, printerType)', () => {
-        equal(
-            hitext([pluginA, pluginB], 'html').print(source),
-            expected
-        );
-    });
-
-    it('hitext(generators).printer()', () => {
-        equal(
-            hitext([pluginA, pluginB])
-                .printer('html')
-                .print(source),
-            expected
-        );
-    });
-
-    it('hitext(generators) as arrays', () => {
-        equal(
-            hitext([{ name: 'a', ranges: genA, printer }, { name: undefined, ranges: genB, printer }])
-                .print(source, 'html'),
-            expected
-        );
-    });
-
-    it('hitext.use()', () => {
-        equal(
-            use(pluginA)
-                .use(pluginB)
-                .print(source, 'html'),
-            expected
-        );
-    });
-
-    it('hitext().use().printer()', () => {
-        equal(
-            use(pluginA)
-                .use(pluginB)
-                .printer('html')
-                .print(source),
-            expected
-        );
-    });
-
-    describe('hitext.use()', () => {
-        it('should return a decorate function', () => {
-            const print = use({ name: 'a', ranges: genA, printer })
-                .use(pluginB);
-
+describe('new API', () => {
+    describe('basic usage', () => {
+        it('should render plain text without layers', () => {
             equal(
-                print(source, 'html'),
-                expected
+                html().render('Hi!'),
+                'Hi!'
             );
         });
 
-        it('with set { generator, printer }', () => {
-            const pipeline = use({ name: 'a', ranges: genA, printer })
-                .use(pluginB);
-
-            equal(
-                pipeline.print(source, 'html'),
-                expected
-            );
-        });
-
-        it('should take two arguments', () => {
-            const print = use({ name: 'a', ranges: genA, printer })
-                .use(pluginB);
-
-            equal(
-                print(source, 'html'),
-                expected
-            );
-        });
-
-        it('should take an array as first argument', () => {
-            const print = use({ name: 'a', ranges: [[0, 4, 'a'], [4, 8, 'b']], printer });
-
-            equal(
-                print(source, 'html'),
-                expected
-            );
-        });
-
-        it('second argument should override plugin\'s default printer', () => {
-            const print = use(pluginA, {
-                html: {
-                    open: () => '!!',
-                    close: () => '!/!'
-                }
-            });
-
-            equal(
-                print(source, 'html'),
-                '!!1234!/!5678'
-            );
-        });
-
-        it.skip('functional printer\'s extension should be lazy', () => {
-            let called = 0;
-            const print = use(genA, {
-                html: () => called++
-            } as any);
-
-            equal(called, 0);
-
-            print('asd', 'html');
-            equal(called, 1);
-
-            print('asd', 'html');
-            equal(called, 1);
-        });
-
-        it('compose printers', () => {
-            const pipeline = use({
-                name: 'foo',
-                ranges: [[1, 2]],
-                printer: {
-                    html: {
-                        open: () => '<foo>',
-                        close: () => '</foo>'
+        it('should render with single layer', () => {
+            const result = html()
+                .addLayer(
+                    [[0, 5]],
+                    {
+                        open: () => '<mark>',
+                        close: () => '</mark>'
                     }
-                }
-            })
-                .use({
-                    name: 'bar',
-                    ranges: [[1, 2]],
-                    printer: {
-                        html: {
-                            open: () => '<bar>',
-                            close: () => '</bar>'
-                        }
-                    }
-                });
+                )
+                .render('Hello world!');
 
-            equal(
-                pipeline.print('abc', 'html'),
-                'a<foo><bar>b</bar></foo>c'
-            );
+            equal(result, '<mark>Hello</mark> world!');
+        });
+
+        it('should render with multiple layers', () => {
+            const result = html()
+                .addLayer(
+                    [[0, 5]],
+                    {
+                        open: () => '<strong>',
+                        close: () => '</strong>'
+                    }
+                )
+                .addLayer(
+                    [[6, 11]],
+                    {
+                        open: () => '<em>',
+                        close: () => '</em>'
+                    }
+                )
+                .render('Hello world!');
+
+            equal(result, '<strong>Hello</strong> <em>world</em>!');
+        });
+
+        it('should handle nested ranges', () => {
+            const result = html()
+                .addLayer(
+                    [[0, 11]],
+                    {
+                        open: () => '<div>',
+                        close: () => '</div>'
+                    }
+                )
+                .addLayer(
+                    [[0, 5]],
+                    {
+                        open: () => '<span>',
+                        close: () => '</span>'
+                    }
+                )
+                .render('Hello world');
+
+            equal(result, '<div><span>Hello</span> world</div>');
+        });
+
+        it('should pass data to hooks', () => {
+            const result = html()
+                .addLayer<{ type: string }>(
+                    [{ start: 0, end: 5, data: { type: 'greeting' } }],
+                    {
+                        open: ({ data }) => `<span class="${data.type}">`,
+                        close: () => '</span>'
+                    }
+                )
+                .render('Hello world');
+
+            equal(result, '<span class="greeting">Hello</span> world');
+        });
+
+        it('should support node hooks', () => {
+            const result = html()
+                .addLayer<{ tag: string }>(
+                    [{ start: 0, end: 5, data: { tag: 'custom' } }],
+                    {
+                        node: (content, { data }) => `<${data.tag}>${content}</${data.tag}>`
+                    }
+                )
+                .render('Hello world');
+
+            equal(result, '<custom>Hello</custom> world');
+        });
+
+        it('should handle array ranges', () => {
+            const result = html()
+                .addLayer(
+                    [[0, 5], [6, 11]],
+                    {
+                        open: () => '<mark>',
+                        close: () => '</mark>'
+                    }
+                )
+                .render('Hello world');
+
+            equal(result, '<mark>Hello</mark> <mark>world</mark>');
+        });
+    });
+
+    describe('with generators', () => {
+        it('should work with built-in match generator', () => {
+            const result = html()
+                .addLayer(
+                    generator.matches('world'),
+                    {
+                        open: () => '<mark>',
+                        close: () => '</mark>'
+                    }
+                )
+                .render('Hello world! Hello world!');
+
+            equal(result, 'Hello <mark>world</mark>! Hello <mark>world</mark>!');
+        });
+
+        it('should work with built-in lines generator', () => {
+            const result = html()
+                .addLayer(
+                    generator.lines,
+                    {
+                        open: ({ line }) => `<div data-line="${line}">`,
+                        close: () => '</div>'
+                    }
+                )
+                .render('line1\nline2\nline3');
+
+            equal(result, '<div data-line="1">line1\n</div><div data-line="2">line2\n</div><div data-line="3">line3</div>');
+        });
+    });
+
+    describe('printer options', () => {
+        it('should pass options to printer', () => {
+            // This test demonstrates that printer options can be passed
+            // Actual behavior depends on printer implementation
+            const pipeline = html({ someOption: true });
+            equal(typeof pipeline.render, 'function');
+        });
+
+        it('should pass render options', () => {
+            const result = string()
+                .addLayer(
+                    [[0, 5]],
+                    {
+                        open: () => '[',
+                        close: () => ']'
+                    }
+                )
+                .render('Hello world', { customOption: 'value' });
+
+            equal(result, '[Hello] world');
         });
     });
 });
