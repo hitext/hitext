@@ -4,12 +4,44 @@ const hasOwn = Object.hasOwn || ((o, k) => Object.prototype.hasOwnProperty.call(
 const emptyString = () => '';
 const noop = function() {};
 
+// Hook name constants
+const HOOK_NODE = 'node';
+const HOOK_BEFORE = 'before';
+const HOOK_AFTER = 'after';
+const HOOK_TEXT = 'text';
+const HOOK_OPEN = 'open';
+const HOOK_CLOSE = 'close';
+const HOOK_PRINT = 'print';
+
+// Constant for throwing callback (when content() is called outside of node hook context)
+const contentNotAvailable = function() {
+    throw new Error('content() is only available in node hook context');
+};
+
 function ensureFunction<T extends Function>(value: T | undefined, alt: T) {
     return typeof value === 'function' ? value : alt;
 }
 
+// Helper to append only non-empty content
+function appendIfNotEmpty(parent: any, child: any, appendFn: (parent: any, child: any) => any): any {
+    if (child !== '' && child != null) {
+        return appendFn(parent, child);
+    }
+    return parent;
+}
+
 export default function print(source: string, ranges: Range[], printer: Printer) {
-    const print = ensureFunction(printer.print, (chunk: string) => chunk);
+    // Support both old (print) and new (text) API
+    const print = ensureFunction(printer[HOOK_TEXT] || printer[HOOK_PRINT], (chunk: string) => chunk);
+
+    // Printer output assembly methods
+    const createRoot = ensureFunction(printer.createRoot, () => '');
+    const append = ensureFunction(printer.append, (parent: any, child: any) => parent + child);
+    const finalize = ensureFunction(printer.finalize, (accumulated: any) => accumulated);
+
+    // Create a mutable content callback holder
+    let contentCallback: () => any = contentNotAvailable;
+
     const printContext: PrinterHookContext = Object.assign(
         Object.defineProperties(Object.create(null), {
             offset: { get: () => printedOffset },
@@ -17,7 +49,11 @@ export default function print(source: string, ranges: Range[], printer: Printer)
             column: { get: () => column },
             start: { get: () => currentRange.start },
             end: { get: () => currentRange.end },
-            data: { get: () => currentRange.data }
+            data: { get: () => currentRange.data },
+            content: {
+                get: () => contentCallback,
+                enumerable: true
+            }
         }),
         ensureFunction(printer.createContext, noop)()
     );
@@ -30,16 +66,19 @@ export default function print(source: string, ranges: Range[], printer: Printer)
     let printedOffset = 0;
     let line = 1;
     let column = 1;
-    let buffer = '';
+    let buffer = createRoot();
 
-    buffer += ensureFunction(printer.open, emptyString)(printContext);
+    // Support both old (open/close) and new (before/after) API at printer level
+    const beforeResult = ensureFunction(printer[HOOK_BEFORE] || printer[HOOK_OPEN], emptyString)(printContext);
+    buffer = appendIfNotEmpty(buffer, beforeResult, append);
 
-    // preprocess range hooks
+    // preprocess range hooks - normalize API (support both old and new names)
     const rangeHooks: PrinterRangeHooksMap = [
         ...Object.getOwnPropertyNames(rangeHooks2),
         ...Object.getOwnPropertySymbols(rangeHooks2)
     ].reduce((result, type) => {
         let rangeHook = rangeHooks2[type];
+
 
         if (typeof rangeHook === 'function') {
             rangeHook = printer.createHook(rangeHook);
@@ -48,9 +87,10 @@ export default function print(source: string, ranges: Range[], printer: Printer)
         if (rangeHook) {
             rangePriority.push(type);
             result[type] = {
-                open: ensureFunction(rangeHook.open, emptyString),
-                close: ensureFunction(rangeHook.close, emptyString),
-                print: ensureFunction(rangeHook.print, print)
+                open: ensureFunction(rangeHook[HOOK_BEFORE] || rangeHook[HOOK_OPEN], emptyString),
+                close: ensureFunction(rangeHook[HOOK_AFTER] || rangeHook[HOOK_CLOSE], emptyString),
+                print: ensureFunction(rangeHook[HOOK_TEXT] || rangeHook[HOOK_PRINT], print),
+                node: rangeHook[HOOK_NODE] // New: node hook for content callback
             };
         }
 
@@ -65,9 +105,82 @@ export default function print(source: string, ranges: Range[], printer: Printer)
             rangePriority.indexOf(a.type) - rangePriority.indexOf(b.type)
     );
 
+    // Track content accumulation for ranges with node hooks
+    const rangeContentStack: any[] = [];
+    const rangeHasNode: boolean[] = [];
+    let insideNodeHookRange = false; // Track if we're inside ANY node hook range
+
     // main part
-    const open = (index: number) => rangeHooks[(currentRange = openedRanges[index]).type].open?.(printContext) || '';
-    const close = (index: number) => rangeHooks[(currentRange = openedRanges[index]).type].close?.(printContext) || '';
+    const open = (index: number) => {
+        currentRange = openedRanges[index];
+        const hook = rangeHooks[currentRange.type];
+
+        if (!hook) {
+            console.error('NO HOOK FOR TYPE:', currentRange.type);
+            return '';
+        }
+
+        // Check if this range uses node hook
+        if (hook.node) {
+            // Start accumulating content for this range
+            rangeHasNode.push(true);
+            rangeContentStack.push(createRoot());
+            insideNodeHookRange = true;
+            return ''; // Don't output open tag yet
+        } else {
+            // Normal open/before behavior
+            rangeHasNode.push(false);
+            const openTag = hook.open?.(printContext) || '';
+
+            // If we're inside a node hook range, add to content stack
+            if (insideNodeHookRange) {
+                const lastIndex = rangeContentStack.length - 1;
+                rangeContentStack[lastIndex] = appendIfNotEmpty(rangeContentStack[lastIndex], openTag, append);
+                return '';
+            }
+            return openTag;
+        }
+    };
+
+    const close = (index: number) => {
+        currentRange = openedRanges[index];
+        const hook = rangeHooks[currentRange.type];
+        const hasNode = rangeHasNode.pop();
+
+        if (hasNode && hook.node) {
+            const accumulatedContent = rangeContentStack.pop() || '';
+
+            // Check if we're still inside another node hook range
+            insideNodeHookRange = rangeContentStack.length > 0;
+
+            // Use node hook with content callback
+            contentCallback = () => accumulatedContent;
+            const result = hook.node(printContext) || '';
+            contentCallback = contentNotAvailable;
+
+            // Add result to parent's content or buffer
+            if (insideNodeHookRange) {
+                // We're nested inside another node hook
+                const lastIndex = rangeContentStack.length - 1;
+                rangeContentStack[lastIndex] = appendIfNotEmpty(rangeContentStack[lastIndex], result, append);
+                return '';
+            } else {
+                return result;
+            }
+        } else {
+            // Normal close/after behavior
+            const closeTag = hook.close?.(printContext) || '';
+
+            // If we're inside a node hook range, add to content stack
+            if (insideNodeHookRange) {
+                const lastIndex = rangeContentStack.length - 1;
+                rangeContentStack[lastIndex] = appendIfNotEmpty(rangeContentStack[lastIndex], closeTag, append);
+                return '';
+            }
+            return closeTag;
+        }
+    };
+
     const printChunk = (offset: number) => {
         if (printedOffset !== offset) {
             const substring = source.substring(printedOffset, offset);
@@ -86,7 +199,17 @@ export default function print(source: string, ranges: Range[], printer: Printer)
                 }
             }
 
-            buffer += printSubstr?.(substring, printContext) || '';
+            const transformed = printSubstr?.(substring, printContext) || '';
+
+            // If we're inside a node hook range, accumulate content
+            // Otherwise add directly to buffer
+            if (insideNodeHookRange) {
+                const lastIndex = rangeContentStack.length - 1;
+                rangeContentStack[lastIndex] = appendIfNotEmpty(rangeContentStack[lastIndex], transformed, append);
+            } else {
+                buffer = appendIfNotEmpty(buffer, transformed, append);
+            }
+
             printedOffset = offset;
         }
     };
@@ -98,7 +221,7 @@ export default function print(source: string, ranges: Range[], printer: Printer)
                 if (openedRanges[j].end !== closingOffset) {
                     break;
                 }
-                buffer += close(j);
+                buffer = appendIfNotEmpty(buffer, close(j), append);
                 openedRanges.pop();
             }
 
@@ -132,7 +255,7 @@ export default function print(source: string, ranges: Range[], printer: Printer)
         for (j = 0; j < openedRanges.length; j++) {
             if (openedRanges[j].end < range.end) {
                 for (let k = openedRanges.length - 1; k >= j; k--) {
-                    buffer += close(k);
+                    buffer = appendIfNotEmpty(buffer, close(k), append);
                 }
                 break;
             }
@@ -141,7 +264,7 @@ export default function print(source: string, ranges: Range[], printer: Printer)
         openedRanges.splice(j, 0, range);
 
         for (; j < openedRanges.length; j++) {
-            buffer += open(j);
+            buffer = appendIfNotEmpty(buffer, open(j), append);
         }
 
         if (range.end < closingOffset) {
@@ -154,11 +277,12 @@ export default function print(source: string, ranges: Range[], printer: Printer)
 
     // print ranges out of source boundaries
     for (let i = openedRanges.length - 1; i >= 0; i--) {
-        buffer += close(i);
+        buffer = appendIfNotEmpty(buffer, close(i), append);
     }
 
-    // finish printing
-    buffer += ensureFunction(printer.close, emptyString)(printContext) || '';
+    // finish printing - support both old (close) and new (after) API
+    const afterResult = ensureFunction(printer[HOOK_AFTER] || printer[HOOK_CLOSE], emptyString)(printContext) || '';
+    buffer = appendIfNotEmpty(buffer, afterResult, append);
 
-    return buffer;
+    return finalize(buffer);
 };
