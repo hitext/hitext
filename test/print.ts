@@ -408,4 +408,73 @@ describe('print', () => {
             );
         })
     );
+
+    describe('node hook', () => {
+        it('should work with node hook', () => {
+            const printer: Printer = {
+                ranges: {
+                    wrap: {
+                        node: (content) => `[${content}]`
+                    }
+                },
+                fork: () => printer,
+                createHook: (fn: Function) => fn()
+            };
+
+            equal(
+                print('Hello world!', [
+                    { type: 'wrap', start: 6, end: 11, data: null }
+                ], printer),
+                'Hello [world]!'
+            );
+        });
+
+        it('should support node hook combined with before/after hooks', () => {
+            const printer: Printer = {
+                ranges: {
+                    wrap: {
+                        before: () => '<',
+                        after: () => '>',
+                        node: (content) => `[${content}]`
+                    }
+                },
+                fork: () => printer,
+                createHook: (fn: Function) => fn()
+            };
+
+            equal(
+                print('Hello world!', [
+                    { type: 'wrap', start: 6, end: 11, data: null }
+                ], printer),
+                'Hello <[world]>!'
+            );
+        });
+
+        it('should support nested node hooks with before/after', () => {
+            const printer: Printer = {
+                ranges: {
+                    outer: {
+                        before: () => '(',
+                        after: () => ')',
+                        node: (content) => `{${content}}`
+                    },
+                    inner: {
+                        before: () => '<',
+                        after: () => '>',
+                        node: (content) => `[${content}]`
+                    }
+                },
+                fork: () => printer,
+                createHook: (fn: Function) => fn()
+            };
+
+            equal(
+                print('Hello world!', [
+                    { type: 'outer', start: 0, end: 12, data: null },
+                    { type: 'inner', start: 6, end: 11, data: null }
+                ], printer),
+                '({Hello <[world]>!})'
+            );
+        });
+    });
 });

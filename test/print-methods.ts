@@ -1,6 +1,6 @@
 import { strictEqual } from 'assert';
 import print from '../src/print.js';
-import type { Printer, PrinterHookContext } from '../src/types.d.js';
+import type { Printer } from '../src/types.d.js';
 
 describe('print methods', () => {
     describe('createRoot', () => {
@@ -126,11 +126,10 @@ describe('print methods', () => {
                 finalize: (root: Node) => root,
                 ranges: {
                     paragraph: {
-                        node: ({ content }: PrinterHookContext) => {
+                        node: (content: any) => {
                             const p: Node = { type: 'p', children: [] };
-                            const contentNode = content();
-                            if (contentNode.type === 'root') {
-                                p.children = contentNode.children;
+                            if (content.type === 'root') {
+                                p.children = content.children;
                             }
                             return p;
                         }

@@ -8,7 +8,7 @@ describe('print hooks', () => {
             const printer: Printer = {
                 ranges: {
                     greeting: {
-                        node: ({ content, data }) => `<span class="${data.type}">${content()}</span>`
+                        node: (content, { data }) => `<span class="${data.type}">${content}</span>`
                     }
                 },
                 fork: () => printer,
@@ -29,10 +29,10 @@ describe('print hooks', () => {
             const printer: Printer = {
                 ranges: {
                     sentence: {
-                        node: ({ content }) => `<p>${content()}</p>`
+                        node: (content) => `<p>${content}</p>`
                     },
                     word: {
-                        node: ({ content }) => `<strong>${content()}</strong>`
+                        node: (content) => `<strong>${content}</strong>`
                     }
                 },
                 fork: () => printer,
@@ -56,7 +56,7 @@ describe('print hooks', () => {
             const printer: Printer = {
                 ranges: {
                     bracket: {
-                        node: ({ content }) => `[${content()}]`
+                        node: (content) => `[${content}]`
                     },
                     mark: {
                         open: () => '<mark>',
@@ -84,8 +84,8 @@ describe('print hooks', () => {
             const printer: Printer = {
                 ranges: {
                     word: {
-                        node: ({ content, data }) =>
-                            data.secret ? '[REDACTED]' : content()
+                        node: (content, { data }) =>
+                            data.secret ? '[REDACTED]' : content
                     }
                 },
                 fork: () => printer,
@@ -110,17 +110,16 @@ describe('print hooks', () => {
             const printer: Printer = {
                 ranges: {
                     test: {
-                        node: (context: PrinterHookContext) => {
+                        node: (content, context: PrinterHookContext) => {
                             capturedContext = {
                                 start: context.start,
                                 end: context.end,
                                 line: context.line,
                                 column: context.column,
                                 offset: context.offset,
-                                data: context.data,
-                                content: typeof context.content
+                                data: context.data
                             };
-                            return context.content();
+                            return content;
                         }
                     }
                 },
@@ -137,20 +136,19 @@ describe('print hooks', () => {
             strictEqual(capturedContext.line, 2);
             strictEqual(capturedContext.column, 6);
             strictEqual(capturedContext.data.foo, 'bar');
-            strictEqual(capturedContext.content, 'function');
         });
 
         it('should handle deeply nested node hooks', () => {
             const printer: Printer = {
                 ranges: {
                     level1: {
-                        node: ({ content }) => `<L1>${content()}</L1>`
+                        node: (content) => `<L1>${content}</L1>`
                     },
                     level2: {
-                        node: ({ content }) => `<L2>${content()}</L2>`
+                        node: (content) => `<L2>${content}</L2>`
                     },
                     level3: {
-                        node: ({ content }) => `<L3>${content()}</L3>`
+                        node: (content) => `<L3>${content}</L3>`
                     }
                 },
                 fork: () => printer,
@@ -175,7 +173,7 @@ describe('print hooks', () => {
             const printer: Printer = {
                 ranges: {
                     empty: {
-                        node: ({ content }) => `<empty>${content()}</empty>`
+                        node: (content) => `<empty>${content}</empty>`
                     }
                 },
                 fork: () => printer,
@@ -196,7 +194,7 @@ describe('print hooks', () => {
             const printer: Printer = {
                 ranges: {
                     tag: {
-                        node: ({ content, data }) => `<${data}>${content()}</${data}>`
+                        node: (content, { data }) => `<${data}>${content}</${data}>`
                     }
                 },
                 fork: () => printer,
@@ -221,8 +219,8 @@ describe('print hooks', () => {
             const printer: Printer = {
                 ranges: {
                     number: {
-                        node: ({ content }) => {
-                            const num = parseInt(content());
+                        node: (content) => {
+                            const num = parseInt(content);
                             return num * 2;
                         }
                     }
@@ -239,36 +237,6 @@ describe('print hooks', () => {
                 ),
                 'The answer is 42'
             );
-        });
-
-        it('should throw error when calling content() outside node hook context', () => {
-            let savedContext: any;
-            const printer: Printer = {
-                ranges: {
-                    test: {
-                        open: (context) => {
-                            savedContext = context;
-                            return '<open>';
-                        },
-                        close: () => '</close>'
-                    }
-                },
-                fork: () => printer,
-                createHook: fn => fn()
-            };
-
-            print(
-                'test',
-                [{ type: 'test', start: 0, end: 4, data: null }],
-                printer
-            );
-
-            try {
-                savedContext.content();
-                throw new Error('Should have thrown');
-            } catch (e: any) {
-                strictEqual(e.message, 'content() is only available in node hook context');
-            }
         });
     });
 
@@ -299,7 +267,7 @@ describe('print hooks', () => {
             const printer: Printer = {
                 ranges: {
                     bracket: {
-                        node: ({ content }: PrinterHookContext) => `[${content()}]`
+                        node: (content: any) => `[${content}]`
                     },
                     mark: {
                         before: () => '<mark>',
