@@ -9,7 +9,15 @@ describe('print methods', () => {
             const printer: Printer = {
                 createRoot: () => {
                     rootCalled = true;
-                    return 'ROOT:';
+                    return {
+                        buffer: 'ROOT:',
+                        append(child: string) {
+                            this.buffer += child;
+                        },
+                        toString() {
+                            return this.buffer;
+                        }
+                    };
                 },
                 ranges: {},
                 fork: () => printer,
@@ -171,7 +179,7 @@ describe('print methods', () => {
         it('should use finalize to process final output', () => {
             let finalizeCalled = false;
             const printer: Printer = {
-                finalize: (buffer: string) => {
+                finalize: (buffer: any) => {
                     finalizeCalled = true;
                     return `FINAL[${buffer}]`;
                 },

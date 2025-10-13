@@ -56,7 +56,7 @@ export interface Printer<T = PrinterHookContext> {
     createRoot?(): any;
 
     // Combine/append fragments
-    append?(parent: any, child: any): any;
+    append?(parent: any, child: any): void;
 
     // Finalize output
     finalize?(accumulated: any): any;
