@@ -159,4 +159,138 @@ describe('Pipeline API', () => {
             equal(result, '[Hello] world');
         });
     });
+
+    describe('pipeline introspection', () => {
+        it('should expose createRenderHooks property', () => {
+            const pipeline = html();
+
+            equal(typeof pipeline.createRenderHooks, 'function');
+
+            const renderHooks = pipeline.createRenderHooks();
+            equal(typeof renderHooks.createBuffer, 'function');
+            equal(typeof renderHooks.text, 'function');
+        });
+
+        it('should expose layers property', () => {
+            const pipeline = html()
+                .addLayer([[0, 5]], { open: () => '<a>', close: () => '</a>' })
+                .addLayer([[6, 11]], { open: () => '<b>', close: () => '</b>' });
+
+            equal(Array.isArray(pipeline.layers), true);
+            equal(pipeline.layers.length, 2);
+
+            // Each layer should have marker, generate, and rangeHooks
+            equal(typeof pipeline.layers[0].marker, 'symbol');
+            equal(typeof pipeline.layers[0].generate, 'function');
+            equal(typeof pipeline.layers[0].rangeHooks, 'object');
+        });
+
+        it('should generate ranges without rendering', () => {
+            const pipeline = html()
+                .addLayer([[0, 5]], { open: () => '<mark>', close: () => '</mark>' })
+                .addLayer([[6, 11]], { open: () => '<em>', close: () => '</em>' });
+
+            const ranges = pipeline.ranges('Hello world');
+
+            equal(Array.isArray(ranges), true);
+            equal(ranges.length, 2);
+            equal(ranges[0].start, 0);
+            equal(ranges[0].end, 5);
+            equal(ranges[1].start, 6);
+            equal(ranges[1].end, 11);
+        });
+
+        it('should generate ranges with generator function', () => {
+            const pipeline = html()
+                .addLayer(
+                    rangeMatch('world'),
+                    { open: () => '<mark>', close: () => '</mark>' }
+                );
+
+            const ranges = pipeline.ranges('Hello world! Hello world!');
+
+            equal(ranges.length, 2);
+            equal(ranges[0].start, 6);
+            equal(ranges[0].end, 11);
+            equal(ranges[1].start, 19);
+            equal(ranges[1].end, 24);
+        });
+
+        it('should generate ranges from multiple layers', () => {
+            const pipeline = html()
+                .addLayer([[0, 5]], { open: () => '<a>', close: () => '</a>' })
+                .addLayer(rangeMatch('o'), { open: () => '<mark>', close: () => '</mark>' });
+
+            const ranges = pipeline.ranges('Hello world');
+
+            // Should have ranges from both layers
+            equal(ranges.length, 3); // [0,5] + two 'o' matches at 4 and 7
+
+            // First layer range
+            equal(ranges[0].start, 0);
+            equal(ranges[0].end, 5);
+
+            // Second layer ranges (matches)
+            equal(ranges[1].start, 4);
+            equal(ranges[1].end, 5);
+            equal(ranges[2].start, 7);
+            equal(ranges[2].end, 8);
+        });
+
+        it('should expose rangeHooksMap method', () => {
+            const pipeline = html()
+                .addLayer([[0, 5]], {
+                    open: () => '<mark>',
+                    close: () => '</mark>'
+                });
+
+            const hooksMap = pipeline.rangeHooksMap();
+
+            equal(typeof hooksMap, 'object');
+
+            // Should have one entry (the symbol key)
+            const keys = Object.getOwnPropertySymbols(hooksMap);
+            equal(keys.length, 1);
+
+            // The hooks should be present
+            const hooks = hooksMap[keys[0]];
+            equal(typeof hooks.open, 'function');
+            equal(typeof hooks.close, 'function');
+        });
+
+        it('rangeHooksMap should resolve function-based hooks', () => {
+            const pipeline = html()
+                .addLayer([[0, 5]], () => ({
+                    open: () => '<dynamic>',
+                    close: () => '</dynamic>'
+                }));
+
+            const hooksMap = pipeline.rangeHooksMap();
+            const keys = Object.getOwnPropertySymbols(hooksMap);
+            const hooks = hooksMap[keys[0]];
+
+            // Should be resolved to actual hooks object
+            equal(typeof hooks.open, 'function');
+            equal(typeof hooks.close, 'function');
+        });
+
+        it('should support chaining after introspection', () => {
+            const pipeline1 = html()
+                .addLayer([[0, 5]], { open: () => '<a>', close: () => '</a>' });
+
+            // Get introspection data
+            const layers1 = pipeline1.layers;
+            pipeline1.rangeHooksMap(); // Exercise the method
+
+            // Continue building pipeline
+            const pipeline2 = pipeline1
+                .addLayer([[6, 11]], { open: () => '<b>', close: () => '</b>' });
+
+            equal(layers1.length, 1);
+            equal(pipeline2.layers.length, 2);
+
+            const result = pipeline2.render('Hello world');
+            equal(result, '<a>Hello</a> <b>world</b>');
+        });
+    });
 });

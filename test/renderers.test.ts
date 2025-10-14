@@ -1,5 +1,5 @@
 import { equal } from 'assert';
-import { html as htmlRenderer, tty as ttyRenderer } from '../src/index.js';
+import { html as htmlRenderer } from '../src/index.js';
 
 describe('built-in renderers', () => {
     describe('html', () => {
@@ -48,64 +48,6 @@ describe('built-in renderers', () => {
             equal(
                 extended.render('123'),
                 '<span>1</span><span>2</span><custom>3</custom>'
-            );
-        });
-    });
-
-    describe('tty', () => {
-        it('basic with createStyle', () => {
-            const result = ttyRenderer()
-                .addLayer([
-                    { start: 0, end: 1 }
-                ], ({ createStyle }) => createStyle('cyan'))
-                .addLayer([
-                    { start: 1, end: 2 }
-                ], ({ createStyle }) => createStyle('bgBlue', 'white'))
-                .addLayer([
-                    { start: 3, end: 4 }
-                ], ({ createStyle }) => createStyle('yellow'))
-                .render('1234');
-
-            equal(
-                result,
-                '\u001b[36m1\u001b[37m\u001b[44m2\u001b[39m\u001b[49m3\u001b[33m4\u001b[39m'
-            );
-        });
-
-        it('with createStyleMap', () => {
-            const result = ttyRenderer()
-                .addLayer([
-                    { start: 0, end: 1, data: 'value' },
-                    { start: 3, end: 4, data: 'other' }
-                ], ({ createStyleMap }) => createStyleMap({
-                    'value': 'cyan',
-                    'other': 'yellow'
-                }))
-                .render('1234');
-
-            equal(
-                result,
-                '\u001b[36m1\u001b[39m23\u001b[33m4\u001b[39m'
-            );
-        });
-
-        it('createStyleMap with custom data fetcher', () => {
-            const result = ttyRenderer()
-                .addLayer([
-                    { start: 0, end: 1, data: { priority: 'high' } },
-                    { start: 1, end: 2, data: { priority: 'low' } }
-                ], ({ createStyleMap }) => createStyleMap(
-                    {
-                        'high': 'red',
-                        'low': 'green'
-                    },
-                    ({ data }) => data.priority
-                ))
-                .render('12');
-
-            equal(
-                result,
-                '\u001b[31m1\u001b[32m2\u001b[39m'
             );
         });
     });
