@@ -16,8 +16,8 @@ export function render<T, R = T>(
 ) {
     // Renderer output assembly methods
     const createBuffer = ensureFunction(renderHooks.createBuffer, () => new StringBuffer() as any);
-    const renderOpen = ensureFunction(renderHooks.open, noOutput as any);
-    const renderClose = ensureFunction(renderHooks.close, noOutput as any);
+    const renderOpen = ensureFunction(renderHooks.open, noOutput);
+    const renderClose = ensureFunction(renderHooks.close, noOutput);
     const renderText = ensureFunction(renderHooks.text, (sourceChunk: string) => sourceChunk);
 
     // Helper to append only non-empty content

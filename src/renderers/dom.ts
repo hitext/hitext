@@ -18,10 +18,10 @@ class DOMBuffer implements RenderBuffer<globalThis.Node, globalThis.DocumentFrag
     }
 }
 
-export function createDomRenderer<LayerOptions>(options?: Partial<Options>) {
+export function createDomRenderer<RenderOptions>(options?: Partial<Options>) {
     const document = options?.document || globalThis.document;
 
-    return createRenderPipeline<LayerOptions, globalThis.Node, globalThis.DocumentFragment>(() => {
+    return createRenderPipeline<RenderOptions, globalThis.Node, globalThis.DocumentFragment>(() => {
         return {
             createBuffer: () => new DOMBuffer(document)
         };

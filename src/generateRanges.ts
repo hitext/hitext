@@ -1,9 +1,9 @@
 import type { GeneratedRange, Generator } from './types.d.js';
 
-export function generateRanges<T>(
+export function generateRanges<T, RenderOptions>(
     source: string,
     generators: Generator<T>[],
-    layerOptions?: any
+    renderOptions?: RenderOptions
 ): GeneratedRange<T>[] {
     const ranges: GeneratedRange<T>[] = [];
 
@@ -12,7 +12,7 @@ export function generateRanges<T>(
             ranges.push({ type: marker, start, end, data });
         };
 
-        generate(source, createRange, layerOptions);
+        generate(source, createRange, renderOptions);
     }
 
     return ranges;

@@ -1,12 +1,11 @@
 import { equal, strictEqual } from 'assert';
 import { render } from '../src/index.js';
-import type { GeneratedRange, RangeHookContext, RangeHooks } from '../src/types.d.js';
+import type { GeneratedRange, RangeHookContext, RangeHooks, RangeMarker } from '../src/types.d.js';
 
-// Test hooks that match old testHooks.hooks.test
-const testHooks: Record<string, Partial<RangeHooks<any, any, any>>> = {
+const testHooks: Record<RangeMarker, Partial<RangeHooks<string, string>>> = {
     test: {
-        open: ({ data: x }: RangeHookContext<any>) => `<${x}>`,
-        close: ({ data: x }: RangeHookContext<any>) => `</${x}>`
+        open: ({ data: x }: RangeHookContext<string>) => `<${x}>`,
+        close: ({ data: x }: RangeHookContext<string>) => `</${x}>`
     }
 };
 

@@ -79,8 +79,8 @@ function _styleToRender(current: Style, next: Style = {}) {
     return modifiers;
 }
 
-export function createTTYRenderer<LayerOptions>() {
-    return createRenderPipeline<LayerOptions, string, string, RangeHooksFactoryContext>(() => {
+export function createTTYRenderer<RenderOptions>() {
+    return createRenderPipeline<RenderOptions, string, string, RangeHooksFactoryContext>(() => {
         const stack: Style[] = [];
         let currentStyle: Style = initialStyle;
         let renderedStyle = {};
@@ -89,7 +89,7 @@ export function createTTYRenderer<LayerOptions>() {
             createBuffer: () => new StringBuffer(),
             open: styleToRender,
             close: styleToRender,
-            text: (chunk) => styleToRender() + chunk,
+            text: (sourceChunk) => styleToRender() + sourceChunk,
 
             // Provide style utils to range hooks factories
             rangeHooksContext: {

@@ -8,20 +8,20 @@ export type PipelineLayer = {
     generate: GenerateRanges<any, any>;
     rangeHooks: Partial<RangeHooks>;
 };
-export interface PipelineNode<LayerOptions, T, R = T, HC = unknown> {
+export interface PipelineNode<RenderOptions, T, R = T, HC = unknown> {
     createRenderHooks: CreateRenderHooks;
     layers: PipelineLayer[];
     addLayer<D = unknown>(
-        ranges: Ranges<D, LayerOptions>,
+        ranges: Ranges<D, RenderOptions>,
         rangeHooks: Partial<RangeHooks<D, T, R>> | ((context: HC) => Partial<RangeHooks<D, T, R>>)
-    ): PipelineNode<LayerOptions, T, R, HC>;
-    ranges(source: string, options?: LayerOptions): GeneratedRange[];
+    ): PipelineNode<RenderOptions, T, R, HC>;
+    ranges(source: string, options?: RenderOptions): GeneratedRange[];
     rangeHooksMap(): Record<RangeMarker, Partial<RangeHooks<any, T, R>>>;
-    render(source: string, options?: LayerOptions): R;
+    render(source: string, options?: RenderOptions): R;
 }
-export interface Generator<Data = unknown, LayerOptions = unknown> {
+export interface Generator<Data = unknown, RenderOptions = unknown> {
     marker: RangeMarker,
-    generate: GenerateRanges<Data, LayerOptions>
+    generate: GenerateRanges<Data, RenderOptions>
 }
 
 //
@@ -29,16 +29,16 @@ export interface Generator<Data = unknown, LayerOptions = unknown> {
 //
 
 // input
-export type Ranges<Data = unknown, LayerOptions = unknown> =
+export type Ranges<Data = unknown, RenderOptions = unknown> =
     | Array<RangeTuple<Data> | Range<Data>>
-    | GenerateRanges<Data, LayerOptions>;
+    | GenerateRanges<Data, RenderOptions>;
 export type RangeTuple<Data = unknown> = [start: number, end: number, data?: Data];
 export type Range<Data = unknown> = { start: number, end: number, data?: Data };
 export type CreateRange<Data = unknown> = (start: number, end: number, data?: Data) => void;
-export type GenerateRanges<Data = unknown, LayerOptions = unknown> = (
+export type GenerateRanges<Data = unknown, RenderOptions = unknown> = (
     source: string,
     createRange: CreateRange<Data>,
-    layerOptions?: LayerOptions
+    renderOptions?: RenderOptions
 ) => void;
 
 // generated
@@ -55,10 +55,10 @@ export interface GeneratedRange<Data = unknown> {
 //
 
 export interface RangeHooks<Data = unknown, T, R = T> {
-    open: (context: RangeHookContext<Data>) => T | string;
-    close: (context: RangeHookContext<Data>) => T | string;
-    node: ((content: T | R, context: RangeHookContext<Data>) => T | string) | null;
-    text: (chunk: string, context: RangeHookContext<Data>) => string | null;
+    open: (context: RangeHookContext<Data>) => T | string | null;
+    close: (context: RangeHookContext<Data>) => T | string | null;
+    node: ((content: T | R, context: RangeHookContext<Data>) => T | string | null) | null;
+    text: (sourceChunk: string, context: RangeHookContext<Data>) => string | null;
 }
 export interface RangeHookContext<T = unknown> {
     offset: number;
@@ -76,8 +76,8 @@ export interface RenderBuffer<T, R = T> {
 export interface RenderHooks<T, R = T, HC = unknown> {
     createBuffer(): RenderBuffer<T, R>;
     text(sourceChunk: string): string;
-    open(context: RangeHookContext): T;
-    close(context: RangeHookContext): T;
+    open(context: RangeHookContext): T | null;
+    close(context: RangeHookContext): T | null;
 
     rangeHooksContext?: HC;
 }

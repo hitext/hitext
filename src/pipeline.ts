@@ -3,7 +3,7 @@ import { generateRanges } from './generateRanges.js';
 import { render } from './render.js';
 
 // Helper to normalize ranges to GenerateRanges function
-function normalizeRanges<D, LayerOptions>(ranges: Ranges<D, LayerOptions>): GenerateRanges<D, LayerOptions> {
+function normalizeRanges<D, RenderOptions>(ranges: Ranges<D, RenderOptions>): GenerateRanges<D, RenderOptions> {
     if (typeof ranges === 'function') {
         return ranges;
     }
@@ -22,10 +22,10 @@ function normalizeRanges<D, LayerOptions>(ranges: Ranges<D, LayerOptions>): Gene
     };
 }
 
-function createPipelineNode<LayerOptions, T, R = T, HC = unknown>(
+function createPipelineNode<RenderOptions, T, R = T, HC = unknown>(
     createRenderHooks: CreateRenderHooks,
     layers: PipelineLayer[]
-): PipelineNode<LayerOptions, T, R, HC> {
+): PipelineNode<RenderOptions, T, R, HC> {
     function createRangeHooksMap(renderHooks: ReturnType<CreateRenderHooks>) {
         const rangeHooksMap = Object.create(null);
         const rangeHooksContext = renderHooks?.rangeHooksContext;
@@ -54,14 +54,14 @@ function createPipelineNode<LayerOptions, T, R = T, HC = unknown>(
                 layers.concat(newLayer)
             );
         },
-        ranges(source, layerOptions) {
-            return generateRanges(source, layers, layerOptions);
+        ranges(source, renderOptions) {
+            return generateRanges(source, layers, renderOptions);
         },
         rangeHooksMap() {
             return createRangeHooksMap(createRenderHooks());
         },
-        render(source, layerOptions) {
-            const ranges = generateRanges(source, layers, layerOptions);
+        render(source, renderOptions) {
+            const ranges = generateRanges(source, layers, renderOptions);
             const renderHooks = createRenderHooks();
             const rangeHooksMap = createRangeHooksMap(renderHooks);
 
@@ -70,8 +70,8 @@ function createPipelineNode<LayerOptions, T, R = T, HC = unknown>(
     };
 }
 
-export function createRenderPipeline<LayerOptions, T, R = T, HC = unknown>(
+export function createRenderPipeline<RenderOptions, T, R = T, HC = unknown>(
     createRenderHooks: CreateRenderHooks
 ) {
-    return createPipelineNode<LayerOptions, T, R, HC>(createRenderHooks, []);
+    return createPipelineNode<RenderOptions, T, R, HC>(createRenderHooks, []);
 }

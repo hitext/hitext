@@ -5,7 +5,7 @@ export function createHtmlRenderer() {
     return createRenderPipeline(() => {
         return {
             createBuffer: () => new StringBuffer(),
-            text: (chunk: string) => chunk
+            text: (sourceChunk: string) => sourceChunk
                 .replace(/&/g, '&amp;')
                 .replace(/</g, '&lt;')
                 .replace(/>/g, '&gt;')
