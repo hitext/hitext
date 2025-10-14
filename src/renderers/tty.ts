@@ -1,19 +1,9 @@
-import type { RangeHooks } from '../types.js';
+import type { RangeHookContext, RangeHooks } from '../types.js';
 import ansiStyles from 'ansi-styles';
 import { createRenderPipeline } from '../pipeline.js';
 import { StringBuffer } from '../string-buffer.js';
 
 const initialStyle = createStyle('reset');
-const createStyleFetcherUtils = {
-    createStyleMap(map: StyleModMap, fetcher = ({ data }: { data: any }) => data) {
-        const styleMap = createStyleMap(map);
-        return (context: { data: any }) => styleMap[fetcher(context)];
-    },
-    createStyle(...styles: StyleMod[]) {
-        const style = createStyle(...styles);
-        return () => style;
-    }
-};
 
 type ForegroundColorName = keyof ansiStyles.ForegroundColor;
 type BackgroundColorName = keyof ansiStyles.BackgroundColor;
@@ -23,6 +13,12 @@ type Style = {
     color?: string;
     bgColor?: string;
 };
+type RangeHooksFactoryContext = {
+    createStyle: (...styles: StyleMod[]) => Partial<RangeHooks<any, any>>;
+    createStyleMap: (map: StyleModMap, fetcher?: (context: RangeHookContext<any>) => any) => Partial<RangeHooks<any, any>>;
+    pushStyle: (style: Style) => void;
+    popStyle: () => void;
+}
 
 function isForegroundColor(name: StyleMod): name is ForegroundColorName {
     return name in ansiStyles.color;
@@ -57,6 +53,16 @@ function createStyleMap(map: StyleModMap): { [key: string]: Style } {
     return result;
 }
 
+function rangeHooksFactoryCreateStyle(...styles: StyleMod[]) {
+    const style = createStyle(...styles);
+    return () => style;
+}
+
+function rangeHooksFactoryCreateStyleMap(map: StyleModMap, fetcher = ({ data }: RangeHookContext<any>) => data) {
+    const styleMap = createStyleMap(map);
+    return (context: RangeHookContext<any>) => styleMap[fetcher(context)];
+}
+
 function _styleToRender(current: Style, next: Style = {}) {
     let modifiers = '';
 
@@ -74,7 +80,7 @@ function _styleToRender(current: Style, next: Style = {}) {
 }
 
 export function createTTYRenderer<LayerOptions>() {
-    return createRenderPipeline<LayerOptions, string>(() => {
+    return createRenderPipeline<LayerOptions, string, string, RangeHooksFactoryContext>(() => {
         const stack: Style[] = [];
         let currentStyle: Style = initialStyle;
         let renderedStyle = {};
@@ -87,8 +93,8 @@ export function createTTYRenderer<LayerOptions>() {
 
             // Provide style utils to range hooks factories
             rangeHooksContext: {
-                createStyle: wrap(createStyleFetcherUtils.createStyle),
-                createStyleMap: wrap(createStyleFetcherUtils.createStyleMap),
+                createStyle: wrapToContext(rangeHooksFactoryCreateStyle),
+                createStyleMap: wrapToContext(rangeHooksFactoryCreateStyleMap),
                 pushStyle,
                 popStyle
             }
@@ -114,7 +120,7 @@ export function createTTYRenderer<LayerOptions>() {
 
             return '';
         }
-        function wrap<T extends(...args: any[]) => any>(fn: T) {
+        function wrapToContext<T extends(...args: any[]) => any>(fn: T) {
             return (...args: Parameters<T>): Partial<RangeHooks<any, any>> => {
                 const styleFetcher = fn(...args);
 

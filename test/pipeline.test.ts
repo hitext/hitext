@@ -1,7 +1,7 @@
 import { equal } from 'assert';
-import { html, string, generator } from '../src/index.js';
+import { html, string, rangeLines, rangeMatch } from '../src/index.js';
 
-describe('new API', () => {
+describe('Pipeline API', () => {
     describe('basic usage', () => {
         it('should render plain text without layers', () => {
             equal(
@@ -112,7 +112,7 @@ describe('new API', () => {
         it('should work with built-in match generator', () => {
             const result = html()
                 .addLayer(
-                    generator.matches('world'),
+                    rangeMatch('world'),
                     {
                         open: () => '<mark>',
                         close: () => '</mark>'
@@ -126,7 +126,7 @@ describe('new API', () => {
         it('should work with built-in lines generator', () => {
             const result = html()
                 .addLayer(
-                    generator.lines,
+                    rangeLines,
                     {
                         open: ({ line }) => `<div data-line="${line}">`,
                         close: () => '</div>'
@@ -138,12 +138,11 @@ describe('new API', () => {
         });
     });
 
-    describe('printer options', () => {
-        it('should pass options to printer', () => {
-            // This test demonstrates that printer options can be passed
-            // Actual behavior depends on printer implementation
-            const pipeline = html({ someOption: true });
+    describe('renderer creation', () => {
+        it('should create a pipeline', () => {
+            const pipeline = html();
             equal(typeof pipeline.render, 'function');
+            equal(typeof pipeline.addLayer, 'function');
         });
 
         it('should pass render options', () => {

@@ -70,8 +70,8 @@ function createPipelineNode<LayerOptions, T, R = T, HC = unknown>(
     };
 }
 
-export function createRenderPipeline<LayerOptions, T, R = T>(
+export function createRenderPipeline<LayerOptions, T, R = T, HC = unknown>(
     createRenderHooks: CreateRenderHooks
 ) {
-    return createPipelineNode<LayerOptions, T, R>(createRenderHooks, []);
+    return createPipelineNode<LayerOptions, T, R, HC>(createRenderHooks, []);
 }

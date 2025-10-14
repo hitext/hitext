@@ -1,16 +1,13 @@
 import { equal, strictEqual } from 'assert';
-import { print } from '../src/index.js';
-import type { Printer, GeneratedRange, PrinterHookContext } from '../src/types.d.js';
+import { render } from '../src/index.js';
+import type { GeneratedRange, RangeHookContext, RangeHooks } from '../src/types.d.js';
 
-const testPrinter: Printer = {
-    hooks: {
-        test: {
-            before: ({ data: x }) => `<${x}>`,
-            after: ({ data: x }) => `</${x}>`
-        }
-    },
-    fork: () => testPrinter,
-    createHook: fn => fn()
+// Test hooks that match old testHooks.hooks.test
+const testHooks: Record<string, Partial<RangeHooks<any, any, any>>> = {
+    test: {
+        open: ({ data: x }: RangeHookContext<any>) => `<${x}>`,
+        close: ({ data: x }: RangeHookContext<any>) => `</${x}>`
+    }
 };
 
 const generateRanges = (lines: string[]): GeneratedRange[] =>
@@ -24,17 +21,17 @@ const generateRanges = (lines: string[]): GeneratedRange[] =>
         };
     });
 
-describe('print', () => {
+describe('render', () => {
     it('basic', () => {
         equal(
-            print(
+            render(
                 'abc',
                 [
                     { type: 'test', start: 0, end: 1, data: 'a' },
                     { type: 'test', start: 1, end: 2, data: 'b' },
                     { type: 'test', start: 2, end: 3, data: 'c' }
                 ],
-                testPrinter
+                testHooks
             ),
             '<a>a</a><b>b</b><c>c</c>'
         );
@@ -42,7 +39,7 @@ describe('print', () => {
 
     it('should be tolerant to unknown token types', () => {
         equal(
-            print(
+            render(
                 'abc',
                 [
                     { type: 'unknown', start: 0, end: 1, data: 'a' },
@@ -50,12 +47,8 @@ describe('print', () => {
                     { type: 'uncomplete', start: 2, end: 3, data: 'c' }
                 ],
                 {
-                    hooks: {
-                        test: testPrinter.hooks.test,
-                        uncomplete: {}
-                    },
-                    fork: () => testPrinter,
-                    createHook: (fn: Function) => fn()
+                    test: testHooks.test,
+                    uncomplete: {}
                 }
             ),
             'a<b>b</b>c'
@@ -65,14 +58,14 @@ describe('print', () => {
     describe('ranges out of source boundaries', () => {
         it('intersect with boundaries', () => {
             equal(
-                print(
+                render(
                     'abc',
                     [
                         { type: 'test', start: -9, end: 9, data: 'a' },
                         { type: 'test', start: -8, end: 1, data: 'b' },
                         { type: 'test', start: 2, end: 9, data: 'c' }
                     ],
-                    testPrinter
+                    testHooks
                 ),
                 '<a><b>a</b>b<c>c</c></a>'
             );
@@ -80,14 +73,14 @@ describe('print', () => {
 
         it('intersect with boundaries', () => {
             equal(
-                print(
+                render(
                     'abc',
                     [
                         { type: 'test', start: -9, end: -5, data: 'a' },
                         { type: 'test', start: 1, end: 2, data: 'b' },
                         { type: 'test', start: 5, end: 9, data: 'c' }
                     ],
-                    testPrinter
+                    testHooks
                 ),
                 '<a></a>a<b>b</b>c<c></c>'
             );
@@ -96,7 +89,7 @@ describe('print', () => {
 
     it('should ignore ranges with bad start/end', () => {
         equal(
-            print(
+            render(
                 '1234567890',
                 [
                     { type: 'test', start: NaN, end: 2, data: 'a' },
@@ -113,31 +106,27 @@ describe('print', () => {
                     { type: 'test', start: NaN, end: NaN, data: 'd' },
                     { type: 'test', start: 3, end: 6, data: 'e' }
                 ],
-                testPrinter
+                testHooks
             ),
             '123<e>456</e>7890'
         );
     });
 
     it('order of ranges should be independant of generator order', () => {
-        const printer: Printer = {
-            hooks: {
-                'a': testPrinter.hooks!.test,
-                'b': testPrinter.hooks!.test
-            },
-            fork: () => printer,
-            createHook: (fn: Function) => fn()
+        const hooks = {
+            'a': testHooks.test,
+            'b': testHooks.test
         };
         const a: GeneratedRange = { type: 'a', start: 1, end: 2, data: 'a' };
         const b: GeneratedRange = { type: 'b', start: 1, end: 2, data: 'b' };
 
         equal(
-            print('123', [a, b], printer),
-            print('123', [b, a], printer)
+            render('123', [a, b], hooks),
+            render('123', [b, a], hooks)
         );
 
         equal(
-            print('123', [b, a], printer),
+            render('123', [b, a], hooks),
             '1<a><b>2</b></a>3'
         );
     });
@@ -148,20 +137,16 @@ describe('print', () => {
         const c: GeneratedRange = { type: 'c', start: 3, end: 4, data: undefined };
 
         equal(
-            print('123456', [a, b, c], {
-                hooks: {
-                    a: {
-                        before: () => '<a>',
-                        after: () => '</a>'
-                    },
-                    b: {
-                        before: () => '',
-                        after: () => ''
-                    },
-                    c: {}
+            render('123456', [a, b, c], {
+                a: {
+                    open: () => '<a>',
+                    close: () => '</a>'
                 },
-                fork: () => testPrinter,
-                createHook: (fn: Function) => fn()
+                b: {
+                    open: () => '',
+                    close: () => ''
+                },
+                c: {}
             }),
             '1<a>2</a>3456'
         );
@@ -176,19 +161,16 @@ describe('print', () => {
         ];
 
         equal(
-            print('1234567890', ranges, {
-                text: (chunk: string) => chunk.replace(/./g, '_'),
-                hooks: {
-                    a: {
-                        text: (chunk: string) => chunk.replace(/./g, 'a')
-                    },
-                    b: {
-                        text: (chunk: string) => chunk.replace(/./g, 'b')
-                    },
-                    c: {}
+            render('1234567890', ranges, {
+                a: {
+                    text: (chunk: string) => chunk.replace(/./g, 'a')
                 },
-                fork: () => testPrinter,
-                createHook: (fn: Function) => fn()
+                b: {
+                    text: (chunk: string) => chunk.replace(/./g, 'b')
+                },
+                c: {}
+            }, {
+                text: (chunk: string) => chunk.replace(/./g, '_')
             }),
             '_ab_ba__aa'
         );
@@ -214,19 +196,15 @@ describe('print', () => {
         });
 
         it('range data', () => {
-            const actual = print(source, ranges, {
-                hooks: {
-                    test: {
-                        before({ data }: PrinterHookContext<TestData>) {
-                            return '[' + (data.test === data ? 'ok' : 'fail') + ']';
-                        },
-                        after({ data }: PrinterHookContext<TestData>) {
-                            return '[/' + (data.test === data ? 'ok' : 'fail') + ']';
-                        }
+            const actual = render(source, ranges, {
+                test: {
+                    open({ data }: RangeHookContext<TestData>) {
+                        return '[' + (data.test === data ? 'ok' : 'fail') + ']';
+                    },
+                    close({ data }: RangeHookContext<TestData>) {
+                        return '[/' + (data.test === data ? 'ok' : 'fail') + ']';
                     }
-                },
-                fork: () => testPrinter as any,
-                createHook: (fn: Function) => fn()
+                }
             });
 
             strictEqual(
@@ -236,19 +214,15 @@ describe('print', () => {
         });
 
         it('range start/end', () => {
-            const actual = print(source, ranges, {
-                hooks: {
-                    test: {
-                        before({ data, start, offset }: PrinterHookContext<TestData>) {
-                            return '[' + (start === offset ? 'start' : 'start-continue') + '-' + data.idx + ']';
-                        },
-                        after({ data, end, offset }: PrinterHookContext<TestData>) {
-                            return '[/' + (end === offset ? 'end' : 'temp-end') + '-' + data.idx + ']';
-                        }
+            const actual = render(source, ranges, {
+                test: {
+                    open({ data, start, offset }: RangeHookContext<TestData>) {
+                        return '[' + (start === offset ? 'start' : 'start-continue') + '-' + data.idx + ']';
+                    },
+                    close({ data, end, offset }: RangeHookContext<TestData>) {
+                        return '[/' + (end === offset ? 'end' : 'temp-end') + '-' + data.idx + ']';
                     }
-                },
-                fork: () => testPrinter as any,
-                createHook: (fn: Function) => fn()
+                }
             });
 
             strictEqual(
@@ -262,21 +236,18 @@ describe('print', () => {
             const ranges = source.split('').map((c, idx) => ({
                 type: 'test' as const,
                 start: idx,
-                end: idx + 1
+                end: idx + 1,
+                data: {}
             }));
-            const actual = print(source, ranges, {
-                hooks: {
-                    test: {
-                        before({ offset, line, column }) {
-                            return '[' + [offset, line, column].join(':') + ']';
-                        },
-                        after({ offset, line, column }) {
-                            return '[/' + [offset, line, column].join(':') + ']';
-                        }
+            const actual = render(source, ranges, {
+                test: {
+                    open({ offset, line, column }: RangeHookContext<Record<string, never>>) {
+                        return '[' + [offset, line, column].join(':') + ']';
+                    },
+                    close({ offset, line, column }: RangeHookContext<Record<string, never>>) {
+                        return '[/' + [offset, line, column].join(':') + ']';
                     }
-                },
-                fork: () => testPrinter,
-                createHook: (fn: Function) => fn()
+                }
             });
 
             strictEqual(actual, [
@@ -403,10 +374,10 @@ describe('print', () => {
     ].forEach(test =>
         it('case\n|' + test.ranges.join('|\n|') + '|', () => {
             equal(
-                print(
+                render(
                     '1234567890',
                     generateRanges(test.ranges),
-                    testPrinter
+                    testHooks
                 ),
                 test.expected
             );
@@ -416,7 +387,7 @@ describe('print', () => {
     describe('node hook', () => {
         it('should work with node hook', () => {
             equal(
-                print('Hello world!', [
+                render('Hello world!', [
                     { type: 'wrap', start: 6, end: 11, data: null }
                 ], {
                     wrap: {
@@ -429,7 +400,7 @@ describe('print', () => {
 
         it('should support node hook combined with before/after hooks', () => {
             equal(
-                print('Hello world!', [
+                render('Hello world!', [
                     { type: 'wrap', start: 6, end: 11, data: null }
                 ], {
                     wrap: {
@@ -444,7 +415,7 @@ describe('print', () => {
 
         it('should support nested node hooks with before/after', () => {
             equal(
-                print('Hello world!', [
+                render('Hello world!', [
                     { type: 'outer', start: 0, end: 12, data: null },
                     { type: 'inner', start: 6, end: 11, data: null }
                 ], {
@@ -460,6 +431,122 @@ describe('print', () => {
                     }
                 }),
                 '({Hello <[world]>!})'
+            );
+        });
+
+        it('should support node hook with data context', () => {
+            equal(
+                render('Hello world!', [
+                    { type: 'greeting', start: 0, end: 5, data: { type: 'greeting' } }
+                ], {
+                    greeting: {
+                        node: (content, { data }: RangeHookContext<{ type: string }>) =>
+                            `<span class="${data.type}">${content}</span>`
+                    }
+                }),
+                '<span class="greeting">Hello</span> world!'
+            );
+        });
+
+        it('should allow skipping content by not using content parameter', () => {
+            equal(
+                render('Hello world!', [
+                    { type: 'word', start: 0, end: 5, data: { secret: false } },
+                    { type: 'word', start: 6, end: 11, data: { secret: true } }
+                ], {
+                    word: {
+                        node: (content, { data }: RangeHookContext<{ secret: boolean }>) =>
+                            data.secret ? '[REDACTED]' : content
+                    }
+                }),
+                'Hello [REDACTED]!'
+            );
+        });
+
+        it('should provide correct context in node hook', () => {
+            let capturedContext: RangeHookContext<{ foo: string }> | null = null;
+
+            render('Hello\nworld!', [
+                { type: 'test', start: 6, end: 11, data: { foo: 'bar' } }
+            ], {
+                test: {
+                    node: (content, context: RangeHookContext<{ foo: string }>) => {
+                        capturedContext = context;
+                        return content;
+                    }
+                }
+            });
+
+            strictEqual(capturedContext!.start, 6);
+            strictEqual(capturedContext!.end, 11);
+            strictEqual(capturedContext!.line, 2);
+            strictEqual(capturedContext!.data.foo, 'bar');
+            // Note: offset/column in node hook context may vary based on when it's called
+        });
+
+        it('should handle deeply nested node hooks', () => {
+            equal(
+                render('content', [
+                    { type: 'level1', start: 0, end: 7, data: null },
+                    { type: 'level2', start: 0, end: 7, data: null },
+                    { type: 'level3', start: 0, end: 7, data: null }
+                ], {
+                    level1: {
+                        node: (content) => `<L1>${content}</L1>`
+                    },
+                    level2: {
+                        node: (content) => `<L2>${content}</L2>`
+                    },
+                    level3: {
+                        node: (content) => `<L3>${content}</L3>`
+                    }
+                }),
+                '<L1><L2><L3>content</L3></L2></L1>'
+            );
+        });
+
+        it('should handle node hook with empty content', () => {
+            equal(
+                render('before after', [
+                    { type: 'empty', start: 6, end: 6, data: null }
+                ], {
+                    empty: {
+                        node: (content) => `<empty>${content}</empty>`
+                    }
+                }),
+                'before<empty></empty> after'
+            );
+        });
+
+        it('should handle multiple non-overlapping node hooks', () => {
+            equal(
+                render('One Two Three', [
+                    { type: 'tag', start: 0, end: 3, data: 'a' },
+                    { type: 'tag', start: 4, end: 7, data: 'b' },
+                    { type: 'tag', start: 8, end: 13, data: 'c' }
+                ], {
+                    tag: {
+                        node: (content, { data }: RangeHookContext<string>) =>
+                            `<${data}>${content}</${data}>`
+                    }
+                }),
+                '<a>One</a> <b>Two</b> <c>Three</c>'
+            );
+        });
+
+        it('should support node hook returning non-string values', () => {
+            equal(
+                render('The answer is 21', [
+                    { type: 'number', start: 14, end: 16, data: null }
+                ], {
+                    number: {
+                        node: (content) => {
+                            const num = parseInt(content as string);
+                            return String(num * 2);
+                        }
+                    }
+                }),
+                'The answer is 42'
             );
         });
     });
