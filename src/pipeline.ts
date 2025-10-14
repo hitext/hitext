@@ -26,14 +26,27 @@ function createPipelineNode<LayerOptions, T, R = T, HC = unknown>(
     createRenderHooks: CreateRenderHooks,
     layers: PipelineLayer[]
 ): PipelineNode<LayerOptions, T, R, HC> {
+    function createRangeHooksMap(renderHooks: ReturnType<CreateRenderHooks>) {
+        const rangeHooksMap = Object.create(null);
+        const rangeHooksContext = renderHooks?.rangeHooksContext;
+
+        for (const { marker, rangeHooks } of layers)  {
+            rangeHooksMap[marker] = typeof rangeHooks === 'function'
+                ? rangeHooks(rangeHooksContext)
+                : rangeHooks;
+        }
+
+        return rangeHooksMap;
+    }
+
     return {
         createRenderHooks,
         layers,
-        addLayer(ranges, hooks) {
+        addLayer(ranges, rangeHooks) {
             const newLayer: PipelineLayer = {
                 marker: Symbol(),
                 generate: normalizeRanges(ranges),
-                hooks
+                rangeHooks
             };
 
             return createPipelineNode(
@@ -41,19 +54,18 @@ function createPipelineNode<LayerOptions, T, R = T, HC = unknown>(
                 layers.concat(newLayer)
             );
         },
+        ranges(source, layerOptions) {
+            return generateRanges(source, layers, layerOptions);
+        },
+        rangeHooksMap() {
+            return createRangeHooksMap(createRenderHooks());
+        },
         render(source, layerOptions) {
             const ranges = generateRanges(source, layers, layerOptions);
-            const rangeHooks = Object.create(null);
             const renderHooks = createRenderHooks();
-            const rangeHooksContext = renderHooks?.rangeHooksContext;
+            const rangeHooksMap = createRangeHooksMap(renderHooks);
 
-            for (const { marker, hooks } of layers)  {
-                rangeHooks[marker] = typeof hooks === 'function'
-                    ? hooks(rangeHooksContext)
-                    : hooks;
-            }
-
-            return render(source, ranges, rangeHooks, renderHooks);
+            return render(source, ranges, rangeHooksMap, renderHooks);
         }
     };
 }

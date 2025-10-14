@@ -6,15 +6,17 @@ export type CreateRenderHooks = () => Partial<RenderHooks<any, any>>;
 export type PipelineLayer = {
     marker: RangeMarker;
     generate: GenerateRanges<any, any>;
-    hooks: Partial<RangeHooks>;
+    rangeHooks: Partial<RangeHooks>;
 };
 export interface PipelineNode<LayerOptions, T, R = T, HC = unknown> {
     createRenderHooks: CreateRenderHooks;
     layers: PipelineLayer[];
     addLayer<D = unknown>(
         ranges: Ranges<D, LayerOptions>,
-        hooks: Partial<RangeHooks<D, T, R>> | ((context: HC) => Partial<RangeHooks<D, T, R>>)
+        rangeHooks: Partial<RangeHooks<D, T, R>> | ((context: HC) => Partial<RangeHooks<D, T, R>>)
     ): PipelineNode<LayerOptions, T, R, HC>;
+    ranges(source: string, options?: LayerOptions): GeneratedRange[];
+    rangeHooksMap(): Record<RangeMarker, Partial<RangeHooks<any, T, R>>>;
     render(source: string, options?: LayerOptions): R;
 }
 export interface Generator<Data = unknown, LayerOptions = unknown> {
