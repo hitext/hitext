@@ -2,15 +2,15 @@
 // Pipeline
 //
 
-export interface PipelineNodeState {
-    createRenderHooks: () => Partial<RenderHooks<any, any>>;
-    layers: Array<{
-        marker: RangeMarker;
-        generate: GenerateRanges<any, any>;
-        hooks: Partial<RangeHooks>;
-    }>;
-}
+export type CreateRenderHooks = () => Partial<RenderHooks<any, any>>;
+export type PipelineLayer = {
+    marker: RangeMarker;
+    generate: GenerateRanges<any, any>;
+    hooks: Partial<RangeHooks>;
+};
 export interface PipelineNode<LayerOptions, T, R = T, HC = unknown> {
+    createRenderHooks: CreateRenderHooks;
+    layers: PipelineLayer[];
     addLayer<D = unknown>(
         ranges: Ranges<D, LayerOptions>,
         hooks: Partial<RangeHooks<D, T, R>> | ((context: HC) => Partial<RangeHooks<D, T, R>>)

@@ -1,8 +1,8 @@
-import { createPipelineForRenderer } from '../pipeline.js';
+import { createRenderPipeline } from '../pipeline.js';
 import { StringBuffer } from '../string-buffer.js';
 
 export function createHtmlRenderer() {
-    return createPipelineForRenderer(() => {
+    return createRenderPipeline(() => {
         return {
             createBuffer: () => new StringBuffer(),
             text: (chunk: string) => chunk

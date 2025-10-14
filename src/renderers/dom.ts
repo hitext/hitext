@@ -1,5 +1,5 @@
 import { RenderBuffer } from '../index.js';
-import { createPipelineForRenderer } from '../pipeline.js';
+import { createRenderPipeline } from '../pipeline.js';
 
 type Options = {
     document: globalThis.Document
@@ -21,7 +21,7 @@ class DOMBuffer implements RenderBuffer<globalThis.Node, globalThis.DocumentFrag
 export function createDomRenderer<LayerOptions>(options?: Partial<Options>) {
     const document = options?.document || globalThis.document;
 
-    return createPipelineForRenderer<LayerOptions, globalThis.Node, globalThis.DocumentFragment>(() => {
+    return createRenderPipeline<LayerOptions, globalThis.Node, globalThis.DocumentFragment>(() => {
         return {
             createBuffer: () => new DOMBuffer(document)
         };

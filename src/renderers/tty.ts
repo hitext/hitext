@@ -1,6 +1,6 @@
 import type { RangeHooks } from '../types.js';
 import ansiStyles from 'ansi-styles';
-import { createPipelineForRenderer } from '../pipeline.js';
+import { createRenderPipeline } from '../pipeline.js';
 import { StringBuffer } from '../string-buffer.js';
 
 const initialStyle = createStyle('reset');
@@ -74,7 +74,7 @@ function _styleToRender(current: Style, next: Style = {}) {
 }
 
 export function createTTYRenderer<LayerOptions>() {
-    return createPipelineForRenderer<LayerOptions, string>(() => {
+    return createRenderPipeline<LayerOptions, string>(() => {
         const stack: Style[] = [];
         let currentStyle: Style = initialStyle;
         let renderedStyle = {};
