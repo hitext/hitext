@@ -1,6 +1,6 @@
-import type { RangeHooks } from '../types.d.js';
+import type { RangeHooks } from '../types.js';
 import ansiStyles from 'ansi-styles';
-import { createPipelineForPrinter } from '../pipeline.js';
+import { createPipelineForRenderer } from '../pipeline.js';
 import { StringBuffer } from '../string-buffer.js';
 
 const initialStyle = createStyle('reset');
@@ -57,7 +57,7 @@ function createStyleMap(map: StyleModMap): { [key: string]: Style } {
     return result;
 }
 
-function _styleToPrint(current: Style, next: Style = {}) {
+function _styleToRender(current: Style, next: Style = {}) {
     let modifiers = '';
 
     for (const key in current) {
@@ -73,17 +73,17 @@ function _styleToPrint(current: Style, next: Style = {}) {
     return modifiers;
 }
 
-export function createTTYPrinter<LayerOptions>() {
-    return createPipelineForPrinter<LayerOptions, string>(() => {
+export function createTTYRenderer<LayerOptions>() {
+    return createPipelineForRenderer<LayerOptions, string>(() => {
         const stack: Style[] = [];
         let currentStyle: Style = initialStyle;
-        let printedStyle = {};
+        let renderedStyle = {};
 
         return {
             createBuffer: () => new StringBuffer(),
-            open: styleToPrint,
-            close: styleToPrint,
-            text: (chunk) => styleToPrint() + chunk,
+            open: styleToRender,
+            close: styleToRender,
+            text: (chunk) => styleToRender() + chunk,
 
             // Provide style utils to range hooks factories
             rangeHooksContext: {
@@ -101,11 +101,11 @@ export function createTTYPrinter<LayerOptions>() {
         function popStyle() {
             currentStyle = stack.pop() || currentStyle;
         }
-        function styleToPrint() {
-            if (printedStyle !== currentStyle) {
-                const newStyle = _styleToPrint(printedStyle, currentStyle);
+        function styleToRender() {
+            if (renderedStyle !== currentStyle) {
+                const newStyle = _styleToRender(renderedStyle, currentStyle);
 
-                printedStyle = currentStyle || {};
+                renderedStyle = currentStyle || {};
 
                 if (newStyle) {
                     return newStyle;

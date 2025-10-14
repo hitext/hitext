@@ -1,6 +1,7 @@
+import { CreateRange } from '../types.js';
 import { newLineLength } from './utils.js';
 
-export default (source: string, createRange: (start: number, end: number, data: number) => void) => {
+export function rangeLineContents(source: string, createRange: CreateRange) {
     let line = 1;
     let lineStart = 0;
 

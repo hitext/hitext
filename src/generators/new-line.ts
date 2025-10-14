@@ -1,6 +1,7 @@
+import { CreateRange } from '../index.js';
 import { newLineLength } from './utils.js';
 
-export default (source: string, createRange: (start: number, end: number, data: number) => void) => {
+export function rangeNewlines(source: string, createRange: CreateRange) {
     let line = 1;
 
     for (let i = 0; i < source.length; i++) {

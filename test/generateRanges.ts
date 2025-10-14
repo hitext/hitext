@@ -1,5 +1,5 @@
 import { deepEqual } from 'assert';
-import generateRanges from '../src/generateRanges.js';
+import { generateRanges } from '../src/generateRanges.js';
 import type { Generator } from '../src/types.d.js';
 
 const stubGeneratorFactory = (marker: symbol | number, ranges: Array<[number, number, string]>): Generator => ({

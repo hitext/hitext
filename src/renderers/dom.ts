@@ -1,11 +1,11 @@
-import { PrintBuffer } from '../index.js';
-import { createPipelineForPrinter } from '../pipeline.js';
+import { RenderBuffer } from '../index.js';
+import { createPipelineForRenderer } from '../pipeline.js';
 
 type Options = {
     document: globalThis.Document
 }
 
-class DOMBuffer implements PrintBuffer<globalThis.Node, globalThis.DocumentFragment> {
+class DOMBuffer implements RenderBuffer<globalThis.Node, globalThis.DocumentFragment> {
     #buffer: globalThis.DocumentFragment;
     constructor(document: globalThis.Document) {
         this.#buffer = document.createDocumentFragment();
@@ -18,10 +18,10 @@ class DOMBuffer implements PrintBuffer<globalThis.Node, globalThis.DocumentFragm
     }
 }
 
-export function createDomPrinter<LayerOptions>(options?: Partial<Options>) {
+export function createDomRenderer<LayerOptions>(options?: Partial<Options>) {
     const document = options?.document || globalThis.document;
 
-    return createPipelineForPrinter<LayerOptions, globalThis.Node, globalThis.DocumentFragment>(() => {
+    return createPipelineForRenderer<LayerOptions, globalThis.Node, globalThis.DocumentFragment>(() => {
         return {
             createBuffer: () => new DOMBuffer(document)
         };

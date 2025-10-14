@@ -3,7 +3,7 @@
 //
 
 export interface PipelineNodeState {
-    createPrintHooks: () => Partial<PrintHooks<any, any>>;
+    createRenderHooks: () => Partial<RenderHooks<any, any>>;
     layers: Array<{
         marker: RangeMarker;
         generate: GenerateRanges<any, any>;
@@ -22,7 +22,6 @@ export interface Generator<Data = unknown, LayerOptions = unknown> {
     generate: GenerateRanges<Data, LayerOptions>
 }
 
-
 //
 // Ranges
 //
@@ -33,7 +32,7 @@ export type Ranges<Data = unknown, LayerOptions = unknown> =
     | GenerateRanges<Data, LayerOptions>;
 export type RangeTuple<Data = unknown> = [start: number, end: number, data?: Data];
 export type Range<Data = unknown> = { start: number, end: number, data?: Data };
-export type CreateRange<Data> = (start: number, end: number, data?: Data) => void;
+export type CreateRange<Data = unknown> = (start: number, end: number, data?: Data) => void;
 export type GenerateRanges<Data = unknown, LayerOptions = unknown> = (
     source: string,
     createRange: CreateRange<Data>,
@@ -50,10 +49,16 @@ export interface GeneratedRange<Data = unknown> {
 }
 
 //
-// Printer
+// Render
 //
 
-export interface PrinterHookContext<T = unknown> {
+export interface RangeHooks<Data = unknown, T, R = T> {
+    open: (context: RangeHookContext<Data>) => T | string;
+    close: (context: RangeHookContext<Data>) => T | string;
+    node: ((content: T | R, context: RangeHookContext<Data>) => T | string) | null;
+    text: (chunk: string, context: RangeHookContext<Data>) => string | null;
+}
+export interface RangeHookContext<T = unknown> {
     offset: number;
     line: number;
     column: number;
@@ -62,43 +67,15 @@ export interface PrinterHookContext<T = unknown> {
     data: T;
 }
 
-export interface RangeHooks<Data = unknown, T, R = T> {
-    open: (context: PrinterHookContext<Data>) => T | string;
-    close: (context: PrinterHookContext<Data>) => T | string;
-    node: ((content: T | R, context: PrinterHookContext<Data>) => T | string) | null;
-    text: (chunk: string, context: PrinterHookContext<Data>) => string | null;
-}
-
-export interface PrinterBuffer<ReturnValue, ChunkValue = ReturnValue> {
-    append(child: ChunkValue | PrinterBuffer<ReturnValue, ChunkValue>): void;
-    emit(): ReturnValue;
-}
-
-export interface Printer<
-    ReturnValue = string,
-    ChunkValue = ReturnValue,
-    Buffer extends PrinterBuffer<ReturnValue, ChunkValue> = PrinterBuffer<ReturnValue, ChunkValue>,
-    Options = any
-> {
-    // Buffer management
-    createBuffer?(options: Options): Buffer;
-
-    // Lifecycle hooks
-    open?(options: Options): ChunkValue;
-    close?(options: Options): ChunkValue;
-    text?(chunk: string): ChunkValue;
-}
-
-export interface PrintBuffer<T, R = T> {
+export interface RenderBuffer<T, R = T> {
     append(child: string | T | R): void;
     emit(): R;
 }
-
-export interface PrintHooks<T, R = T, HC = unknown> {
-    createBuffer(): PrintBuffer<T, R>;
+export interface RenderHooks<T, R = T, HC = unknown> {
+    createBuffer(): RenderBuffer<T, R>;
     text(sourceChunk: string): string;
-    open(context: PrinterHookContext): T;
-    close(context: PrinterHookContext): T;
+    open(context: RangeHookContext): T;
+    close(context: RangeHookContext): T;
 
     rangeHooksContext?: HC;
 }

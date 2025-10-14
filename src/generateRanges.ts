@@ -1,6 +1,6 @@
 import type { GeneratedRange, Generator } from './types.d.js';
 
-export default function generateRanges<T>(
+export function generateRanges<T>(
     source: string,
     generators: Generator<T>[],
     layerOptions?: any

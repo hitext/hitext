@@ -1,20 +1,17 @@
-import * as generators from './generator/index.js';
-import { string, html, dom, tty } from './printer/index.js';
-import { createPipelineForPrinter } from './pipeline.js';
-import print from './print.js';
-
 // exports
 export type * from './types.d.js';
+
+// Re-export generators (both namespace and direct)
 export {
-    generators as generator,
+    rangeLines,
+    rangeLineContents,
+    rangeMatch,
+    rangeNewlines
+} from './generators/index.js';
 
-    // printer
-    string,
-    html,
-    dom,
-    tty,
+// Re-export renderers
+export { string, html, dom, tty } from './renderers/index.js';
 
-    // helpers
-    createPipelineForPrinter,
-    print
-};
+// Re-export helpers
+export { createPipelineForRenderer } from './pipeline.js';
+export { render } from './render.js';

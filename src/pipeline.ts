@@ -1,6 +1,6 @@
-import { PipelineNode, PipelineNodeState, Ranges, GenerateRanges, PrintHooks } from './types.js';
-import generateRanges from './generateRanges.js';
-import print from './print.js';
+import { PipelineNode, PipelineNodeState, Ranges, GenerateRanges, RenderHooks } from './types.js';
+import { generateRanges } from './generateRanges.js';
+import { render } from './render.js';
 
 // Helper to normalize ranges to GenerateRanges function
 function normalizeRanges<D, LayerOptions>(ranges: Ranges<D, LayerOptions>): GenerateRanges<D, LayerOptions> {
@@ -40,13 +40,13 @@ function createPipelineNode<LayerOptions, T, R = T, HC = unknown>(
             return createPipelineNode(newState);
         },
         render(source, layerOptions) {
-            const { layers, createPrintHooks } = state;
+            const { layers, createRenderHooks } = state;
 
             // Generate ranges with markers
             const ranges = generateRanges(source, layers, layerOptions);
             const rangeHooks = Object.create(null);
-            const printHooks = createPrintHooks();
-            const rangeHooksContext = printHooks?.rangeHooksContext;
+            const renderHooks = createRenderHooks();
+            const rangeHooksContext = renderHooks?.rangeHooksContext;
 
             for (const { marker, hooks } of layers)  {
                 rangeHooks[marker] = typeof hooks === 'function'
@@ -54,16 +54,16 @@ function createPipelineNode<LayerOptions, T, R = T, HC = unknown>(
                     : hooks;
             }
 
-            return print(source, ranges, rangeHooks, printHooks);
+            return render(source, ranges, rangeHooks, renderHooks);
         }
     };
 }
 
-export function createPipelineForPrinter<LayerOptions, T, R = T>(
-    createPrintHooks: () => Partial<PrintHooks<T, R>>
+export function createPipelineForRenderer<LayerOptions, T, R = T>(
+    createRenderHooks: () => Partial<RenderHooks<T, R>>
 ) {
     return createPipelineNode<LayerOptions, T, R>({
-        createPrintHooks,
+        createRenderHooks,
         layers: []
     });
 }
