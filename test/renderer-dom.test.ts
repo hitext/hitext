@@ -1,7 +1,7 @@
 import { strictEqual } from 'assert';
 import { parseHTML } from 'linkedom';
 import { dom } from '../src/index.js';
-import type { RangeHookContext } from '../src/types.d.js';
+import type { RangeHookContext } from '../src/types.js';
 
 // Setup DOM environment for tests
 const { document: doc } = parseHTML('<!DOCTYPE html><html></html>');
@@ -27,7 +27,7 @@ describe('DOM renderer', () => {
                 .addLayer([
                     { start: 6, end: 11 }
                 ], {
-                    node: (content: globalThis.Node | globalThis.DocumentFragment) => {
+                    range: (content: globalThis.Node | globalThis.DocumentFragment) => {
                         const em = doc.createElement('em');
                         em.append(content);
                         return em;
@@ -43,7 +43,7 @@ describe('DOM renderer', () => {
                 .addLayer([
                     { start: 0, end: 12 }
                 ], {
-                    node: (content: globalThis.Node | globalThis.DocumentFragment) => {
+                    range: (content: globalThis.Node | globalThis.DocumentFragment) => {
                         const p = doc.createElement('p');
                         p.append(content);
                         return p;
@@ -52,7 +52,7 @@ describe('DOM renderer', () => {
                 .addLayer([
                     { start: 6, end: 11 }
                 ], {
-                    node: (content: globalThis.Node | globalThis.DocumentFragment) => {
+                    range: (content: globalThis.Node | globalThis.DocumentFragment) => {
                         const strong = doc.createElement('strong');
                         strong.append(content);
                         return strong;
@@ -68,7 +68,7 @@ describe('DOM renderer', () => {
                 .addLayer([
                     { start: 6, end: 10, data: { url: 'https://example.com' } }
                 ], {
-                    node: (content: globalThis.Node | globalThis.DocumentFragment, { data }: RangeHookContext<{ url: string }>) => {
+                    range: (content: globalThis.Node | globalThis.DocumentFragment, { data }: RangeHookContext<{ url: string }>) => {
                         const a = doc.createElement('a');
                         a.setAttribute('href', data.url);
                         a.setAttribute('target', '_blank');
@@ -88,7 +88,7 @@ describe('DOM renderer', () => {
                     { start: 4, end: 7, data: { className: 'second' } },
                     { start: 8, end: 13, data: { className: 'third' } }
                 ], {
-                    node: (content: globalThis.Node | globalThis.DocumentFragment, { data }: RangeHookContext<{ className: string }>) => {
+                    range: (content: globalThis.Node | globalThis.DocumentFragment, { data }: RangeHookContext<{ className: string }>) => {
                         const span = doc.createElement('span');
                         span.setAttribute('class', data.className);
                         span.append(content);
@@ -120,7 +120,7 @@ describe('DOM renderer', () => {
                         suffix.textContent = ']';
                         return suffix;
                     },
-                    node: (content: globalThis.Node | globalThis.DocumentFragment) => {
+                    range: (content: globalThis.Node | globalThis.DocumentFragment) => {
                         const div = doc.createElement('div');
                         div.className = 'wrapper';
                         div.append(content);
@@ -142,7 +142,7 @@ describe('DOM renderer', () => {
                 .addLayer([
                     { start: 2, end: 2 }
                 ], {
-                    node: (content: globalThis.Node | globalThis.DocumentFragment) => {
+                    range: (content: globalThis.Node | globalThis.DocumentFragment) => {
                         const span = doc.createElement('span');
                         span.setAttribute('class', 'marker');
                         span.append(content);
@@ -161,7 +161,7 @@ describe('DOM renderer', () => {
                     { start: 0, end: 7, data: { level: 2 } },
                     { start: 0, end: 7, data: { level: 3 } }
                 ], {
-                    node: (content: globalThis.Node | globalThis.DocumentFragment, { data }: RangeHookContext<{ level: number }>) => {
+                    range: (content: globalThis.Node | globalThis.DocumentFragment, { data }: RangeHookContext<{ level: number }>) => {
                         const div = doc.createElement('div');
                         div.setAttribute('level', String(data.level));
                         div.append(content);
@@ -181,7 +181,7 @@ describe('DOM renderer', () => {
                 .addLayer([
                     { start: 0, end: 8 }
                 ], {
-                    node: (content: globalThis.Node | globalThis.DocumentFragment) => {
+                    range: (content: globalThis.Node | globalThis.DocumentFragment) => {
                         const b = doc.createElement('b');
                         b.append(content);
                         return b;
@@ -190,7 +190,7 @@ describe('DOM renderer', () => {
                 .addLayer([
                     { start: 3, end: 11 }
                 ], {
-                    node: (content: globalThis.Node | globalThis.DocumentFragment) => {
+                    range: (content: globalThis.Node | globalThis.DocumentFragment) => {
                         const i = doc.createElement('i');
                         i.append(content);
                         return i;
@@ -217,7 +217,7 @@ describe('DOM renderer', () => {
                 .addLayer([
                     { start: 0, end: 4 }
                 ], {
-                    node: (content: globalThis.Node | globalThis.DocumentFragment) => {
+                    range: (content: globalThis.Node | globalThis.DocumentFragment) => {
                         const mark = doc.createElement('mark');
                         mark.append(content);
                         return mark;
@@ -235,7 +235,7 @@ describe('DOM renderer', () => {
                     { start: 1, end: 2, data: { id: '2' } },
                     { start: 2, end: 3, data: { id: '3' } }
                 ], {
-                    node: (content: globalThis.Node | globalThis.DocumentFragment, { data }: RangeHookContext<{ id: string }>) => {
+                    range: (content: globalThis.Node | globalThis.DocumentFragment, { data }: RangeHookContext<{ id: string }>) => {
                         const span = doc.createElement('span');
                         span.setAttribute('id', data.id);
                         span.append(content);

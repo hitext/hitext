@@ -1,4 +1,4 @@
-import type { RangeHookContext, RangeHooks } from '../types.js';
+import type { RangeHookContext, RangeHooks, RangeHooksFactory } from '../types.js';
 import ansiStyles from 'ansi-styles';
 import { createRenderPipeline } from '../pipeline.js';
 import { StringBuffer } from '../string-buffer.js';
@@ -138,3 +138,16 @@ export function createTTYRenderer<RenderOptions>() {
         };
     });
 }
+
+// Attach helper functions as static methods to the factory function itself
+createTTYRenderer.createStyle = (
+    ...args: Parameters<RangeHooksFactoryContext['createStyle']>
+): RangeHooksFactory<any, any, any, RangeHooksFactoryContext> => ({
+    createRangeHooks: ({ createStyle }) => createStyle(...args)
+});
+
+createTTYRenderer.createStyleMap = (
+    ...args: Parameters<RangeHooksFactoryContext['createStyleMap']>
+): RangeHooksFactory<any, any, any, RangeHooksFactoryContext> => ({
+    createRangeHooks: ({ createStyleMap }) => createStyleMap(...args)
+});

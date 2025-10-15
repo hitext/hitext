@@ -44,7 +44,7 @@ export function render<T, R = T>(
             result[type] = {
                 open: ensureFunction(rangeHook.open, noOutput),
                 close: ensureFunction(rangeHook.close, noOutput),
-                node: rangeHook.node,
+                range: rangeHook.range,
                 text: ensureFunction(rangeHook.text, renderText)
             };
         }
@@ -145,11 +145,11 @@ export function render<T, R = T>(
         currentRange = openedRanges[index];
         const hook = normRangeHooksMap[currentRange.type];
 
-        // Call open hook (goes to current buffer, or parent if node hook exists)
+        // Call open hook (goes to current buffer, or parent if range hook exists)
         append(hook.open(renderContext));
 
-        // Check if this range uses node hook
-        if (hook.node) {
+        // Check if this range uses range hook
+        if (hook.range) {
             // Start accumulating content for this range
             rangeContentStack.push(buffer);
             buffer = createBuffer();
@@ -160,16 +160,16 @@ export function render<T, R = T>(
         currentRange = openedRanges[index];
         const hook = normRangeHooksMap[currentRange.type];
 
-        if (hook.node) {
+        if (hook.range) {
             const contentBuffer = buffer;
             buffer = rangeContentStack.pop()!;
 
-            // Emit the buffer content - check if buffer has emit method for backward compatibility
+            // Emit the buffer content
             const content = contentBuffer.emit();
-            append(hook.node(content, renderContext));
+            append(hook.range(content, renderContext));
         }
 
-        // Call close hook (goes to current buffer, which is parent after node processing)
+        // Call close hook (goes to current buffer, which is parent after range processing)
         append(hook.close(renderContext));
     };
 

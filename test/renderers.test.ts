@@ -10,7 +10,7 @@ describe('built-in renderers', () => {
                         { start: 0, end: 1, data: 'value' },
                         { start: 1, end: 2 },
                         { start: 2, end: 3 }
-                    ], () => ({}))
+                    ], {})
                     .render('abc'),
                 'abc'
             )

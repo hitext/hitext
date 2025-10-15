@@ -1,50 +1,53 @@
 import { equal } from 'assert';
 import { tty as ttyRenderer } from '../src/index.js';
-import type { RangeHookContext } from '../src/types.js';
 
 describe('TTY renderer', () => {
     describe('basic styling', () => {
         it('should apply foreground colors', () => {
-            const result = ttyRenderer()
+            const tty = ttyRenderer();
+            const result = tty
                 .addLayer([
                     { start: 0, end: 1 }
-                ], ({ createStyle }) => createStyle('cyan'))
+                ], ttyRenderer.createStyle('cyan'))
                 .render('test');
 
             equal(result, '\u001b[36mt\u001b[39mest');
         });
 
         it('should apply background colors', () => {
-            const result = ttyRenderer()
+            const tty = ttyRenderer();
+            const result = tty
                 .addLayer([
                     { start: 0, end: 1 }
-                ], ({ createStyle }) => createStyle('bgRed'))
+                ], ttyRenderer.createStyle('bgRed'))
                 .render('test');
 
             equal(result, '\u001b[41mt\u001b[49mest');
         });
 
         it('should combine foreground and background colors', () => {
-            const result = ttyRenderer()
+            const tty = ttyRenderer();
+            const result = tty
                 .addLayer([
                     { start: 0, end: 1 }
-                ], ({ createStyle }) => createStyle('white', 'bgBlue'))
+                ], ttyRenderer.createStyle('white', 'bgBlue'))
                 .render('test');
 
             equal(result, '\u001b[37m\u001b[44mt\u001b[39m\u001b[49mest');
         });
 
         it('should handle multiple non-overlapping styled ranges', () => {
-            const result = ttyRenderer()
+            const tty = ttyRenderer();
+            const result = tty
                 .addLayer([
                     { start: 0, end: 1 }
-                ], ({ createStyle }) => createStyle('cyan'))
+                ], ttyRenderer.createStyle('cyan'))
                 .addLayer([
                     { start: 1, end: 2 }
-                ], ({ createStyle }) => createStyle('bgBlue', 'white'))
+                ], ttyRenderer.createStyle('bgBlue', 'white'))
                 .addLayer([
                     { start: 3, end: 4 }
-                ], ({ createStyle }) => createStyle('yellow'))
+                ], ttyRenderer.createStyle('yellow'))
                 .render('1234');
 
             equal(
@@ -59,10 +62,10 @@ describe('TTY renderer', () => {
             const result = ttyRenderer()
                 .addLayer([
                     { start: 0, end: 5 }
-                ], ({ createStyle }) => createStyle('bgBlue'))
+                ], ttyRenderer.createStyle('bgBlue'))
                 .addLayer([
                     { start: 1, end: 4 }
-                ], ({ createStyle }) => createStyle('white'))
+                ], ttyRenderer.createStyle('white'))
                 .render('Hello');
 
             // Background should continue through nested range
@@ -73,10 +76,10 @@ describe('TTY renderer', () => {
             const result = ttyRenderer()
                 .addLayer([
                     { start: 0, end: 6 }
-                ], ({ createStyle }) => createStyle('cyan'))
+                ], ttyRenderer.createStyle('cyan'))
                 .addLayer([
                     { start: 2, end: 4 }
-                ], ({ createStyle }) => createStyle('yellow'))
+                ], ttyRenderer.createStyle('yellow'))
                 .render('abcdef');
 
             equal(result, '\u001b[36mab\u001b[33mcd\u001b[36mef\u001b[39m');
@@ -86,13 +89,13 @@ describe('TTY renderer', () => {
             const result = ttyRenderer()
                 .addLayer([
                     { start: 0, end: 5 }
-                ], ({ createStyle }) => createStyle('red'))
+                ], ttyRenderer.createStyle('red'))
                 .addLayer([
                     { start: 1, end: 4 }
-                ], ({ createStyle }) => createStyle('bgYellow'))
+                ], ttyRenderer.createStyle('bgYellow'))
                 .addLayer([
                     { start: 2, end: 3 }
-                ], ({ createStyle }) => createStyle('white'))
+                ], ttyRenderer.createStyle('white'))
                 .render('12345');
 
             equal(result, '\u001b[31m1\u001b[43m2\u001b[37m3\u001b[31m4\u001b[49m5\u001b[39m');
@@ -105,7 +108,7 @@ describe('TTY renderer', () => {
                 .addLayer([
                     { start: 0, end: 1, data: 'value' },
                     { start: 3, end: 4, data: 'other' }
-                ], ({ createStyleMap }) => createStyleMap({
+                ], ttyRenderer.createStyleMap({
                     'value': 'cyan',
                     'other': 'yellow'
                 }))
@@ -119,7 +122,7 @@ describe('TTY renderer', () => {
                 .addLayer([
                     { start: 0, end: 1, data: 'error' },
                     { start: 1, end: 2, data: 'warning' }
-                ], ({ createStyleMap }) => createStyleMap({
+                ], ttyRenderer.createStyleMap({
                     'error': ['red', 'bgWhite'],
                     'warning': ['yellow', 'bgBlack']
                 }))
@@ -130,15 +133,15 @@ describe('TTY renderer', () => {
 
         it('should support custom data fetcher', () => {
             const result = ttyRenderer()
-                .addLayer([
+                .addLayer<{ priority: string }>([
                     { start: 0, end: 1, data: { priority: 'high' } },
                     { start: 1, end: 2, data: { priority: 'low' } }
-                ], ({ createStyleMap }) => createStyleMap(
+                ], ttyRenderer.createStyleMap(
                     {
                         'high': 'red',
                         'low': 'green'
                     },
-                    ({ data }: RangeHookContext<{ priority: string }>) => data.priority
+                    ({ data }) => data.priority
                 ))
                 .render('12');
 
@@ -151,7 +154,7 @@ describe('TTY renderer', () => {
                     { start: 0, end: 1, data: 0 },
                     { start: 1, end: 2, data: 1 },
                     { start: 2, end: 3, data: 2 }
-                ], ({ createStyleMap }) => createStyleMap([
+                ], ttyRenderer.createStyleMap([
                     'red',
                     'green',
                     'blue'
@@ -167,10 +170,10 @@ describe('TTY renderer', () => {
             const result = ttyRenderer()
                 .addLayer([
                     { start: 0, end: 2 }
-                ], ({ createStyle }) => createStyle('red'))
+                ], ttyRenderer.createStyle('red'))
                 .addLayer([
                     { start: 1, end: 2 }
-                ], ({ createStyle }) => createStyle('reset'))
+                ], ttyRenderer.createStyle('reset'))
                 .render('abc');
 
             // Reset should restore to default
@@ -181,7 +184,7 @@ describe('TTY renderer', () => {
             const result = ttyRenderer()
                 .addLayer([
                     { start: 0, end: 0 }
-                ], ({ createStyle }) => createStyle('red'))
+                ], ttyRenderer.createStyle('red'))
                 .render('test');
 
             // Empty range at position 0
@@ -194,10 +197,10 @@ describe('TTY renderer', () => {
             const result = ttyRenderer()
                 .addLayer([
                     { start: 0, end: 3 }
-                ], ({ createStyle }) => createStyle('red'))
+                ], ttyRenderer.createStyle('red'))
                 .addLayer([
                     { start: 2, end: 5 }
-                ], ({ createStyle }) => createStyle('blue'))
+                ], ttyRenderer.createStyle('blue'))
                 .render('Hello');
 
             equal(result, '\u001b[31mHel\u001b[34mlo\u001b[39m');
@@ -207,10 +210,10 @@ describe('TTY renderer', () => {
             const result = ttyRenderer()
                 .addLayer([
                     { start: 0, end: 3 }
-                ], ({ createStyle }) => createStyle('red'))
+                ], ttyRenderer.createStyle('red'))
                 .addLayer([
                     { start: 1, end: 4 }
-                ], ({ createStyle }) => createStyle('bgYellow'))
+                ], ttyRenderer.createStyle('bgYellow'))
                 .render('Hello');
 
             // Red fg at 0-3, yellow bg at 1-4, overlap at 1-3
@@ -221,7 +224,7 @@ describe('TTY renderer', () => {
     describe('edge cases', () => {
         it('should handle empty string', () => {
             const result = ttyRenderer()
-                .addLayer([[0, 0]], ({ createStyle }) => createStyle('red'))
+                .addLayer([[0, 0]], ttyRenderer.createStyle('red'))
                 .render('');
 
             equal(result, '');
@@ -237,7 +240,7 @@ describe('TTY renderer', () => {
                 .addLayer([
                     { start: -5, end: 2 },
                     { start: 3, end: 100 }
-                ], ({ createStyle }) => createStyle('red'))
+                ], ttyRenderer.createStyle('red'))
                 .render('abc');
 
             // Should clip to actual source boundaries
@@ -249,7 +252,7 @@ describe('TTY renderer', () => {
                 .addLayer([
                     { start: 0, end: 1, data: 'known' },
                     { start: 1, end: 2, data: 'unknown' }
-                ], ({ createStyleMap }) => createStyleMap({
+                ], ttyRenderer.createStyleMap({
                     'known': 'red'
                     // 'unknown' is not in the map
                 }))
@@ -265,12 +268,12 @@ describe('TTY renderer', () => {
             const result = ttyRenderer()
                 .addLayer([
                     { start: 0, end: 5, data: 'keyword' }
-                ], ({ createStyleMap }) => createStyleMap({
+                ], ttyRenderer.createStyleMap({
                     'keyword': 'cyan'
                 }))
                 .addLayer([
                     { start: 6, end: 11 }
-                ], ({ createStyle }) => createStyle('bgRed', 'white'))
+                ], ttyRenderer.createStyle('bgRed', 'white'))
                 .render('Hello world');
 
             equal(result, '\u001b[36mHello\u001b[39m \u001b[37m\u001b[41mworld\u001b[39m\u001b[49m');
@@ -282,7 +285,7 @@ describe('TTY renderer', () => {
                 .addLayer([
                     { start: 0, end: 5, data: 'keyword' },
                     { start: 10, end: 12, data: 'number' }
-                ], ({ createStyleMap }) => createStyleMap({
+                ], ttyRenderer.createStyleMap({
                     'keyword': 'magenta',
                     'number': 'green',
                     'string': 'yellow'
@@ -296,10 +299,10 @@ describe('TTY renderer', () => {
             const result = ttyRenderer()
                 .addLayer([
                     { start: 0, end: 11 }
-                ], ({ createStyle }) => createStyle('bgBlack'))
+                ], ttyRenderer.createStyle('bgBlack'))
                 .addLayer([
                     { start: 0, end: 5 }
-                ], ({ createStyle }) => createStyle('cyan'))
+                ], ttyRenderer.createStyle('cyan'))
                 .render('Hello world');
 
             equal(result, '\u001b[36m\u001b[40mHello\u001b[39m world\u001b[49m');
@@ -311,16 +314,18 @@ describe('TTY renderer', () => {
             const result = ttyRenderer()
                 .addLayer([
                     { start: 0, end: 5 }
-                ], ({ pushStyle, popStyle }) => ({
-                    open() {
-                        pushStyle({ color: '\u001b[31m' }); // Red
-                        return '';
-                    },
-                    close() {
-                        popStyle();
-                        return '';
-                    }
-                }))
+                ], {
+                    createRangeHooks: ({ pushStyle, popStyle }) => ({
+                        open() {
+                            pushStyle({ color: '\u001b[31m' }); // Red
+                            return '';
+                        },
+                        close() {
+                            popStyle();
+                            return '';
+                        }
+                    })
+                })
                 .render('Hello world');
 
             equal(result, '\u001b[31mHello\u001b[39m world');
@@ -330,28 +335,32 @@ describe('TTY renderer', () => {
             const result = ttyRenderer()
                 .addLayer([
                     { start: 0, end: 7 }
-                ], ({ pushStyle, popStyle }) => ({
-                    open() {
-                        pushStyle({ color: '\u001b[34m' }); // Blue
-                        return '';
-                    },
-                    close() {
-                        popStyle();
-                        return '';
-                    }
-                }))
+                ], {
+                    createRangeHooks: ({ pushStyle, popStyle }) => ({
+                        open() {
+                            pushStyle({ color: '\u001b[34m' }); // Blue
+                            return '';
+                        },
+                        close() {
+                            popStyle();
+                            return '';
+                        }
+                    })
+                })
                 .addLayer([
                     { start: 2, end: 5 }
-                ], ({ pushStyle, popStyle }) => ({
-                    open() {
-                        pushStyle({ bgColor: '\u001b[43m' }); // Yellow bg
-                        return '';
-                    },
-                    close() {
-                        popStyle();
-                        return '';
-                    }
-                }))
+                ], {
+                    createRangeHooks: ({ pushStyle, popStyle }) => ({
+                        open() {
+                            pushStyle({ bgColor: '\u001b[43m' }); // Yellow bg
+                            return '';
+                        },
+                        close() {
+                            popStyle();
+                            return '';
+                        }
+                    })
+                })
                 .render('Hello world');
 
             equal(result, '\u001b[34mHe\u001b[43mllo\u001b[49m w\u001b[39morld');

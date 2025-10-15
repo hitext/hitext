@@ -390,7 +390,7 @@ describe('render', () => {
                     { type: 'wrap', start: 6, end: 11, data: null }
                 ], {
                     wrap: {
-                        node: (content) => `[${content}]`
+                        range: (content) => `[${content}]`
                     }
                 }),
                 'Hello [world]!'
@@ -405,7 +405,7 @@ describe('render', () => {
                     wrap: {
                         open: () => '<',
                         close: () => '>',
-                        node: (content) => `[${content}]`
+                        range: (content) => `[${content}]`
                     }
                 }),
                 'Hello <[world]>!'
@@ -421,12 +421,12 @@ describe('render', () => {
                     outer: {
                         open: () => '(',
                         close: () => ')',
-                        node: (content) => `{${content}}`
+                        range: (content) => `{${content}}`
                     },
                     inner: {
                         open: () => '<',
                         close: () => '>',
-                        node: (content) => `[${content}]`
+                        range: (content) => `[${content}]`
                     }
                 }),
                 '({Hello <[world]>!})'
@@ -439,7 +439,7 @@ describe('render', () => {
                     { type: 'greeting', start: 0, end: 5, data: { type: 'greeting' } }
                 ], {
                     greeting: {
-                        node: (content, { data }: RangeHookContext<{ type: string }>) =>
+                        range: (content, { data }: RangeHookContext<{ type: string }>) =>
                             `<span class="${data.type}">${content}</span>`
                     }
                 }),
@@ -454,7 +454,7 @@ describe('render', () => {
                     { type: 'word', start: 6, end: 11, data: { secret: true } }
                 ], {
                     word: {
-                        node: (content, { data }: RangeHookContext<{ secret: boolean }>) =>
+                        range: (content, { data }: RangeHookContext<{ secret: boolean }>) =>
                             data.secret ? '[REDACTED]' : content
                     }
                 }),
@@ -469,7 +469,7 @@ describe('render', () => {
                 { type: 'test', start: 6, end: 11, data: { foo: 'bar' } }
             ], {
                 test: {
-                    node: (content, context: RangeHookContext<{ foo: string }>) => {
+                    range: (content, context: RangeHookContext<{ foo: string }>) => {
                         capturedContext = context;
                         return content;
                     }
@@ -491,13 +491,13 @@ describe('render', () => {
                     { type: 'level3', start: 0, end: 7, data: null }
                 ], {
                     level1: {
-                        node: (content) => `<L1>${content}</L1>`
+                        range: (content) => `<L1>${content}</L1>`
                     },
                     level2: {
-                        node: (content) => `<L2>${content}</L2>`
+                        range: (content) => `<L2>${content}</L2>`
                     },
                     level3: {
-                        node: (content) => `<L3>${content}</L3>`
+                        range: (content) => `<L3>${content}</L3>`
                     }
                 }),
                 '<L1><L2><L3>content</L3></L2></L1>'
@@ -510,7 +510,7 @@ describe('render', () => {
                     { type: 'empty', start: 6, end: 6, data: null }
                 ], {
                     empty: {
-                        node: (content) => `<empty>${content}</empty>`
+                        range: (content) => `<empty>${content}</empty>`
                     }
                 }),
                 'before<empty></empty> after'
@@ -525,7 +525,7 @@ describe('render', () => {
                     { type: 'tag', start: 8, end: 13, data: 'c' }
                 ], {
                     tag: {
-                        node: (content, { data }: RangeHookContext<string>) =>
+                        range: (content, { data }: RangeHookContext<string>) =>
                             `<${data}>${content}</${data}>`
                     }
                 }),
@@ -539,7 +539,7 @@ describe('render', () => {
                     { type: 'number', start: 14, end: 16, data: null }
                 ], {
                     number: {
-                        node: (content) => {
+                        range: (content) => {
                             const num = parseInt(content as string);
                             return String(num * 2);
                         }

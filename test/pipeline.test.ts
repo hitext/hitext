@@ -85,7 +85,7 @@ describe('Pipeline API', () => {
                 .addLayer<{ tag: string }>(
                     [{ start: 0, end: 5, data: { tag: 'custom' } }],
                     {
-                        node: (content, { data }) => `<${data.tag}>${content}</${data.tag}>`
+                        range: (content, { data }) => `<${data.tag}>${content}</${data.tag}>`
                     }
                 )
                 .render('Hello world');
@@ -179,7 +179,7 @@ describe('Pipeline API', () => {
             equal(Array.isArray(pipeline.layers), true);
             equal(pipeline.layers.length, 2);
 
-            // Each layer should have marker, generate, and rangeHooks
+            // Each layer should have marker, generate, and rangeHooksConfig
             equal(typeof pipeline.layers[0].marker, 'symbol');
             equal(typeof pipeline.layers[0].generate, 'function');
             equal(typeof pipeline.layers[0].rangeHooks, 'object');
@@ -258,12 +258,14 @@ describe('Pipeline API', () => {
             equal(typeof hooks.close, 'function');
         });
 
-        it('rangeHooksMap should resolve function-based hooks', () => {
+        it('rangeHooksMap should resolve factory-based hooks', () => {
             const pipeline = html()
-                .addLayer([[0, 5]], () => ({
-                    open: () => '<dynamic>',
-                    close: () => '</dynamic>'
-                }));
+                .addLayer([[0, 5]], {
+                    createRangeHooks: () => ({
+                        open: () => '<dynamic>',
+                        close: () => '</dynamic>'
+                    })
+                });
 
             const hooksMap = pipeline.rangeHooksMap();
             const keys = Object.getOwnPropertySymbols(hooksMap);
@@ -272,6 +274,62 @@ describe('Pipeline API', () => {
             // Should be resolved to actual hooks object
             equal(typeof hooks.open, 'function');
             equal(typeof hooks.close, 'function');
+        });
+
+        it('rangeHooksMap should convert function shortcuts to range hook', () => {
+            const pipeline = html()
+                .addLayer([[0, 5]], (content) => `[${content}]`);
+
+            const hooksMap = pipeline.rangeHooksMap();
+            const keys = Object.getOwnPropertySymbols(hooksMap);
+            const hooks = hooksMap[keys[0]];
+
+            // Function shortcut should be converted to {range: fn}
+            equal(typeof hooks.range, 'function');
+            equal(hooks.range!('test', {} as any), '[test]');
+        });
+
+        it('should test factory logic with rangeHooksContext', () => {
+            // Create a custom renderer with context
+            const customRenderer = html();
+
+            // Create a factory that uses context
+            const factoryConfig = {
+                createRangeHooks: () => ({
+                    open: () => '<mark>',
+                    close: () => '</mark>'
+                })
+            };
+
+            const pipeline = customRenderer.addLayer([[0, 5]], factoryConfig);
+            const result = pipeline.render('Hello world');
+
+            equal(result, '<mark>Hello</mark> world');
+        });
+
+        it('should test all three hook config forms', () => {
+            // 1. Plain object
+            const pipeline1 = html()
+                .addLayer([[0, 5]], {
+                    open: () => '<a>',
+                    close: () => '</a>'
+                });
+            equal(pipeline1.render('Hello world'), '<a>Hello</a> world');
+
+            // 2. Function shortcut
+            const pipeline2 = html()
+                .addLayer([[0, 5]], (content) => `<b>${content}</b>`);
+            equal(pipeline2.render('Hello world'), '<b>Hello</b> world');
+
+            // 3. Factory wrapper
+            const pipeline3 = html()
+                .addLayer([[0, 5]], {
+                    createRangeHooks: () => ({
+                        open: () => '<c>',
+                        close: () => '</c>'
+                    })
+                });
+            equal(pipeline3.render('Hello world'), '<c>Hello</c> world');
         });
 
         it('should support chaining after introspection', () => {

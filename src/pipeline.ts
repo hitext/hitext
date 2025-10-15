@@ -32,8 +32,10 @@ function createPipelineNode<RenderOptions, T, R = T, HC = unknown>(
 
         for (const { marker, rangeHooks } of layers)  {
             rangeHooksMap[marker] = typeof rangeHooks === 'function'
-                ? rangeHooks(rangeHooksContext)
-                : rangeHooks;
+                ? { range: rangeHooks }
+                : rangeHooks && 'createRangeHooks' in rangeHooks
+                    ? rangeHooks.createRangeHooks(rangeHooksContext)
+                    : rangeHooks;
         }
 
         return rangeHooksMap;
