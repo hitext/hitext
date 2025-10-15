@@ -13,5 +13,5 @@ export {
 export { string, html, dom, tty } from './renderers/index.js';
 
 // Re-export helpers
-export { createRenderPipeline as createPipelineForRenderer } from './pipeline.js';
+export { createRenderPipeline } from './pipeline.js';
 export { render } from './render.js';

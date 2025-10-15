@@ -1,5 +1,5 @@
 import { equal } from 'assert';
-import { html, string, rangeLines, rangeMatch } from '../src/index.js';
+import { html, string, rangeLines, rangeMatch, createRenderPipeline } from '../src/index.js';
 
 describe('Pipeline API', () => {
     describe('basic usage', () => {
@@ -349,6 +349,113 @@ describe('Pipeline API', () => {
 
             const result = pipeline2.render('Hello world');
             equal(result, '<a>Hello</a> <b>world</b>');
+        });
+    });
+
+    describe('createRenderPipeline', () => {
+        it('should create a custom renderer', () => {
+            const customRenderer = createRenderPipeline(() => {
+                let buffer = '';
+
+                return {
+                    createBuffer: () => ({
+                        append(child: string) {
+                            buffer += child;
+                        },
+                        emit() {
+                            const result = buffer;
+                            buffer = '';
+                            return result;
+                        }
+                    }),
+                    text: (chunk) => chunk,
+                    open: () => '',
+                    close: () => ''
+                };
+            });
+
+            const pipeline = customRenderer.addLayer([[0, 5]], {
+                open: () => '[',
+                close: () => ']'
+            });
+
+            equal(pipeline.render('Hello world'), '[Hello] world');
+        });
+
+        it('should support rangeHooksContext', () => {
+            const customRenderer = createRenderPipeline<unknown, string, string, { wrapper: string }>(() => {
+                let buffer = '';
+
+                return {
+                    createBuffer: () => ({
+                        append(child: string) {
+                            buffer += child;
+                        },
+                        emit() {
+                            const result = buffer;
+                            buffer = '';
+                            return result;
+                        }
+                    }),
+                    text: (chunk) => chunk,
+                    open: () => '',
+                    close: () => '',
+                    rangeHooksContext: {
+                        wrapper: '<<>>'
+                    }
+                };
+            });
+
+            const pipeline = customRenderer.addLayer([[0, 5]], {
+                createRangeHooks: ({ wrapper }) => ({
+                    open: () => wrapper.slice(0, 2),
+                    close: () => wrapper.slice(2)
+                })
+            });
+
+            equal(pipeline.render('Hello world'), '<<Hello>> world');
+        });
+
+        it('should work with all hook config forms', () => {
+            const customRenderer = createRenderPipeline(() => {
+                let buffer = '';
+
+                return {
+                    createBuffer: () => ({
+                        append(child: string) {
+                            buffer += child;
+                        },
+                        emit() {
+                            const result = buffer;
+                            buffer = '';
+                            return result;
+                        }
+                    }),
+                    text: (chunk) => chunk,
+                    open: () => '',
+                    close: () => ''
+                };
+            });
+
+            // Plain object
+            equal(
+                customRenderer.addLayer([[0, 5]], { open: () => '<a>', close: () => '</a>' }).render('Hello world'),
+                '<a>Hello</a> world'
+            );
+
+            // Function shortcut
+            equal(
+                customRenderer.addLayer([[0, 5]], (content) => `<b>${content}</b>`).render('Hello world'),
+                '<b>Hello</b> world'
+            );
+
+            // Factory wrapper
+            equal(
+                customRenderer.addLayer([[0, 5]], {
+                    createRangeHooks: () => ({ open: () => '<c>', close: () => '</c>' })
+                }).render('Hello world'),
+                '<c>Hello</c> world'
+            );
         });
     });
 });
