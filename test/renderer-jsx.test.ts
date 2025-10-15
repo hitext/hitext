@@ -16,7 +16,7 @@ describe('JSX renderer', () => {
             .addLayer([
                 { start: 0, end: 5 }
             ], {
-                range: (content: any) => h('span', { class: 'test' }, content)
+                content: (content: any) => h('span', { class: 'test' }, content)
             })
             .render('Hello, world!');
         const html = renderToString(h(Fragment, null, ...result));
@@ -29,12 +29,12 @@ describe('JSX renderer', () => {
             .addLayer([
                 { start: 0, end: 12 }
             ], {
-                range: (content: any) => h('div', { class: 'outer' }, content)
+                content: (content: any) => h('div', { class: 'outer' }, content)
             })
             .addLayer([
                 { start: 0, end: 5 }
             ], {
-                range: (content: any) => h('span', { class: 'inner' }, content)
+                content: (content: any) => h('span', { class: 'inner' }, content)
             })
             .render('Hello, world!');
         const html = renderToString(h(Fragment, null, ...result));
@@ -47,7 +47,7 @@ describe('JSX renderer', () => {
             .addLayer([
                 { start: 0, end: 5, data: { color: 'red' } }
             ], {
-                range: (content: any, { data }: any) => h('span', { style: `color: ${data.color}` }, content)
+                content: (content: any, { data }: any) => h('span', { style: `color: ${data.color}` }, content)
             })
             .render('Hello, world!');
         const html = renderToString(h(Fragment, null, ...result));
@@ -60,7 +60,7 @@ describe('JSX renderer', () => {
             .addLayer([
                 { start: 0, end: 5 }
             ], {
-                range: (content: any) => h('span', { class: 'test' }, content)
+                content: (content: any) => h('span', { class: 'test' }, content)
             })
             .render('Hello, world!');
 
@@ -78,7 +78,7 @@ describe('JSX renderer', () => {
                 { start: 0, end: 5 },
                 { start: 7, end: 12 }
             ], {
-                range: (content: any) => h('span', { class: 'test' }, content)
+                content: (content: any) => h('span', { class: 'test' }, content)
             })
             .render('Hello, world!');
         const html = renderToString(h(Fragment, null, ...result));

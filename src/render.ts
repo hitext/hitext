@@ -1,5 +1,5 @@
 import { StringBuffer } from './string-buffer.js';
-import type { GeneratedRange, RangeHookContext, RangeHooks, RenderHooks, RangeMarker } from './types.d.js';
+import type { GeneratedRange, RangeHookContext, RangeHooks, RenderHooks, RangeMarker, RangeHooksMap } from './types.d.js';
 
 const hasOwn = Object.hasOwn || ((o, k) => Object.prototype.hasOwnProperty.call(o, k));
 const noOutput = () => null;
@@ -11,7 +11,7 @@ function ensureFunction<T extends Function>(value: T | undefined, alt: T) {
 export function render<T, R = T>(
     source: string,
     ranges: GeneratedRange[],
-    rangeHooksMap: Record<string | symbol, Partial<RangeHooks<any, any>>>,
+    rangeHooksMap: RangeHooksMap<T, R> | null = null,
     renderHooks: Partial<RenderHooks<T, R>> = {}
 ) {
     // Renderer output assembly methods
@@ -44,7 +44,7 @@ export function render<T, R = T>(
             result[type] = {
                 open: ensureFunction(rangeHook.open, noOutput),
                 close: ensureFunction(rangeHook.close, noOutput),
-                range: rangeHook.range,
+                content: rangeHook.content,
                 text: ensureFunction(rangeHook.text, renderText)
             };
         }
@@ -100,13 +100,13 @@ export function render<T, R = T>(
             continue;
         }
 
-        closeRanges(range.start);
+        closeRangeSegments(range.start);
         renderChunk(range.start);
 
         for (j = 0; j < openedRanges.length; j++) {
             if (openedRanges[j].end < range.end) {
                 for (let k = openedRanges.length - 1; k >= j; k--) {
-                    closeRange(k);
+                    closeRangeSegment(k);
                 }
                 break;
             }
@@ -115,7 +115,7 @@ export function render<T, R = T>(
         openedRanges.splice(j, 0, range);
 
         for (; j < openedRanges.length; j++) {
-            openRange(j);
+            openRangeSegment(j);
         }
 
         if (range.end < closingOffset) {
@@ -123,12 +123,12 @@ export function render<T, R = T>(
         }
     }
 
-    closeRanges(source.length);
+    closeRangeSegments(source.length);
     renderChunk(source.length);
 
     // Render ranges out of source boundaries
     for (let i = openedRanges.length - 1; i >= 0; i--) {
-        closeRange(i);
+        closeRangeSegment(i);
     }
 
     // Finish rendering - call renderer close hook
@@ -141,7 +141,7 @@ export function render<T, R = T>(
     // Handlers
     //
 
-    function openRange(index: number) {
+    function openRangeSegment(index: number) {
         currentRange = openedRanges[index];
         const hook = normRangeHooksMap[currentRange.type];
 
@@ -149,24 +149,24 @@ export function render<T, R = T>(
         append(hook.open(renderContext));
 
         // Check if this range uses range hook
-        if (hook.range) {
+        if (hook.content) {
             // Start accumulating content for this range
             rangeContentStack.push(buffer);
             buffer = createBuffer();
         }
     }
 
-    function closeRange(index: number) {
+    function closeRangeSegment(index: number) {
         currentRange = openedRanges[index];
         const hook = normRangeHooksMap[currentRange.type];
 
-        if (hook.range) {
+        if (hook.content) {
             const contentBuffer = buffer;
             buffer = rangeContentStack.pop()!;
 
             // Emit the buffer content
             const content = contentBuffer.emit();
-            append(hook.range(content, renderContext));
+            append(hook.content(content, renderContext));
         }
 
         // Call close hook (goes to current buffer, which is parent after range processing)
@@ -201,7 +201,7 @@ export function render<T, R = T>(
         renderedOffset = offset;
     }
 
-    function closeRanges(offset: number) {
+    function closeRangeSegments(offset: number) {
         while (closingOffset <= offset) {
             renderChunk(closingOffset);
 
@@ -209,7 +209,7 @@ export function render<T, R = T>(
                 if (openedRanges[j].end !== closingOffset) {
                     break;
                 }
-                closeRange(j);
+                closeRangeSegment(j);
                 openedRanges.pop();
             }
 

@@ -1,4 +1,4 @@
-import { PipelineNode, Ranges, GenerateRanges, CreateRenderHooks, PipelineLayer } from './types.js';
+import { PipelineNode, Ranges, GenerateRanges, CreateRenderHooks, PipelineLayer, RangeHooksMap } from './types.js';
 import { generateRanges } from './generateRanges.js';
 import { render } from './render.js';
 
@@ -27,15 +27,15 @@ function createPipelineNode<RenderOptions, T, R = T, HC = unknown>(
     layers: PipelineLayer[]
 ): PipelineNode<RenderOptions, T, R, HC> {
     function createRangeHooksMap(renderHooks: ReturnType<CreateRenderHooks>) {
-        const rangeHooksMap = Object.create(null);
+        const rangeHooksMap: RangeHooksMap<T, R> = Object.create(null);
         const rangeHooksContext = renderHooks?.rangeHooksContext;
 
         for (const { marker, rangeHooks } of layers)  {
             rangeHooksMap[marker] = typeof rangeHooks === 'function'
-                ? { range: rangeHooks }
+                ? { content: rangeHooks }
                 : rangeHooks && 'createRangeHooks' in rangeHooks
                     ? rangeHooks.createRangeHooks(rangeHooksContext)
-                    : rangeHooks;
+                    : rangeHooks || null;
         }
 
         return rangeHooksMap;

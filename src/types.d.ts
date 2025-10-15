@@ -17,7 +17,7 @@ export type RangeHooksFactory<Data = unknown, T = unknown, R = T, HC = unknown> 
 // Range hooks configuration - can be hooks object, function shortcut, or factory
 export type LayerRangeHooks<Data = unknown, T = unknown, R = T, HC = unknown> =
     | Partial<RangeHooks<Data, T, R>>
-    | RangeHooks<Data, T, R>['range']
+    | RangeHooks<Data, T, R>['content']
     | RangeHooksFactory<Data, T, R, HC>;
 
 export interface PipelineNode<RenderOptions, T, R = T, HC = unknown> {
@@ -28,7 +28,7 @@ export interface PipelineNode<RenderOptions, T, R = T, HC = unknown> {
         rangeHooks: LayerRangeHooks<D, T, R, HC>
     ): PipelineNode<RenderOptions, T, R, HC>;
     ranges(source: string, options?: RenderOptions): GeneratedRange[];
-    rangeHooksMap(): Record<RangeMarker, Partial<RangeHooks<any, T, R>>>;
+    rangeHooksMap(): RangeHooksMap<T, R>;
     render(source: string, options?: RenderOptions): R;
 }
 export interface Generator<Data = unknown, RenderOptions = unknown> {
@@ -66,10 +66,14 @@ export interface GeneratedRange<Data = unknown> {
 // Render
 //
 
+export type RangeHooksMap<T, R = T> = Record<
+    RangeMarker,
+    Partial<RangeHooks<any, T, R>> | null
+>;
 export interface RangeHooks<Data = unknown, T, R = T> {
     open: (context: RangeHookContext<Data>) => T | string | null;
     close: (context: RangeHookContext<Data>) => T | string | null;
-    range: ((content: T | R, context: RangeHookContext<Data>) => T | string | null) | null;
+    content: ((content: T | R, context: RangeHookContext<Data>) => T | string | null) | null;
     text: (sourceChunk: string, context: RangeHookContext<Data>) => string | null;
 }
 export interface RangeHookContext<T = unknown> {

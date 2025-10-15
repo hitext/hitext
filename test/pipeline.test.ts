@@ -85,7 +85,7 @@ describe('Pipeline API', () => {
                 .addLayer<{ tag: string }>(
                     [{ start: 0, end: 5, data: { tag: 'custom' } }],
                     {
-                        range: (content, { data }) => `<${data.tag}>${content}</${data.tag}>`
+                        content: (content, { data }) => `<${data.tag}>${content}</${data.tag}>`
                     }
                 )
                 .render('Hello world');
@@ -252,9 +252,10 @@ describe('Pipeline API', () => {
             equal(keys.length, 1);
 
             // The hooks should be present
-            const hooks = hooksMap[keys[0]];
-            equal(typeof hooks.open, 'function');
-            equal(typeof hooks.close, 'function');
+            const firstKey: keyof typeof hooksMap = keys[0];
+            const hooks = hooksMap[firstKey];
+            equal(typeof hooks?.open, 'function');
+            equal(typeof hooks?.close, 'function');
         });
 
         it('rangeHooksMap should resolve factory-based hooks', () => {
@@ -268,11 +269,12 @@ describe('Pipeline API', () => {
 
             const hooksMap = pipeline.rangeHooksMap();
             const keys = Object.getOwnPropertySymbols(hooksMap);
-            const hooks = hooksMap[keys[0]];
+            const firstKey: keyof typeof hooksMap = keys[0];
+            const hooks = hooksMap[firstKey];
 
             // Should be resolved to actual hooks object
-            equal(typeof hooks.open, 'function');
-            equal(typeof hooks.close, 'function');
+            equal(typeof hooks?.open, 'function');
+            equal(typeof hooks?.close, 'function');
         });
 
         it('rangeHooksMap should convert function shortcuts to range hook', () => {
@@ -281,11 +283,12 @@ describe('Pipeline API', () => {
 
             const hooksMap = pipeline.rangeHooksMap();
             const keys = Object.getOwnPropertySymbols(hooksMap);
-            const hooks = hooksMap[keys[0]];
+            const firstKey: keyof typeof hooksMap = keys[0];
+            const hooks = hooksMap[firstKey];
 
-            // Function shortcut should be converted to {range: fn}
-            equal(typeof hooks.range, 'function');
-            equal(hooks.range!('test', {} as any), '[test]');
+            // Function shortcut should be converted to {content: fn}
+            equal(typeof hooks?.content, 'function');
+            equal(hooks?.content!('test', {} as any), '[test]');
         });
 
         it('should test factory logic with rangeHooksContext', () => {
