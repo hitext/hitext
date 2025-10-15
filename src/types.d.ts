@@ -59,7 +59,7 @@ export interface GeneratedRange<Data = unknown> {
     type: RangeMarker;
     start: number;
     end: number;
-    data: Data | undefined;
+    data?: Data;
 }
 
 //

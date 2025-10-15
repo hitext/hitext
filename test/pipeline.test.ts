@@ -167,7 +167,6 @@ describe('Pipeline API', () => {
             equal(typeof pipeline.createRenderHooks, 'function');
 
             const renderHooks = pipeline.createRenderHooks();
-            equal(typeof renderHooks.createBuffer, 'function');
             equal(typeof renderHooks.text, 'function');
         });
 

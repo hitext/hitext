@@ -21,8 +21,8 @@ describe('built-in generators', () => {
                     rangeMatch('world')
                 ),
                 [
-                    { type: testMarker, start: 6, end: 11, data: undefined },
-                    { type: testMarker, start: 19, end: 24, data: undefined }
+                    { type: testMarker, start: 6, end: 11 },
+                    { type: testMarker, start: 19, end: 24 }
                 ]
             )
         );
@@ -34,8 +34,8 @@ describe('built-in generators', () => {
                     rangeMatch(/\w+/)
                 ),
                 [
-                    { type: testMarker, start: 0, end: 5, data: undefined },
-                    { type: testMarker, start: 6, end: 11, data: undefined }
+                    { type: testMarker, start: 0, end: 5 },
+                    { type: testMarker, start: 6, end: 11 }
                 ]
             )
         );
@@ -47,8 +47,8 @@ describe('built-in generators', () => {
                     rangeMatch(/hello|world/ig)
                 ),
                 [
-                    { type: testMarker, start: 0, end: 5, data: undefined },
-                    { type: testMarker, start: 6, end: 11, data: undefined }
+                    { type: testMarker, start: 0, end: 5 },
+                    { type: testMarker, start: 6, end: 11 }
                 ]
             )
         );
@@ -60,7 +60,7 @@ describe('built-in generators', () => {
                     rangeMatch('234')
                 ),
                 [
-                    { type: testMarker, start: 1, end: 4, data: undefined }
+                    { type: testMarker, start: 1, end: 4 }
                 ]
             )
         );

@@ -131,9 +131,9 @@ describe('render', () => {
     });
 
     it('should be fine when open/close is omitted in printer range hook', () => {
-        const a: GeneratedRange = { type: 'a', start: 1, end: 2, data: undefined };
-        const b: GeneratedRange = { type: 'b', start: 2, end: 3, data: undefined };
-        const c: GeneratedRange = { type: 'c', start: 3, end: 4, data: undefined };
+        const a: GeneratedRange = { type: 'a', start: 1, end: 2 };
+        const b: GeneratedRange = { type: 'b', start: 2, end: 3 };
+        const c: GeneratedRange = { type: 'c', start: 3, end: 4 };
 
         equal(
             render('123456', [a, b, c], {
@@ -153,10 +153,10 @@ describe('render', () => {
 
     it('should use range hook text method when defined', () => {
         const ranges: GeneratedRange[] = [
-            { type: 'a', start: 1, end: 6, data: undefined },
-            { type: 'b', start: 2, end: 5, data: undefined },
-            { type: 'c', start: 3, end: 4, data: undefined },
-            { type: 'a', start: 8, end: 10, data: undefined }
+            { type: 'a', start: 1, end: 6 },
+            { type: 'b', start: 2, end: 5 },
+            { type: 'c', start: 3, end: 4 },
+            { type: 'a', start: 8, end: 10 }
         ];
 
         equal(
