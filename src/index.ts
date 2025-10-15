@@ -10,7 +10,7 @@ export {
 } from './generators/index.js';
 
 // Re-export renderers
-export { string, html, dom, tty } from './renderers/index.js';
+export { string, html, dom, tty, jsx } from './renderers/index.js';
 
 // Re-export helpers
 export { createRenderPipeline } from './pipeline.js';

@@ -54,6 +54,8 @@
         "globals": "^16.4.0",
         "linkedom": "^0.18.12",
         "mocha": "^9.2.2",
+        "preact": "^10.27.2",
+        "preact-render-to-string": "^6.6.2",
         "rollup": "^2.67.3",
         "sucrase": "^3.34.0",
         "tsx": "^4.20.6",
