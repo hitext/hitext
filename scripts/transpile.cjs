@@ -10,8 +10,9 @@ const external = [
     'fs',
     'path',
     'assert',
-    'ansi-colors',
-    'ansi-styles',
+    'preact',
+    'preact-render-to-string',
+    'linkedom',
     'hitext'
 ];
 
