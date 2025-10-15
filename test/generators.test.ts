@@ -1,174 +1,126 @@
-import { deepEqual } from 'assert';
+import { deepStrictEqual } from 'assert';
 import { rangeLines, rangeLineContents, rangeMatch, rangeNewlines } from '../src/index.js';
 import { generateRangesFromLayers } from '../src/ranges.js';
 import type { GenerateRanges, Range } from '../src/types.d.js';
 
 const testMarker = Symbol('test');
 
-function gen(source: string, generate: GenerateRanges): Range[] {
+function gen(source: string, ranges: GenerateRanges): Range[] {
     return generateRangesFromLayers(source, [{
         marker: testMarker,
-        ranges: generate
+        ranges
     }]);
 }
 
+const startEndData = (ranges: Range[]) => ranges.map(r => [r.start, r.end, r.data]);
+
 describe('built-in generators', () => {
     describe('rangeMatch', () => {
-        it('using string', () =>
-            deepEqual(
-                gen(
-                    'Hello world! Hello world!',
-                    rangeMatch('world')
-                ),
-                [
-                    { type: testMarker, start: 6, end: 11, data: undefined },
-                    { type: testMarker, start: 19, end: 24, data: undefined }
-                ]
-            )
-        );
+        it('using string', () => {
+            const ranges = gen('Hello world! Hello world!', rangeMatch('world'));
+            deepStrictEqual(startEndData(ranges), [
+                [6, 11, undefined],
+                [19, 24, undefined]
+            ]);
+        });
 
-        it('using regexp', () =>
-            deepEqual(
-                gen(
-                    'Hello world!',
-                    rangeMatch(/\w+/)
-                ),
-                [
-                    { type: testMarker, start: 0, end: 5, data: undefined },
-                    { type: testMarker, start: 6, end: 11, data: undefined }
-                ]
-            )
-        );
+        it('using regexp', () => {
+            const ranges = gen('Hello world!', rangeMatch(/\w+/));
+            deepStrictEqual(startEndData(ranges), [
+                [0, 5, undefined],
+                [6, 11, undefined]
+            ]);
+        });
 
-        it('using regexp with flags', () =>
-            deepEqual(
-                gen(
-                    'Hello world!',
-                    rangeMatch(/hello|world/ig)
-                ),
-                [
-                    { type: testMarker, start: 0, end: 5, data: undefined },
-                    { type: testMarker, start: 6, end: 11, data: undefined }
-                ]
-            )
-        );
+        it('using regexp with flags', () => {
+            const ranges = gen('Hello world!', rangeMatch(/hello|world/ig));
+            deepStrictEqual(startEndData(ranges), [
+                [0, 5, undefined],
+                [6, 11, undefined]
+            ]);
+        });
 
-        it('using non-string and non-regexp value', () =>
-            deepEqual(
-                gen(
-                    '1234567890',
-                    rangeMatch('234')
-                ),
-                [
-                    { type: testMarker, start: 1, end: 4, data: undefined }
-                ]
-            )
-        );
+        it('using non-string and non-regexp value', () => {
+            const ranges = gen('1234567890', rangeMatch('234'));
+            deepStrictEqual(startEndData(ranges), [
+                [1, 4, undefined]
+            ]);
+        });
     });
 
     describe('line', () => {
-        it('new-line ending input', () =>
-            deepEqual(
-                gen(
-                    '\na\rbb\r\nccc\n\r',
-                    rangeLines
-                ),
-                [
-                    { type: testMarker, start: 0, end: 1, data: 1 },
-                    { type: testMarker, start: 1, end: 3, data: 2 },
-                    { type: testMarker, start: 3, end: 7, data: 3 },
-                    { type: testMarker, start: 7, end: 11, data: 4 },
-                    { type: testMarker, start: 11, end: 12, data: 5 },
-                    { type: testMarker, start: 12, end: 12, data: 6 }
-                ]
-            )
-        );
+        it('new-line ending input', () => {
+            const ranges = gen('\na\rbb\r\nccc\n\r', rangeLines);
+            deepStrictEqual(startEndData(ranges), [
+                [0, 1, 1],
+                [1, 3, 2],
+                [3, 7, 3],
+                [7, 11, 4],
+                [11, 12, 5],
+                [12, 12, 6]
+            ]);
+        });
 
-        it('non-new-line ending input', () =>
-            deepEqual(
-                gen(
-                    '\na\rbb\r\nccc\n\rdddd',
-                    rangeLines
-                ),
-                [
-                    { type: testMarker, start: 0, end: 1, data: 1 },
-                    { type: testMarker, start: 1, end: 3, data: 2 },
-                    { type: testMarker, start: 3, end: 7, data: 3 },
-                    { type: testMarker, start: 7, end: 11, data: 4 },
-                    { type: testMarker, start: 11, end: 12, data: 5 },
-                    { type: testMarker, start: 12, end: 16, data: 6 }
-                ]
-            )
-        );
+        it('non-new-line ending input', () => {
+            const ranges = gen('\na\rbb\r\nccc\n\rdddd', rangeLines);
+            deepStrictEqual(startEndData(ranges), [
+                [0, 1, 1],
+                [1, 3, 2],
+                [3, 7, 3],
+                [7, 11, 4],
+                [11, 12, 5],
+                [12, 16, 6]
+            ]);
+        });
     });
 
     describe('lineContent', () => {
-        it('new-line ending input', () =>
-            deepEqual(
-                gen(
-                    '\na\rbb\r\nccc\n\r',
-                    rangeLineContents
-                ),
-                [
-                    { type: testMarker, start: 0, end: 0, data: 1 },
-                    { type: testMarker, start: 1, end: 2, data: 2 },
-                    { type: testMarker, start: 3, end: 5, data: 3 },
-                    { type: testMarker, start: 7, end: 10, data: 4 },
-                    { type: testMarker, start: 11, end: 11, data: 5 },
-                    { type: testMarker, start: 12, end: 12, data: 6 }
-                ]
-            )
-        );
+        it('new-line ending input', () => {
+            const ranges = gen('\na\rbb\r\nccc\n\r', rangeLineContents);
+            deepStrictEqual(startEndData(ranges), [
+                [0, 0, 1],
+                [1, 2, 2],
+                [3, 5, 3],
+                [7, 10, 4],
+                [11, 11, 5],
+                [12, 12, 6]
+            ]);
+        });
 
-        it('non-new-line ending input', () =>
-            deepEqual(
-                gen(
-                    '\na\rbb\r\nccc\n\rdddd',
-                    rangeLineContents
-                ),
-                [
-                    { type: testMarker, start: 0, end: 0, data: 1 },
-                    { type: testMarker, start: 1, end: 2, data: 2 },
-                    { type: testMarker, start: 3, end: 5, data: 3 },
-                    { type: testMarker, start: 7, end: 10, data: 4 },
-                    { type: testMarker, start: 11, end: 11, data: 5 },
-                    { type: testMarker, start: 12, end: 16, data: 6 }
-                ]
-            )
-        );
+        it('non-new-line ending input', () => {
+            const ranges = gen('\na\rbb\r\nccc\n\rdddd', rangeLineContents);
+            deepStrictEqual(startEndData(ranges), [
+                [0, 0, 1],
+                [1, 2, 2],
+                [3, 5, 3],
+                [7, 10, 4],
+                [11, 11, 5],
+                [12, 16, 6]
+            ]);
+        });
     });
 
     describe('newLine', () => {
-        it('new-line ending input', () =>
-            deepEqual(
-                gen(
-                    '\na\rbb\r\nccc\n\r',
-                    rangeNewlines
-                ),
-                [
-                    { type: testMarker, start: 0, end: 1, data: 1 },
-                    { type: testMarker, start: 2, end: 3, data: 2 },
-                    { type: testMarker, start: 5, end: 7, data: 3 },
-                    { type: testMarker, start: 10, end: 11, data: 4 },
-                    { type: testMarker, start: 11, end: 12, data: 5 }
-                ]
-            )
-        );
+        it('new-line ending input', () => {
+            const ranges = gen('\na\rbb\r\nccc\n\r', rangeNewlines);
+            deepStrictEqual(startEndData(ranges), [
+                [0, 1, 1],
+                [2, 3, 2],
+                [5, 7, 3],
+                [10, 11, 4],
+                [11, 12, 5]
+            ]);
+        });
 
-        it('non-new-line ending input', () =>
-            deepEqual(
-                gen(
-                    '\na\rbb\r\nccc\n\rdddd',
-                    rangeNewlines
-                ),
-                [
-                    { type: testMarker, start: 0, end: 1, data: 1 },
-                    { type: testMarker, start: 2, end: 3, data: 2 },
-                    { type: testMarker, start: 5, end: 7, data: 3 },
-                    { type: testMarker, start: 10, end: 11, data: 4 },
-                    { type: testMarker, start: 11, end: 12, data: 5 }
-                ]
-            )
-        );
+        it('non-new-line ending input', () => {
+            const ranges = gen('\na\rbb\r\nccc\n\rdddd', rangeNewlines);
+            deepStrictEqual(startEndData(ranges), [
+                [0, 1, 1],
+                [2, 3, 2],
+                [5, 7, 3],
+                [10, 11, 4],
+                [11, 12, 5]
+            ]);
+        });
     });
 });

@@ -1,10 +1,13 @@
-import { equal } from 'assert';
+import { strictEqual, deepStrictEqual } from 'assert';
 import { html, string, rangeLines, rangeMatch, createRenderPipeline, RangeHooks } from '../src/index.js';
+import type { GeneratedRange } from '../src/types.js';
+
+const startEndPairs = (ranges: GeneratedRange[]) => ranges.map(r => [r.start, r.end]);
 
 describe('Pipeline API', () => {
     describe('basic usage', () => {
         it('should render plain text without layers', () => {
-            equal(
+            strictEqual(
                 html().render('Hi!'),
                 'Hi!'
             );
@@ -12,58 +15,28 @@ describe('Pipeline API', () => {
 
         it('should render with single layer', () => {
             const result = html()
-                .addLayer(
-                    [[0, 5]],
-                    {
-                        open: () => '<mark>',
-                        close: () => '</mark>'
-                    }
-                )
+                .addLayer([[0, 5]], (content) => `<mark>${content}</mark>`)
                 .render('Hello world!');
 
-            equal(result, '<mark>Hello</mark> world!');
+            strictEqual(result, '<mark>Hello</mark> world!');
         });
 
         it('should render with multiple layers', () => {
             const result = html()
-                .addLayer(
-                    [[0, 5]],
-                    {
-                        open: () => '<strong>',
-                        close: () => '</strong>'
-                    }
-                )
-                .addLayer(
-                    [[6, 11]],
-                    {
-                        open: () => '<em>',
-                        close: () => '</em>'
-                    }
-                )
+                .addLayer([[0, 5]], (content) => `<strong>${content}</strong>`)
+                .addLayer([[6, 11]], (content) => `<em>${content}</em>`)
                 .render('Hello world!');
 
-            equal(result, '<strong>Hello</strong> <em>world</em>!');
+            strictEqual(result, '<strong>Hello</strong> <em>world</em>!');
         });
 
         it('should handle nested ranges', () => {
             const result = html()
-                .addLayer(
-                    [[0, 11]],
-                    {
-                        open: () => '<div>',
-                        close: () => '</div>'
-                    }
-                )
-                .addLayer(
-                    [[0, 5]],
-                    {
-                        open: () => '<span>',
-                        close: () => '</span>'
-                    }
-                )
+                .addLayer([[0, 11]], (content) => `<div>${content}</div>`)
+                .addLayer([[0, 5]], (content) => `<span>${content}</span>`)
                 .render('Hello world');
 
-            equal(result, '<div><span>Hello</span> world</div>');
+            strictEqual(result, '<div><span>Hello</span> world</div>');
         });
 
         it('should pass data to hooks', () => {
@@ -77,50 +50,36 @@ describe('Pipeline API', () => {
                 )
                 .render('Hello world');
 
-            equal(result, '<span class="greeting">Hello</span> world');
+            strictEqual(result, '<span class="greeting">Hello</span> world');
         });
 
         it('should support node hooks', () => {
             const result = html()
                 .addLayer<{ tag: string }>(
                     [{ start: 0, end: 5, data: { tag: 'custom' } }],
-                    {
-                        content: (content, { data }) => `<${data.tag}>${content}</${data.tag}>`
-                    }
+                    (content, { data }) => `<${data.tag}>${content}</${data.tag}>`
                 )
                 .render('Hello world');
 
-            equal(result, '<custom>Hello</custom> world');
+            strictEqual(result, '<custom>Hello</custom> world');
         });
 
         it('should handle array ranges', () => {
             const result = html()
-                .addLayer(
-                    [[0, 5], [6, 11]],
-                    {
-                        open: () => '<mark>',
-                        close: () => '</mark>'
-                    }
-                )
+                .addLayer([[0, 5], [6, 11]], (content) => `<mark>${content}</mark>`)
                 .render('Hello world');
 
-            equal(result, '<mark>Hello</mark> <mark>world</mark>');
+            strictEqual(result, '<mark>Hello</mark> <mark>world</mark>');
         });
     });
 
     describe('with generators', () => {
         it('should work with built-in match generator', () => {
             const result = html()
-                .addLayer(
-                    rangeMatch('world'),
-                    {
-                        open: () => '<mark>',
-                        close: () => '</mark>'
-                    }
-                )
+                .addLayer(rangeMatch('world'), (content) => `<mark>${content}</mark>`)
                 .render('Hello world! Hello world!');
 
-            equal(result, 'Hello <mark>world</mark>! Hello <mark>world</mark>!');
+            strictEqual(result, 'Hello <mark>world</mark>! Hello <mark>world</mark>!');
         });
 
         it('should work with built-in lines generator', () => {
@@ -134,29 +93,23 @@ describe('Pipeline API', () => {
                 )
                 .render('line1\nline2\nline3');
 
-            equal(result, '<div data-line="1">line1\n</div><div data-line="2">line2\n</div><div data-line="3">line3</div>');
+            strictEqual(result, '<div data-line="1">line1\n</div><div data-line="2">line2\n</div><div data-line="3">line3</div>');
         });
     });
 
     describe('renderer creation', () => {
         it('should create a pipeline', () => {
             const pipeline = html();
-            equal(typeof pipeline.render, 'function');
-            equal(typeof pipeline.addLayer, 'function');
+            strictEqual(typeof pipeline.render, 'function');
+            strictEqual(typeof pipeline.addLayer, 'function');
         });
 
         it('should pass render options', () => {
             const result = string()
-                .addLayer(
-                    [[0, 5]],
-                    {
-                        open: () => '[',
-                        close: () => ']'
-                    }
-                )
+                .addLayer([[0, 5]], (content) => `[${content}]`)
                 .render('Hello world', { customOption: 'value' });
 
-            equal(result, '[Hello] world');
+            strictEqual(result, '[Hello] world');
         });
     });
 
@@ -164,124 +117,91 @@ describe('Pipeline API', () => {
         it('should expose createRenderHooks property', () => {
             const pipeline = html();
 
-            equal(typeof pipeline.createRenderHooks, 'function');
+            strictEqual(typeof pipeline.createRenderHooks, 'function');
 
             const renderHooks = pipeline.createRenderHooks();
-            equal(typeof renderHooks.text, 'function');
+            strictEqual(typeof renderHooks.text, 'function');
         });
 
         it('should expose layers property', () => {
             const pipeline = html()
-                .addLayer([[0, 5]], { open: () => '<a>', close: () => '</a>' })
-                .addLayer([[6, 11]], { open: () => '<b>', close: () => '</b>' });
+                .addLayer([[0, 5]], (content) => `<a>${content}</a>`)
+                .addLayer([[6, 11]], (content) => `<b>${content}</b>`);
 
-            equal(Array.isArray(pipeline.layers), true);
-            equal(pipeline.layers.length, 2);
+            strictEqual(Array.isArray(pipeline.layers), true);
+            strictEqual(pipeline.layers.length, 2);
 
             // Each layer should have marker, generate, and rangeHooksConfig
             const firstLayer = pipeline.layers[0];
-            equal(typeof firstLayer.marker, 'symbol');
-            equal(Array.isArray(firstLayer.ranges), true);
-            equal(typeof firstLayer.rangeHooks, 'object');
+            strictEqual(typeof firstLayer.marker, 'symbol');
+            strictEqual(Array.isArray(firstLayer.ranges), true);
+            strictEqual(typeof firstLayer.rangeHooks, 'function');
         });
 
         it('should generate ranges without rendering', () => {
             const pipeline = html()
-                .addLayer([[0, 5]], { open: () => '<mark>', close: () => '</mark>' })
-                .addLayer([[6, 11]], { open: () => '<em>', close: () => '</em>' });
+                .addLayer([[0, 5]], (content) => `<mark>${content}</mark>`)
+                .addLayer([[6, 11]], (content) => `<em>${content}</em>`);
 
             const ranges = pipeline.ranges('Hello world');
 
-            equal(Array.isArray(ranges), true);
-            equal(ranges.length, 2);
-            equal(ranges[0].start, 0);
-            equal(ranges[0].end, 5);
-            equal(ranges[1].start, 6);
-            equal(ranges[1].end, 11);
+            deepStrictEqual(startEndPairs(ranges), [[0, 5], [6, 11]]);
         });
 
         it('should generate ranges with generator function', () => {
             const pipeline = html()
-                .addLayer(
-                    rangeMatch('world'),
-                    { open: () => '<mark>', close: () => '</mark>' }
-                );
+                .addLayer(rangeMatch('world'), (content) => `<mark>${content}</mark>`);
 
             const ranges = pipeline.ranges('Hello world! Hello world!');
 
-            equal(ranges.length, 2);
-            equal(ranges[0].start, 6);
-            equal(ranges[0].end, 11);
-            equal(ranges[1].start, 19);
-            equal(ranges[1].end, 24);
+            deepStrictEqual(startEndPairs(ranges), [[6, 11], [19, 24]]);
         });
 
         it('should generate ranges from multiple layers', () => {
             const pipeline = html()
-                .addLayer([[0, 5]], { open: () => '<a>', close: () => '</a>' })
-                .addLayer(rangeMatch('o'), { open: () => '<mark>', close: () => '</mark>' });
+                .addLayer([[0, 5]], (content) => `<a>${content}</a>`)
+                .addLayer(rangeMatch('o'), (content) => `<mark>${content}</mark>`);
 
             const ranges = pipeline.ranges('Hello world');
 
-            // Should have ranges from both layers
-            equal(ranges.length, 3); // [0,5] + two 'o' matches at 4 and 7
-
-            // First layer range
-            equal(ranges[0].start, 0);
-            equal(ranges[0].end, 5);
-
-            // Second layer ranges (matches)
-            equal(ranges[1].start, 4);
-            equal(ranges[1].end, 5);
-            equal(ranges[2].start, 7);
-            equal(ranges[2].end, 8);
+            // Should have ranges from both layers: [0,5] + two 'o' matches at 4 and 7
+            deepStrictEqual(startEndPairs(ranges), [[0, 5], [4, 5], [7, 8]]);
         });
 
         it('should expose rangeHooksMap method', () => {
             const pipeline = html()
-                .addLayer([[0, 5]], {
-                    open: () => '<mark>',
-                    close: () => '</mark>'
-                });
+                .addLayer([[0, 5]], (content) => `<mark>${content}</mark>`);
 
             const hooksMap = pipeline.rangeHooksMap();
 
-            equal(typeof hooksMap, 'object');
+            strictEqual(typeof hooksMap, 'object');
 
             // Should have one entry (the symbol key)
             const keys = Object.getOwnPropertySymbols(hooksMap);
-            equal(keys.length, 1);
+            strictEqual(keys.length, 1);
 
             // The hooks should be present
             const firstKey: keyof typeof hooksMap = keys[0];
-            const hooks = hooksMap[firstKey] as RangeHooks<any, any>;
-            equal(typeof hooks.open, 'function');
-            equal(typeof hooks.close, 'function');
+            const hooks = hooksMap[firstKey];
+            strictEqual(typeof hooks.content, 'function');
         });
 
         it('should expose rangeHooksDefinitionMap method', () => {
-            const plainHooks = {
-                open: () => '<mark>',
-                close: () => '</mark>'
-            };
             const shortcut = (content: any) => `[${content}]`;
-
             const pipeline = html()
-                .addLayer([[0, 5]], plainHooks)
+                .addLayer([[0, 5]], shortcut)
                 .addLayer([[6, 11]], shortcut);
 
             const definitionMap = pipeline.rangeHooksDefinitionMap();
 
-            equal(typeof definitionMap, 'object');
+            strictEqual(typeof definitionMap, 'object');
 
             const keys = Object.getOwnPropertySymbols(definitionMap);
-            equal(keys.length, 2);
+            strictEqual(keys.length, 2);
 
-            // First should be the plain hooks object (unresolved)
-            equal(definitionMap[keys[0]], plainHooks);
-
-            // Second should be the function shortcut (unresolved)
-            equal(definitionMap[keys[1]], shortcut);
+            // Both should be the function shortcut (unresolved)
+            strictEqual(definitionMap[keys[0]], shortcut);
+            strictEqual(definitionMap[keys[1]], shortcut);
         });
 
         it('rangeHooksMap should resolve factory-based hooks', () => {
@@ -299,8 +219,8 @@ describe('Pipeline API', () => {
             const hooks = hooksMap[firstKey] as RangeHooks<any, any>;
 
             // Should be resolved to actual hooks object
-            equal(typeof hooks.open, 'function');
-            equal(typeof hooks.close, 'function');
+            strictEqual(typeof hooks.open, 'function');
+            strictEqual(typeof hooks.close, 'function');
         });
 
         it('rangeHooksMap should convert function shortcuts to range hook', () => {
@@ -313,8 +233,8 @@ describe('Pipeline API', () => {
             const rangeHooks = hooksMap[firstKey];
 
             // Function shortcut should be converted to {content: fn}
-            equal(typeof rangeHooks?.content, 'function');
-            equal(rangeHooks?.content('test', {} as any), '[test]');
+            strictEqual(typeof rangeHooks?.content, 'function');
+            strictEqual(rangeHooks?.content('test', {} as any), '[test]');
         });
 
         it('should test factory logic with rangeHooksContext', () => {
@@ -332,7 +252,7 @@ describe('Pipeline API', () => {
             const pipeline = customRenderer.addLayer([[0, 5]], factoryConfig);
             const result = pipeline.render('Hello world');
 
-            equal(result, '<mark>Hello</mark> world');
+            strictEqual(result, '<mark>Hello</mark> world');
         });
 
         it('should test all three hook config forms', () => {
@@ -342,12 +262,12 @@ describe('Pipeline API', () => {
                     open: () => '<a>',
                     close: () => '</a>'
                 });
-            equal(pipeline1.render('Hello world'), '<a>Hello</a> world');
+            strictEqual(pipeline1.render('Hello world'), '<a>Hello</a> world');
 
             // 2. Function shortcut
             const pipeline2 = html()
                 .addLayer([[0, 5]], (content) => `<b>${content}</b>`);
-            equal(pipeline2.render('Hello world'), '<b>Hello</b> world');
+            strictEqual(pipeline2.render('Hello world'), '<b>Hello</b> world');
 
             // 3. Factory wrapper
             const pipeline3 = html()
@@ -357,12 +277,12 @@ describe('Pipeline API', () => {
                         close: () => '</c>'
                     })
                 });
-            equal(pipeline3.render('Hello world'), '<c>Hello</c> world');
+            strictEqual(pipeline3.render('Hello world'), '<c>Hello</c> world');
         });
 
         it('should support chaining after introspection', () => {
             const pipeline1 = html()
-                .addLayer([[0, 5]], { open: () => '<a>', close: () => '</a>' });
+                .addLayer([[0, 5]], (content) => `<a>${content}</a>`);
 
             // Get introspection data
             const layers1 = pipeline1.layers;
@@ -370,13 +290,13 @@ describe('Pipeline API', () => {
 
             // Continue building pipeline
             const pipeline2 = pipeline1
-                .addLayer([[6, 11]], { open: () => '<b>', close: () => '</b>' });
+                .addLayer([[6, 11]], (content) => `<b>${content}</b>`);
 
-            equal(layers1.length, 1);
-            equal(pipeline2.layers.length, 2);
+            strictEqual(layers1.length, 1);
+            strictEqual(pipeline2.layers.length, 2);
 
             const result = pipeline2.render('Hello world');
-            equal(result, '<a>Hello</a> <b>world</b>');
+            strictEqual(result, '<a>Hello</a> <b>world</b>');
         });
     });
 
@@ -402,12 +322,14 @@ describe('Pipeline API', () => {
                 };
             });
 
-            const pipeline = customRenderer.addLayer([[0, 5]], {
-                open: () => '[',
-                close: () => ']'
-            });
+            const result = customRenderer
+                .addLayer([[0, 5]], {
+                    open: () => '[',
+                    close: () => ']'
+                })
+                .render('Hello world');
 
-            equal(pipeline.render('Hello world'), '[Hello] world');
+            strictEqual(result, '[Hello] world');
         });
 
         it('should support rangeHooksContext', () => {
@@ -434,14 +356,16 @@ describe('Pipeline API', () => {
                 };
             });
 
-            const pipeline = customRenderer.addLayer([[0, 5]], {
-                createRangeHooks: ({ wrapper }) => ({
-                    open: () => wrapper.slice(0, 2),
-                    close: () => wrapper.slice(2)
+            const result = customRenderer
+                .addLayer([[0, 5]], {
+                    createRangeHooks: ({ wrapper }) => ({
+                        open: () => wrapper.slice(0, 2),
+                        close: () => wrapper.slice(2)
+                    })
                 })
-            });
+                .render('Hello world');
 
-            equal(pipeline.render('Hello world'), '<<Hello>> world');
+            strictEqual(result, '<<Hello>> world');
         });
 
         it('should work with all hook config forms', () => {
@@ -466,19 +390,19 @@ describe('Pipeline API', () => {
             });
 
             // Plain object
-            equal(
+            strictEqual(
                 customRenderer.addLayer([[0, 5]], { open: () => '<a>', close: () => '</a>' }).render('Hello world'),
                 '<a>Hello</a> world'
             );
 
             // Function shortcut
-            equal(
+            strictEqual(
                 customRenderer.addLayer([[0, 5]], (content) => `<b>${content}</b>`).render('Hello world'),
                 '<b>Hello</b> world'
             );
 
             // Factory wrapper
-            equal(
+            strictEqual(
                 customRenderer.addLayer([[0, 5]], {
                     createRangeHooks: () => ({ open: () => '<c>', close: () => '</c>' })
                 }).render('Hello world'),

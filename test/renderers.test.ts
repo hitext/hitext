@@ -1,51 +1,36 @@
-import { equal } from 'assert';
-import { html as htmlRenderer } from '../src/index.js';
+import { strictEqual } from 'assert';
+import { html } from '../src/index.js';
 
 describe('built-in renderers', () => {
     describe('html', () => {
-        it('basic', () =>
-            equal(
-                htmlRenderer()
-                    .addLayer([
-                        { start: 0, end: 1, data: 'value' },
-                        { start: 1, end: 2 },
-                        { start: 2, end: 3 }
-                    ], {})
+        it('should render plain text', () =>
+            strictEqual(
+                html()
+                    .addLayer([[0, 1], [1, 2], [2, 3]], {})
                     .render('abc'),
                 'abc'
             )
         );
 
         it('should escape special chars', () => {
-            equal(
-                htmlRenderer().render('<br>&amp;'),
+            strictEqual(
+                html().render('<br>&amp;'),
                 '&lt;br&gt;&amp;amp;'
             );
         });
 
         it('should be extendable via pipeline', () => {
-            const base = htmlRenderer()
-                .addLayer([
-                    { start: 0, end: 1 },
-                    { start: 1, end: 2 }
-                ], {
-                    open: () => '<span>',
-                    close: () => '</span>'
-                });
+            const base = html()
+                .addLayer([[0, 1], [1, 2]], (content) => `<span>${content}</span>`);
 
             // Can add more layers to extend functionality
-            const extended = base.addLayer([
-                { start: 2, end: 3 }
-            ], {
-                open: () => '<custom>',
-                close: () => '</custom>'
-            });
+            const extended = base.addLayer([[2, 3]], (content) => `<custom>${content}</custom>`);
 
-            equal(
+            strictEqual(
                 base.render('123'),
                 '<span>1</span><span>2</span>3'
             );
-            equal(
+            strictEqual(
                 extended.render('123'),
                 '<span>1</span><span>2</span><custom>3</custom>'
             );

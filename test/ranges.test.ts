@@ -1,6 +1,8 @@
-import { deepEqual, equal } from 'assert';
+import { strictEqual, deepStrictEqual } from 'assert';
 import { generateRanges, generateRangesFromLayers, rangeMatch } from '../src/index.js';
-import type { GenerateRanges } from '../src/types.d.js';
+import type { GenerateRanges, GeneratedRange } from '../src/types.d.js';
+
+const startEndPairs = (ranges: GeneratedRange[]) => ranges.map(r => [r.start, r.end]);
 
 describe('Range Generation Helpers', () => {
     describe('generateRanges', () => {
@@ -15,7 +17,7 @@ describe('Range Generation Helpers', () => {
                 ]
             );
 
-            deepEqual(ranges, [
+            deepStrictEqual(ranges, [
                 { type: marker, start: 0, end: 5, data: undefined },
                 { type: marker, start: 6, end: 11, data: 'extra' }
             ]);
@@ -32,7 +34,7 @@ describe('Range Generation Helpers', () => {
                 ]
             );
 
-            deepEqual(ranges, [
+            deepStrictEqual(ranges, [
                 { type: marker, start: 0, end: 5, data: undefined },
                 { type: marker, start: 6, end: 11, data: { type: 'word' } }
             ]);
@@ -55,7 +57,7 @@ describe('Range Generation Helpers', () => {
 
             const ranges = generateRanges('Hello world', marker, generator);
 
-            deepEqual(ranges, [
+            deepStrictEqual(ranges, [
                 { type: marker, start: 0, end: 5, data: 'Hello' },
                 { type: marker, start: 6, end: 11, data: 'world' }
             ]);
@@ -68,27 +70,19 @@ describe('Range Generation Helpers', () => {
             const existingRanges = generateRanges('Hello', marker1, [[0, 5]]);
             const allRanges = generateRanges('Hello', marker2, [[6, 11]], undefined, existingRanges);
 
-            equal(allRanges, existingRanges); // Same array reference
-            deepEqual(allRanges, [
+            strictEqual(allRanges, existingRanges); // Same array reference
+            deepStrictEqual(allRanges, [
                 { type: marker1, start: 0, end: 5, data: undefined },
                 { type: marker2, start: 6, end: 11, data: undefined }
             ]);
         });
 
         it('should pass render options to generator function', () => {
-            const marker = Symbol('test');
-            let capturedOptions: any;
+            const ranges = generateRanges('Hello world', 'test', (_, createRange, options) => {
+                createRange(0, 0, options);
+            }, { threshold: 3 });
 
-            const generator: GenerateRanges<any, { threshold: number }> = (source, createRange, options) => {
-                capturedOptions = options;
-                if (options?.threshold) {
-                    createRange(0, options.threshold);
-                }
-            };
-
-            generateRanges('Hello world', marker, generator, { threshold: 3 });
-
-            deepEqual(capturedOptions, { threshold: 3 });
+            deepStrictEqual(ranges[0].data, { threshold: 3 });
         });
 
         it('should handle mixed tuple and object format', () => {
@@ -102,9 +96,10 @@ describe('Range Generation Helpers', () => {
                 ]
             );
 
-            equal(ranges.length, 2);
-            equal(ranges[0].start, 0);
-            equal(ranges[1].start, 6);
+            deepStrictEqual(ranges, [
+                { type: marker, start: 0, end: 5, data: undefined },
+                { type: marker, start: 6, end: 11, data: undefined }
+            ]);
         });
     });
 
@@ -112,21 +107,18 @@ describe('Range Generation Helpers', () => {
         it('should generate ranges from multiple layers', () => {
             const marker1 = Symbol('layer1');
             const marker2 = Symbol('layer2');
-
-            const layers = [
+            const ranges = generateRangesFromLayers('Hello world', [
                 {
                     marker: marker1,
-                    ranges: [[0, 5] as [number, number]]
+                    ranges: [[0, 5]]
                 },
                 {
                     marker: marker2,
-                    ranges: [[6, 11] as [number, number]]
+                    ranges: [[6, 11]]
                 }
-            ];
+            ]);
 
-            const ranges = generateRangesFromLayers('Hello world', layers);
-
-            deepEqual(ranges, [
+            deepStrictEqual(ranges, [
                 { type: marker1, start: 0, end: 5, data: undefined },
                 { type: marker2, start: 6, end: 11, data: undefined }
             ]);
@@ -134,49 +126,35 @@ describe('Range Generation Helpers', () => {
 
         it('should handle generator functions in layers', () => {
             const marker = Symbol('words');
-
-            const layers = [
+            const ranges = generateRangesFromLayers('Hello world', [
                 {
                     marker,
                     ranges: rangeMatch(/\w+/g)
                 }
-            ];
+            ]);
 
-            const ranges = generateRangesFromLayers('Hello world', layers);
-
-            equal(ranges.length, 2);
-            equal(ranges[0].type, marker);
-            equal(ranges[0].start, 0);
-            equal(ranges[0].end, 5);
-            equal(ranges[1].start, 6);
-            equal(ranges[1].end, 11);
+            deepStrictEqual(ranges, [
+                { type: marker, start: 0, end: 5, data: undefined },
+                { type: marker, start: 6, end: 11, data: undefined }
+            ]);
         });
 
         it('should pass render options to all generators', () => {
             const marker1 = Symbol('layer1');
             const marker2 = Symbol('layer2');
-            const capturedOptions: any[] = [];
+            const ranges = generateRangesFromLayers('Hello', [
+                { marker: marker1, ranges: (_, createRange, options) =>
+                    createRange(0, 1, options)
+                },
+                { marker: marker2, ranges: (_, createRange, options) =>
+                    createRange(1, 2, options)
+                }
+            ], { setting: 'test' });
 
-            const generator1: GenerateRanges<any, { setting: string }> = (source, createRange, options) => {
-                capturedOptions.push(options);
-                createRange(0, 1);
-            };
-
-            const generator2: GenerateRanges<any, { setting: string }> = (source, createRange, options) => {
-                capturedOptions.push(options);
-                createRange(1, 2);
-            };
-
-            const layers = [
-                { marker: marker1, ranges: generator1 },
-                { marker: marker2, ranges: generator2 }
-            ];
-
-            generateRangesFromLayers('Hello', layers, { setting: 'test' });
-
-            equal(capturedOptions.length, 2);
-            deepEqual(capturedOptions[0], { setting: 'test' });
-            deepEqual(capturedOptions[1], { setting: 'test' });
+            deepStrictEqual(ranges, [
+                { type: marker1, start: 0, end: 1, data: { setting: 'test' } },
+                { type: marker2, start: 1, end: 2, data: { setting: 'test' } }
+            ]);
         });
 
         it('should accumulate ranges from all layers', () => {
@@ -184,60 +162,52 @@ describe('Range Generation Helpers', () => {
             const marker2 = Symbol('words');
             const marker3 = Symbol('specific');
 
-            const layers = [
+            const ranges = generateRangesFromLayers('Hello world', [
                 { marker: marker1, ranges: [[0, 11] as [number, number]] },
                 { marker: marker2, ranges: rangeMatch(/\w+/g) },
                 { marker: marker3, ranges: [[0, 5] as [number, number]] }
-            ];
+            ]);
 
-            const ranges = generateRangesFromLayers('Hello world', layers);
-
-            equal(ranges.length, 4); // 1 from layer1 + 2 from layer2 + 1 from layer3
-
-            // Check markers
-            equal(ranges[0].type, marker1);
-            equal(ranges[1].type, marker2);
-            equal(ranges[2].type, marker2);
-            equal(ranges[3].type, marker3);
+            deepStrictEqual(ranges, [
+                { type: marker1, start: 0, end: 11, data: undefined },
+                { type: marker2, start: 0, end: 5, data: undefined },
+                { type: marker2, start: 6, end: 11, data: undefined },
+                { type: marker3, start: 0, end: 5, data: undefined }
+            ]);
         });
 
         it('should handle empty layers', () => {
             const ranges = generateRangesFromLayers('Hello world', []);
-            deepEqual(ranges, []);
+
+            deepStrictEqual(ranges, []);
         });
 
-        it('should handle layers with no ranges', () => {
+        it('should handle layers with empty ranges', () => {
             const marker = Symbol('empty');
-
-            const layers = [
-                { marker, ranges: [] as [] }
-            ];
-
+            const layers = [{ marker, ranges: [] as [] }];
             const ranges = generateRangesFromLayers('Hello world', layers);
-            deepEqual(ranges, []);
+
+            deepStrictEqual(ranges, []);
         });
 
         it('should preserve data in generated ranges', () => {
             const marker1 = Symbol('with-data');
             const marker2 = Symbol('without-data');
-
-            const layers = [
+            const ranges = generateRangesFromLayers('Hello world', [
                 {
                     marker: marker1,
-                    ranges: [
-                        { start: 0, end: 5, data: { type: 'greeting' } }
-                    ]
+                    ranges: [{ start: 0, end: 5, data: { type: 'greeting' } }]
                 },
                 {
                     marker: marker2,
-                    ranges: [[6, 11] as [number, number]]
+                    ranges: [[6, 11]]
                 }
-            ];
+            ]);
 
-            const ranges = generateRangesFromLayers('Hello world', layers);
-
-            deepEqual(ranges[0].data, { type: 'greeting' });
-            equal(ranges[1].data, undefined);
+            deepStrictEqual(ranges, [
+                { type: marker1, start: 0, end: 5, data: { type: 'greeting' } },
+                { type: marker2, start: 6, end: 11, data: undefined }
+            ]);
         });
     });
 
@@ -250,11 +220,7 @@ describe('Range Generation Helpers', () => {
                 rangeMatch(/ERROR|WARNING/g)
             );
 
-            equal(ranges.length, 2);
-            equal(ranges[0].start, 0);
-            equal(ranges[0].end, 5); // "ERROR"
-            equal(ranges[1].start, 29);
-            equal(ranges[1].end, 36); // "WARNING"
+            deepStrictEqual(startEndPairs(ranges), [[0, 5], [29, 36]]);
         });
 
         it('should support custom generator with options', () => {
@@ -284,9 +250,11 @@ describe('Range Generation Helpers', () => {
                 { minLength: 3 }
             );
 
-            equal(ranges.length, 2); // Only "the" and "world"
-            equal(ranges[0].data, 'the');
-            equal(ranges[1].data, 'world');
+            // Only "the" and "world"
+            deepStrictEqual(ranges, [
+                { type: marker, start: 5, end: 8, data: 'the' },
+                { type: marker, start: 9, end: 14, data: 'world' }
+            ]);
         });
     });
 });

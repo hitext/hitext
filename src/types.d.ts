@@ -73,7 +73,9 @@ export type RangeHooksShortcut<Data = unknown, T, R = T> =
 export type RangeHooksFactory<Data = unknown, T, R = T, HC = unknown> = {
     createRangeHooks: (createRangeHooksContext: HC) =>
         | Partial<RangeHooks<Data, T, R>>
-        | RangeHooksShortcut<Data, T, R>;
+        | RangeHooksShortcut<Data, T, R>
+        | null
+        | undefined;
 };
 
 export interface RangeHooks<Data = unknown, T, R = T> {
@@ -82,6 +84,7 @@ export interface RangeHooks<Data = unknown, T, R = T> {
     content: ((content: T | R, context: RangeHookContext<Data>) => T | string | null) | null | undefined;
     text: (sourceChunk: string, context: RangeHookContext<Data>) => string | null;
 }
+export type RangeHookContextDump<T> = Omit<RangeHookContext<T>, 'dump'>;
 export interface RangeHookContext<T = unknown> {
     offset: number;
     line: number;
@@ -89,6 +92,7 @@ export interface RangeHookContext<T = unknown> {
     start: number;
     end: number;
     data: T;
+    dump(): RangeHookContextDump<T>;
 }
 
 //

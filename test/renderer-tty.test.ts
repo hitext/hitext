@@ -1,4 +1,4 @@
-import { equal } from 'assert';
+import { strictEqual } from 'assert';
 import { tty as ttyRenderer } from '../src/index.js';
 
 describe('TTY renderer', () => {
@@ -11,7 +11,7 @@ describe('TTY renderer', () => {
                 ], ttyRenderer.createStyle('cyan'))
                 .render('test');
 
-            equal(result, '\u001b[36mt\u001b[39mest');
+            strictEqual(result, '\u001b[36mt\u001b[39mest');
         });
 
         it('should apply background colors', () => {
@@ -22,7 +22,7 @@ describe('TTY renderer', () => {
                 ], ttyRenderer.createStyle('bgRed'))
                 .render('test');
 
-            equal(result, '\u001b[41mt\u001b[49mest');
+            strictEqual(result, '\u001b[41mt\u001b[49mest');
         });
 
         it('should combine foreground and background colors', () => {
@@ -33,7 +33,7 @@ describe('TTY renderer', () => {
                 ], ttyRenderer.createStyle('white', 'bgBlue'))
                 .render('test');
 
-            equal(result, '\u001b[37m\u001b[44mt\u001b[39m\u001b[49mest');
+            strictEqual(result, '\u001b[37m\u001b[44mt\u001b[39m\u001b[49mest');
         });
 
         it('should handle multiple non-overlapping styled ranges', () => {
@@ -50,7 +50,7 @@ describe('TTY renderer', () => {
                 ], ttyRenderer.createStyle('yellow'))
                 .render('1234');
 
-            equal(
+            strictEqual(
                 result,
                 '\u001b[36m1\u001b[37m\u001b[44m2\u001b[39m\u001b[49m3\u001b[33m4\u001b[39m'
             );
@@ -69,7 +69,7 @@ describe('TTY renderer', () => {
                 .render('Hello');
 
             // Background should continue through nested range
-            equal(result, '\u001b[44mH\u001b[37mell\u001b[39mo\u001b[49m');
+            strictEqual(result, '\u001b[44mH\u001b[37mell\u001b[39mo\u001b[49m');
         });
 
         it('should properly restore styles after nested ranges', () => {
@@ -82,7 +82,7 @@ describe('TTY renderer', () => {
                 ], ttyRenderer.createStyle('yellow'))
                 .render('abcdef');
 
-            equal(result, '\u001b[36mab\u001b[33mcd\u001b[36mef\u001b[39m');
+            strictEqual(result, '\u001b[36mab\u001b[33mcd\u001b[36mef\u001b[39m');
         });
 
         it('should handle deeply nested styles', () => {
@@ -98,7 +98,7 @@ describe('TTY renderer', () => {
                 ], ttyRenderer.createStyle('white'))
                 .render('12345');
 
-            equal(result, '\u001b[31m1\u001b[43m2\u001b[37m3\u001b[31m4\u001b[49m5\u001b[39m');
+            strictEqual(result, '\u001b[31m1\u001b[43m2\u001b[37m3\u001b[31m4\u001b[49m5\u001b[39m');
         });
     });
 
@@ -114,7 +114,7 @@ describe('TTY renderer', () => {
                 }))
                 .render('1234');
 
-            equal(result, '\u001b[36m1\u001b[39m23\u001b[33m4\u001b[39m');
+            strictEqual(result, '\u001b[36m1\u001b[39m23\u001b[33m4\u001b[39m');
         });
 
         it('should support array of styles in styleMap', () => {
@@ -128,7 +128,7 @@ describe('TTY renderer', () => {
                 }))
                 .render('12');
 
-            equal(result, '\u001b[31m\u001b[47m1\u001b[33m\u001b[40m2\u001b[39m\u001b[49m');
+            strictEqual(result, '\u001b[31m\u001b[47m1\u001b[33m\u001b[40m2\u001b[39m\u001b[49m');
         });
 
         it('should support custom data fetcher', () => {
@@ -145,7 +145,7 @@ describe('TTY renderer', () => {
                 ))
                 .render('12');
 
-            equal(result, '\u001b[31m1\u001b[32m2\u001b[39m');
+            strictEqual(result, '\u001b[31m1\u001b[32m2\u001b[39m');
         });
 
         it('should support array-based styleMap for numeric indices', () => {
@@ -161,7 +161,7 @@ describe('TTY renderer', () => {
                 ]))
                 .render('abc');
 
-            equal(result, '\u001b[31ma\u001b[32mb\u001b[34mc\u001b[39m');
+            strictEqual(result, '\u001b[31ma\u001b[32mb\u001b[34mc\u001b[39m');
         });
     });
 
@@ -177,7 +177,7 @@ describe('TTY renderer', () => {
                 .render('abc');
 
             // Reset should restore to default
-            equal(result, '\u001b[31ma\u001b[39mbc');
+            strictEqual(result, '\u001b[31ma\u001b[39mbc');
         });
 
         it('should handle empty ranges without styling', () => {
@@ -188,7 +188,7 @@ describe('TTY renderer', () => {
                 .render('test');
 
             // Empty range at position 0
-            equal(result, 'test');
+            strictEqual(result, 'test');
         });
     });
 
@@ -203,7 +203,7 @@ describe('TTY renderer', () => {
                 ], ttyRenderer.createStyle('blue'))
                 .render('Hello');
 
-            equal(result, '\u001b[31mHel\u001b[34mlo\u001b[39m');
+            strictEqual(result, '\u001b[31mHel\u001b[34mlo\u001b[39m');
         });
 
         it('should handle overlapping foreground and background', () => {
@@ -217,7 +217,7 @@ describe('TTY renderer', () => {
                 .render('Hello');
 
             // Red fg at 0-3, yellow bg at 1-4, overlap at 1-3
-            equal(result, '\u001b[31mH\u001b[43mel\u001b[39ml\u001b[49mo');
+            strictEqual(result, '\u001b[31mH\u001b[43mel\u001b[39ml\u001b[49mo');
         });
     });
 
@@ -227,12 +227,12 @@ describe('TTY renderer', () => {
                 .addLayer([[0, 0]], ttyRenderer.createStyle('red'))
                 .render('');
 
-            equal(result, '');
+            strictEqual(result, '');
         });
 
         it('should handle text without any styles', () => {
             const result = ttyRenderer().render('plain text');
-            equal(result, 'plain text');
+            strictEqual(result, 'plain text');
         });
 
         it('should handle ranges outside source boundaries', () => {
@@ -244,7 +244,7 @@ describe('TTY renderer', () => {
                 .render('abc');
 
             // Should clip to actual source boundaries
-            equal(result, '\u001b[31mab\u001b[39mc');
+            strictEqual(result, '\u001b[31mab\u001b[39mc');
         });
 
         it('should handle styleMap with missing keys gracefully', () => {
@@ -259,7 +259,7 @@ describe('TTY renderer', () => {
                 .render('ab');
 
             // Should handle missing key (no style applied)
-            equal(result, '\u001b[31ma\u001b[39mb');
+            strictEqual(result, '\u001b[31ma\u001b[39mb');
         });
     });
 
@@ -276,7 +276,7 @@ describe('TTY renderer', () => {
                 ], ttyRenderer.createStyle('bgRed', 'white'))
                 .render('Hello world');
 
-            equal(result, '\u001b[36mHello\u001b[39m \u001b[37m\u001b[41mworld\u001b[39m\u001b[49m');
+            strictEqual(result, '\u001b[36mHello\u001b[39m \u001b[37m\u001b[41mworld\u001b[39m\u001b[49m');
         });
 
         it('should handle syntax highlighting scenario', () => {
@@ -292,7 +292,7 @@ describe('TTY renderer', () => {
                 }))
                 .render(code);
 
-            equal(result, '\u001b[35mconst\u001b[39m x = \u001b[32m42\u001b[39m;');
+            strictEqual(result, '\u001b[35mconst\u001b[39m x = \u001b[32m42\u001b[39m;');
         });
 
         it('should handle line highlighting with text styling', () => {
@@ -305,7 +305,7 @@ describe('TTY renderer', () => {
                 ], ttyRenderer.createStyle('cyan'))
                 .render('Hello world');
 
-            equal(result, '\u001b[36m\u001b[40mHello\u001b[39m world\u001b[49m');
+            strictEqual(result, '\u001b[36m\u001b[40mHello\u001b[39m world\u001b[49m');
         });
     });
 
@@ -328,7 +328,7 @@ describe('TTY renderer', () => {
                 })
                 .render('Hello world');
 
-            equal(result, '\u001b[31mHello\u001b[39m world');
+            strictEqual(result, '\u001b[31mHello\u001b[39m world');
         });
 
         it('should handle multiple push/pop operations in nested ranges', () => {
@@ -363,7 +363,7 @@ describe('TTY renderer', () => {
                 })
                 .render('Hello world');
 
-            equal(result, '\u001b[34mHe\u001b[43mllo\u001b[49m w\u001b[39morld');
+            strictEqual(result, '\u001b[34mHe\u001b[43mllo\u001b[49m w\u001b[39morld');
         });
     });
 });

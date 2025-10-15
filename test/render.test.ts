@@ -1,6 +1,6 @@
-import { equal, strictEqual } from 'assert';
+import { strictEqual, deepStrictEqual } from 'assert';
 import { render } from '../src/index.js';
-import type { GeneratedRange, RangeHookContext, RangeHooksDefinitionMap } from '../src/types.d.js';
+import type { GeneratedRange, RangeHookContext, RangeHookContextDump, RangeHooksDefinitionMap } from '../src/types.d.js';
 
 const testHooks: RangeHooksDefinitionMap<any, any> = {
     test: {
@@ -22,7 +22,7 @@ const generateRanges = (lines: string[]): GeneratedRange[] =>
 
 describe('render', () => {
     it('basic', () => {
-        equal(
+        strictEqual(
             render(
                 'abc',
                 [
@@ -37,7 +37,7 @@ describe('render', () => {
     });
 
     it('should be tolerant to unknown token types', () => {
-        equal(
+        strictEqual(
             render(
                 'abc',
                 [
@@ -56,7 +56,7 @@ describe('render', () => {
 
     describe('ranges out of source boundaries', () => {
         it('intersect with boundaries', () => {
-            equal(
+            strictEqual(
                 render(
                     'abc',
                     [
@@ -71,7 +71,7 @@ describe('render', () => {
         });
 
         it('intersect with boundaries', () => {
-            equal(
+            strictEqual(
                 render(
                     'abc',
                     [
@@ -87,7 +87,7 @@ describe('render', () => {
     });
 
     it('should ignore ranges with bad start/end', () => {
-        equal(
+        strictEqual(
             render(
                 '1234567890',
                 [
@@ -119,12 +119,12 @@ describe('render', () => {
         const a: GeneratedRange = { type: 'a', start: 1, end: 2, data: 'a' };
         const b: GeneratedRange = { type: 'b', start: 1, end: 2, data: 'b' };
 
-        equal(
+        strictEqual(
             render('123', [a, b], hooks),
             render('123', [b, a], hooks)
         );
 
-        equal(
+        strictEqual(
             render('123', [b, a], hooks),
             '1<a><b>2</b></a>3'
         );
@@ -135,7 +135,7 @@ describe('render', () => {
         const b: GeneratedRange = { type: 'b', start: 2, end: 3 };
         const c: GeneratedRange = { type: 'c', start: 3, end: 4 };
 
-        equal(
+        strictEqual(
             render('123456', [a, b, c], {
                 a: {
                     open: () => '<a>',
@@ -159,7 +159,7 @@ describe('render', () => {
             { type: 'a', start: 8, end: 10 }
         ];
 
-        equal(
+        strictEqual(
             render('1234567890', ranges, {
                 a: {
                     text: (chunk: string) => chunk.replace(/./g, 'a')
@@ -372,7 +372,7 @@ describe('render', () => {
         }
     ].forEach(test =>
         it('case\n|' + test.ranges.join('|\n|') + '|', () => {
-            equal(
+            strictEqual(
                 render(
                     '1234567890',
                     generateRanges(test.ranges),
@@ -385,20 +385,18 @@ describe('render', () => {
 
     describe('node hook', () => {
         it('should work with node hook', () => {
-            equal(
+            strictEqual(
                 render('Hello world!', [
                     { type: 'wrap', start: 6, end: 11, data: null }
                 ], {
-                    wrap: {
-                        content: (content) => `[${content}]`
-                    }
+                    wrap: (content) => `[${content}]`
                 }),
                 'Hello [world]!'
             );
         });
 
         it('should support node hook combined with before/after hooks', () => {
-            equal(
+            strictEqual(
                 render('Hello world!', [
                     { type: 'wrap', start: 6, end: 11, data: null }
                 ], {
@@ -413,7 +411,7 @@ describe('render', () => {
         });
 
         it('should support nested node hooks with before/after', () => {
-            equal(
+            strictEqual(
                 render('Hello world!', [
                     { type: 'outer', start: 0, end: 12, data: null },
                     { type: 'inner', start: 6, end: 11, data: null }
@@ -434,115 +432,102 @@ describe('render', () => {
         });
 
         it('should support node hook with data context', () => {
-            equal(
+            strictEqual(
                 render('Hello world!', [
                     { type: 'greeting', start: 0, end: 5, data: { type: 'greeting' } }
                 ], {
-                    greeting: {
-                        content: (content, { data }: RangeHookContext<{ type: string }>) =>
-                            `<span class="${data.type}">${content}</span>`
-                    }
+                    greeting: (content, { data }: RangeHookContext<{ type: string }>) =>
+                        `<span class="${data.type}">${content}</span>`
                 }),
                 '<span class="greeting">Hello</span> world!'
             );
         });
 
         it('should allow skipping content by not using content parameter', () => {
-            equal(
+            strictEqual(
                 render('Hello world!', [
                     { type: 'word', start: 0, end: 5, data: { secret: false } },
                     { type: 'word', start: 6, end: 11, data: { secret: true } }
                 ], {
-                    word: {
-                        content: (content, { data }: RangeHookContext<{ secret: boolean }>) =>
-                            data.secret ? '[REDACTED]' : content
-                    }
+                    word: (content, { data }: RangeHookContext<{ secret: boolean }>) =>
+                        data.secret ? '[REDACTED]' : content
                 }),
                 'Hello [REDACTED]!'
             );
         });
 
         it('should provide correct context in node hook', () => {
-            let capturedContext: RangeHookContext<{ foo: string }> | null = null;
+            let capturedContext: RangeHookContextDump<{ foo: string }> | null = null;
 
             render('Hello\nworld!', [
                 { type: 'test', start: 6, end: 11, data: { foo: 'bar' } }
             ], {
-                test: {
-                    content: (content, context: RangeHookContext<{ foo: string }>) => {
-                        capturedContext = context;
-                        return content;
-                    }
+                test(content, context: RangeHookContext<{ foo: string }>) {
+                    capturedContext = context.dump();
+                    return content;
                 }
             });
 
-            strictEqual(capturedContext!.start, 6);
-            strictEqual(capturedContext!.end, 11);
-            strictEqual(capturedContext!.line, 2);
-            strictEqual(capturedContext!.data.foo, 'bar');
-            // Note: offset/column in node hook context may vary based on when it's called
+            deepStrictEqual(capturedContext, {
+                offset: 11,
+                line: 2,
+                column: 6,
+                start: 6,
+                end: 11,
+                data: {
+                    foo: 'bar'
+                }
+            });
         });
 
         it('should handle deeply nested node hooks', () => {
-            equal(
+            strictEqual(
                 render('content', [
                     { type: 'level1', start: 0, end: 7, data: null },
                     { type: 'level2', start: 0, end: 7, data: null },
                     { type: 'level3', start: 0, end: 7, data: null }
                 ], {
-                    level1: {
-                        content: (content) => `<L1>${content}</L1>`
-                    },
-                    level2: {
-                        content: (content) => `<L2>${content}</L2>`
-                    },
-                    level3: {
-                        content: (content) => `<L3>${content}</L3>`
-                    }
+                    level1: (content) => `<L1>${content}</L1>`,
+                    level2: (content) => `<L2>${content}</L2>`,
+                    level3: (content) => `<L3>${content}</L3>`
                 }),
                 '<L1><L2><L3>content</L3></L2></L1>'
             );
         });
 
         it('should handle node hook with empty content', () => {
-            equal(
+            strictEqual(
                 render('before after', [
                     { type: 'empty', start: 6, end: 6, data: null }
                 ], {
-                    empty: {
-                        content: (content) => `<empty>${content}</empty>`
-                    }
+                    empty: (content) => `<empty>${content}</empty>`
                 }),
                 'before<empty></empty> after'
             );
         });
 
         it('should handle multiple non-overlapping node hooks', () => {
-            equal(
+            strictEqual(
                 render('One Two Three', [
                     { type: 'tag', start: 0, end: 3, data: 'a' },
                     { type: 'tag', start: 4, end: 7, data: 'b' },
                     { type: 'tag', start: 8, end: 13, data: 'c' }
                 ], {
-                    tag: {
-                        content: (content, { data }: RangeHookContext<string>) =>
-                            `<${data}>${content}</${data}>`
-                    }
+                    tag: (content, { data }: RangeHookContext<string>) =>
+                        `<${data}>${content}</${data}>`
                 }),
                 '<a>One</a> <b>Two</b> <c>Three</c>'
             );
         });
 
         it('should support node hook returning non-string values', () => {
-            equal(
+            strictEqual(
                 render('The answer is 21', [
                     { type: 'number', start: 14, end: 16, data: null }
                 ], {
-                    number: {
-                        content: (content) => {
-                            const num = parseInt(content as string);
-                            return String(num * 2);
-                        }
+                    number(content) {
+                        const num = parseInt(content as string);
+                        return num * 2;
                     }
                 }),
                 'The answer is 42'

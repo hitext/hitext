@@ -59,7 +59,11 @@ export function render<T, R = T, HC = unknown>(
         column: { get: () => column },
         start: { get: () => currentRange.start },
         end: { get: () => currentRange.end },
-        data: { get: () => currentRange.data }
+        data: { get: () => currentRange.data },
+        dump: { value: () => (Object.fromEntries(Reflect.ownKeys(renderContext)
+            .map((key) => [key, (renderContext as any)[key]])
+            .filter(key => key[0] !== 'dump')
+        )) }
     });
     let renderedOffset = 0;
     let closingOffset = Infinity;

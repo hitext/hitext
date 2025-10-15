@@ -1,104 +1,90 @@
-import { equal } from 'assert';
+import { strictEqual, deepStrictEqual } from 'assert';
 import {
     createRangeHooksMapFromLayers,
     resolveRangeHooksMap,
     resolveRangeHooksDefinition,
     html
 } from '../src/index.js';
-import type { PipelineLayer, RangeHooksDefinition } from '../src/types.d.js';
+import type { RangeHooksDefinition } from '../src/types.d.js';
 
 describe('Range Hooks Map Helpers', () => {
     describe('createRangeHooksMapFromLayers', () => {
         it('should create a map from layers', () => {
             const marker1 = Symbol('layer1');
             const marker2 = Symbol('layer2');
-
-            const layers: PipelineLayer<any, any, any, any, any>[] = [
+            const rangeHooks1 = (content: string) => `<div>${content}</div>`;
+            const rangeHooks2 = (content: string) => `<span>${content}</span>`;
+            const map = createRangeHooksMapFromLayers([
                 {
                     marker: marker1,
                     ranges: [[0, 5]],
-                    rangeHooks: {
-                        open: () => '<a>',
-                        close: () => '</a>'
-                    }
+                    rangeHooks: rangeHooks1
                 },
                 {
                     marker: marker2,
                     ranges: [[6, 11]],
-                    rangeHooks: {
-                        open: () => '<b>',
-                        close: () => '</b>'
-                    }
+                    rangeHooks: rangeHooks2
                 }
-            ];
+            ]);
 
-            const map = createRangeHooksMapFromLayers(layers);
-
-            equal(typeof map, 'object');
-            equal(Object.getOwnPropertySymbols(map).length, 2);
-            equal(map[marker1], layers[0].rangeHooks);
-            equal(map[marker2], layers[1].rangeHooks);
+            deepStrictEqual(map, {
+                [marker1]: rangeHooks1,
+                [marker2]: rangeHooks2
+            });
         });
 
-        it('should handle null and undefined rangeHooks', () => {
+        it('should handle missing rangeHooks', () => {
             const marker1 = Symbol('layer1');
             const marker2 = Symbol('layer2');
-            const marker3 = Symbol('layer3');
-
-            const layers: PipelineLayer<any, any, any, any, any>[] = [
+            const rangeHooks2 = (content: string) => `<c>${content}</c>`;
+            const map = createRangeHooksMapFromLayers([
                 {
                     marker: marker1,
-                    ranges: [[0, 5]],
-                    rangeHooks: null
+                    ranges: [[0, 5]]
                 },
                 {
                     marker: marker2,
                     ranges: [[6, 11]],
-                    rangeHooks: undefined
-                },
-                {
-                    marker: marker3,
-                    ranges: [[12, 17]],
-                    rangeHooks: { open: () => '<c>', close: () => '</c>' }
+                    rangeHooks: rangeHooks2
                 }
-            ];
+            ]);
 
-            const map = createRangeHooksMapFromLayers(layers);
-
-            equal(map[marker1], null);
-            equal(map[marker2], undefined);
-            equal(typeof map[marker3], 'object');
+            deepStrictEqual(map, {
+                [marker1]: undefined,
+                [marker2]: rangeHooks2
+            });
         });
 
         it('should preserve function shortcuts', () => {
             const marker = Symbol('layer');
             const shortcut = (content: string) => `[${content}]`;
-
-            const layers: PipelineLayer<any, any, any, any, any>[] = [
+            const map = createRangeHooksMapFromLayers([
                 {
                     marker,
                     ranges: [[0, 5]],
                     rangeHooks: shortcut
                 }
-            ];
+            ]);
 
-            const map = createRangeHooksMapFromLayers(layers);
-            equal(map[marker], shortcut);
+            deepStrictEqual(map, {
+                [marker]: shortcut
+            });
         });
     });
 
     describe('resolveRangeHooksDefinition', () => {
         it('should return null for null/undefined', () => {
-            equal(resolveRangeHooksDefinition(null, {}), null);
-            equal(resolveRangeHooksDefinition(undefined, {}), null);
+            strictEqual(resolveRangeHooksDefinition(null, {}), null);
+            strictEqual(resolveRangeHooksDefinition(undefined, {}), null);
         });
 
         it('should convert function shortcut to content hook', () => {
             const shortcut = (content: string) => `[${content}]`;
             const resolved = resolveRangeHooksDefinition(shortcut, {});
 
-            equal(typeof resolved, 'object');
-            equal(resolved?.content, shortcut);
+            deepStrictEqual(resolved, {
+                content: shortcut
+            });
         });
 
         it('should pass through plain hook objects', () => {
@@ -106,9 +92,10 @@ describe('Range Hooks Map Helpers', () => {
                 open: () => '<mark>',
                 close: () => '</mark>'
             };
-
             const resolved = resolveRangeHooksDefinition(hooks, {});
-            equal(resolved, hooks);
+
+            deepStrictEqual(resolved, hooks);
+            strictEqual(resolved, hooks);
         });
 
         it('should resolve factory definitions', () => {
@@ -123,11 +110,11 @@ describe('Range Hooks Map Helpers', () => {
                 rangeHooksContext: { prefix: 'custom' }
             });
 
-            equal(typeof resolved, 'object');
-            equal(typeof resolved?.open, 'function');
-            equal(typeof resolved?.close, 'function');
-            equal(resolved?.open?.({} as any), '<custom>');
-            equal(resolved?.close?.({} as any), '</custom>');
+            strictEqual(typeof resolved, 'object');
+            strictEqual(typeof resolved?.open, 'function');
+            strictEqual(typeof resolved?.close, 'function');
+            strictEqual(resolved?.open?.({} as any), '<custom>');
+            strictEqual(resolved?.close?.({} as any), '</custom>');
         });
 
         it('should handle factory returning function shortcut', () => {
@@ -139,8 +126,8 @@ describe('Range Hooks Map Helpers', () => {
                 rangeHooksContext: { wrapper: '**' }
             });
 
-            equal(typeof resolved?.content, 'function');
-            equal(resolved?.content?.('test', {} as any), '**test**');
+            strictEqual(typeof resolved?.content, 'function');
+            strictEqual(resolved?.content?.('test', {} as any), '**test**');
         });
     });
 
@@ -167,36 +154,32 @@ describe('Range Hooks Map Helpers', () => {
             const resolved = resolveRangeHooksMap(definitionMap, {});
 
             // All three should be resolved
-            equal(Object.getOwnPropertySymbols(resolved).length, 3);
+            strictEqual(Object.getOwnPropertySymbols(resolved).length, 3);
 
             // Plain object should be unchanged
-            equal(resolved[marker1], definitionMap[marker1]);
+            strictEqual(resolved[marker1], definitionMap[marker1]);
 
             // Shortcut should be converted
-            equal(typeof resolved[marker2]?.content, 'function');
+            strictEqual(typeof resolved[marker2]?.content, 'function');
 
             // Factory should be resolved
-            equal(typeof resolved[marker3]?.open, 'function');
+            strictEqual(typeof resolved[marker3]?.open, 'function');
         });
 
-        it('should skip null/undefined definitions', () => {
+        it('should skip missing definitions', () => {
             const marker1 = Symbol('valid');
-            const marker2 = Symbol('null');
-            const marker3 = Symbol('undefined');
+            const marker2 = Symbol('missing');
 
             const definitionMap = {
-                [marker1]: { open: () => '<a>', close: () => '</a>' },
-                [marker2]: null,
-                [marker3]: undefined
+                [marker1]: (content: string) => `<a>${content}</a>`
             };
 
             const resolved = resolveRangeHooksMap(definitionMap, {});
 
             // Only valid definition should be present
-            equal(Object.getOwnPropertySymbols(resolved).length, 1);
-            equal(typeof resolved[marker1], 'object');
-            equal(resolved[marker2], undefined);
-            equal(resolved[marker3], undefined);
+            strictEqual(Object.getOwnPropertySymbols(resolved).length, 1);
+            strictEqual(typeof resolved[marker1]?.content, 'function');
+            strictEqual(resolved[marker2], undefined);
         });
 
         it('should pass rangeHooksContext to factories', () => {
@@ -217,30 +200,30 @@ describe('Range Hooks Map Helpers', () => {
                 rangeHooksContext: testContext
             });
 
-            equal(capturedContext, testContext);
+            strictEqual(capturedContext, testContext);
         });
     });
 
     describe('integration with pipeline', () => {
         it('should expose rangeHooksDefinitionMap method', () => {
             const pipeline = html()
-                .addLayer([[0, 5]], { open: () => '<a>', close: () => '</a>' })
+                .addLayer([[0, 5]], (content) => `<a>${content}</a>`)
                 .addLayer([[6, 11]], (content) => `<b>${content}</b>`);
 
             const definitionMap = pipeline.rangeHooksDefinitionMap();
 
-            equal(typeof definitionMap, 'object');
+            strictEqual(typeof definitionMap, 'object');
             const keys = Object.getOwnPropertySymbols(definitionMap);
-            equal(keys.length, 2);
+            strictEqual(keys.length, 2);
 
             // First should be the plain hooks object
-            equal(typeof definitionMap[keys[0]], 'object');
+            strictEqual(typeof definitionMap[keys[0]], 'function');
 
             // Second should be the function shortcut
-            equal(typeof definitionMap[keys[1]], 'function');
+            strictEqual(typeof definitionMap[keys[1]], 'function');
         });
 
-        it('rangeHooksDefinitionMap should return unresolved definitions', () => {
+        it('should differentiate between definitions and resolved hooks', () => {
             const factory = {
                 createRangeHooks: () => ({
                     open: () => '<tag>',
@@ -251,30 +234,16 @@ describe('Range Hooks Map Helpers', () => {
             const pipeline = html()
                 .addLayer([[0, 5]], factory);
 
+            // rangeHooksDefinitionMap should return the factory
             const definitionMap = pipeline.rangeHooksDefinitionMap();
-            const keys = Object.getOwnPropertySymbols(definitionMap);
+            const defKeys = Object.getOwnPropertySymbols(definitionMap);
+            strictEqual(definitionMap[defKeys[0]], factory);
 
-            // Should return the factory, not the resolved hooks
-            equal(definitionMap[keys[0]], factory);
-        });
-
-        it('rangeHooksMap should return resolved definitions', () => {
-            const factory = {
-                createRangeHooks: () => ({
-                    open: () => '<tag>',
-                    close: () => '</tag>'
-                })
-            };
-
-            const pipeline = html()
-                .addLayer([[0, 5]], factory);
-
+            // rangeHooksMap should return resolved hooks
             const hooksMap = pipeline.rangeHooksMap();
-            const keys = Object.getOwnPropertySymbols(hooksMap);
-
-            // Should return resolved hooks, not the factory
-            equal(typeof hooksMap[keys[0]]?.open, 'function');
-            equal(typeof hooksMap[keys[0]]?.close, 'function');
+            const hooksKeys = Object.getOwnPropertySymbols(hooksMap);
+            strictEqual(typeof hooksMap[hooksKeys[0]]?.open, 'function');
+            strictEqual(typeof hooksMap[hooksKeys[0]]?.close, 'function');
         });
     });
 });

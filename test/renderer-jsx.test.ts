@@ -1,4 +1,4 @@
-import assert from 'assert';
+import { strictEqual } from 'assert';
 import { h, Fragment } from 'preact';
 import { renderToString } from 'preact-render-to-string';
 import { jsx } from '../src/index.js';
@@ -8,7 +8,7 @@ describe('JSX renderer', () => {
         const result = jsx().render('Hello, world!');
         const html = renderToString(h(Fragment, null, ...result));
 
-        assert.strictEqual(html, 'Hello, world!');
+        strictEqual(html, 'Hello, world!');
     });
 
     it('should render with range hook', () => {
@@ -21,7 +21,7 @@ describe('JSX renderer', () => {
             .render('Hello, world!');
         const html = renderToString(h(Fragment, null, ...result));
 
-        assert.strictEqual(html, '<span class="test">Hello</span>, world!');
+        strictEqual(html, '<span class="test">Hello</span>, world!');
     });
 
     it('should render nested ranges', () => {
@@ -39,7 +39,7 @@ describe('JSX renderer', () => {
             .render('Hello, world!');
         const html = renderToString(h(Fragment, null, ...result));
 
-        assert.strictEqual(html, '<div class="outer"><span class="inner">Hello</span>, world</div>!');
+        strictEqual(html, '<div class="outer"><span class="inner">Hello</span>, world</div>!');
     });
 
     it('should pass data to hooks', () => {
@@ -52,7 +52,7 @@ describe('JSX renderer', () => {
             .render('Hello, world!');
         const html = renderToString(h(Fragment, null, ...result));
 
-        assert.strictEqual(html, '<span style="color: red">Hello</span>, world!');
+        strictEqual(html, '<span style="color: red">Hello</span>, world!');
     });
 
     it('should return an array that can be used as JSX children', () => {
@@ -65,11 +65,11 @@ describe('JSX renderer', () => {
             .render('Hello, world!');
 
         // Result should be an array
-        assert.ok(Array.isArray(result));
+        strictEqual(Array.isArray(result), true);
 
         // Should work as JSX children in a div
         const html = renderToString(h('div', null, ...result));
-        assert.strictEqual(html, '<div><span class="test">Hello</span>, world!</div>');
+        strictEqual(html, '<div><span class="test">Hello</span>, world!</div>');
     });
 
     it('should handle multiple ranges', () => {
@@ -83,6 +83,6 @@ describe('JSX renderer', () => {
             .render('Hello, world!');
         const html = renderToString(h(Fragment, null, ...result));
 
-        assert.strictEqual(html, '<span class="test">Hello</span>, <span class="test">world</span>!');
+        strictEqual(html, '<span class="test">Hello</span>, <span class="test">world</span>!');
     });
 });
