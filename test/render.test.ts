@@ -1,8 +1,8 @@
 import { equal, strictEqual } from 'assert';
 import { render } from '../src/index.js';
-import type { GeneratedRange, RangeHookContext, RangeHooksMap } from '../src/types.d.js';
+import type { GeneratedRange, RangeHookContext, RangeHooksDefinitionMap } from '../src/types.d.js';
 
-const testHooks: RangeHooksMap<any, any> = {
+const testHooks: RangeHooksDefinitionMap<any, any> = {
     test: {
         open: ({ data: x }: RangeHookContext<string>) => `<${x}>`,
         close: ({ data: x }: RangeHookContext<string>) => `</${x}>`

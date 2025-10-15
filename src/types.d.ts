@@ -2,38 +2,23 @@
 // Pipeline
 //
 
-export type CreateRenderHooks = () => Partial<RenderHooks<any, any>>;
-export type PipelineLayer = {
+export type CreateRenderHooks<T, R, HC> = () => Partial<RenderHooks<T, R, HC>>;
+export type PipelineLayer<RenderOptions, Data = unknown, T = unknown, R = T, HC = unknown> = {
     marker: RangeMarker;
-    generate: GenerateRanges<any, any>;
-    rangeHooks: LayerRangeHooks<any, any, any, any>;
+    ranges: Ranges<Data, RenderOptions>;
+    rangeHooks?: RangeHooksDefinition<Data, T, R, HC> | null;
 };
-
-// Range hooks factory wrapper
-export type RangeHooksFactory<Data = unknown, T = unknown, R = T, HC = unknown> = {
-    createRangeHooks: (context: HC) => Partial<RangeHooks<Data, T, R>>;
-};
-
-// Range hooks configuration - can be hooks object, function shortcut, or factory
-export type LayerRangeHooks<Data = unknown, T = unknown, R = T, HC = unknown> =
-    | Partial<RangeHooks<Data, T, R>>
-    | RangeHooks<Data, T, R>['content']
-    | RangeHooksFactory<Data, T, R, HC>;
-
 export interface PipelineNode<RenderOptions, T, R = T, HC = unknown> {
     createRenderHooks: CreateRenderHooks;
-    layers: PipelineLayer[];
+    layers: PipelineLayer<RenderOptions, any, T, R, HC>[];
     addLayer<D = unknown>(
         ranges: Ranges<D, RenderOptions>,
-        rangeHooks: LayerRangeHooks<D, T, R, HC>
+        rangeHooks: RangeHooksDefinition<D, T, R, HC> | null
     ): PipelineNode<RenderOptions, T, R, HC>;
     ranges(source: string, options?: RenderOptions): GeneratedRange[];
-    rangeHooksMap(): RangeHooksMap<T, R>;
+    rangeHooksMap(): RangeHooksMap<any, T, R, HC>;
+    rangeHooksDefinitionMap(): RangeHooksDefinitionMap<any, T, R, HC>;
     render(source: string, options?: RenderOptions): R;
-}
-export interface Generator<Data = unknown, RenderOptions = unknown> {
-    marker: RangeMarker,
-    generate: GenerateRanges<Data, RenderOptions>
 }
 
 //
@@ -63,17 +48,38 @@ export interface GeneratedRange<Data = unknown> {
 }
 
 //
-// Render
+// Render range hooks
 //
 
-export type RangeHooksMap<T, R = T> = Record<
+export type RangeHooksMap<Data, T, R = T, HC = unknown> = Record<
     RangeMarker,
-    Partial<RangeHooks<any, T, R>> | null
+    Partial<RangeHooks<Data, T, R, HC>>
 >;
+export type RangeHooksNormalizedMap<Data, T, R = T, HC = unknown> = Record<
+    RangeMarker,
+    RangeHooks<Data, T, R, HC>
+>;
+export type RangeHooksDefinitionMap<Data, T, R = T, HC = unknown> = Record<
+    RangeMarker,
+    RangeHooksDefinition<Data, T, R, HC> | undefined | null
+>;
+
+export type RangeHooksDefinition<Data = unknown, T, R = T, HC = unknown> =
+    | Partial<RangeHooks<Data, T, R>>
+    | RangeHooksShortcut<Data, T, R>
+    | RangeHooksFactory<Data, T, R, HC>;
+export type RangeHooksShortcut<Data = unknown, T, R = T> =
+    Exclude<RangeHooks<Data, T, R>['content'], undefined | null>;
+export type RangeHooksFactory<Data = unknown, T, R = T, HC = unknown> = {
+    createRangeHooks: (createRangeHooksContext: HC) =>
+        | Partial<RangeHooks<Data, T, R>>
+        | RangeHooksShortcut<Data, T, R>;
+};
+
 export interface RangeHooks<Data = unknown, T, R = T> {
     open: (context: RangeHookContext<Data>) => T | string | null;
     close: (context: RangeHookContext<Data>) => T | string | null;
-    content: ((content: T | R, context: RangeHookContext<Data>) => T | string | null) | null;
+    content: ((content: T | R, context: RangeHookContext<Data>) => T | string | null) | null | undefined;
     text: (sourceChunk: string, context: RangeHookContext<Data>) => string | null;
 }
 export interface RangeHookContext<T = unknown> {
@@ -85,10 +91,10 @@ export interface RangeHookContext<T = unknown> {
     data: T;
 }
 
-export interface RenderBuffer<T, R = T> {
-    append(child: string | T | R): void;
-    emit(): R;
-}
+//
+// Render hooks
+//
+
 export interface RenderHooks<T, R = T, HC = unknown> {
     createBuffer(): RenderBuffer<T, R>;
     text(sourceChunk: string): string;
@@ -96,4 +102,8 @@ export interface RenderHooks<T, R = T, HC = unknown> {
     close(context: RangeHookContext): T | null;
 
     rangeHooksContext?: HC;
+}
+export interface RenderBuffer<T, R = T> {
+    append(child: string | T | R): void;
+    emit(): R;
 }

@@ -1,4 +1,4 @@
-// exports
+// Re-export types
 export type * from './types.d.js';
 
 // Re-export generators (both namespace and direct)
@@ -13,5 +13,17 @@ export {
 export { string, html, dom, tty, jsx } from './renderers/index.js';
 
 // Re-export helpers
-export { createRenderPipeline } from './pipeline.js';
 export { render } from './render.js';
+export {
+    createRenderPipeline,
+    createPipelineNode
+} from './pipeline.js';
+export {
+    generateRangesFromLayers,
+    generateRanges
+} from './ranges.js';
+export {
+    createRangeHooksMapFromLayers,
+    resolveRangeHooksMap,
+    resolveRangeHooksDefinition
+} from './range-hooks-map.js';

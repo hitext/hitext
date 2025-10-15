@@ -10,7 +10,7 @@ type Style = {
     color?: string;
     bgColor?: string;
 };
-type RangeHooksFactoryContext = {
+type TtyFactoryContext = {
     createStyle: (...styles: StyleMod[]) => Partial<RangeHooks<any, any>>;
     createStyleMap: (map: StyleModMap, fetcher?: (context: RangeHookContext<any>) => any) => Partial<RangeHooks<any, any>>;
     pushStyle: (style: Style) => void;
@@ -94,7 +94,7 @@ function rangeHooksFactoryCreateStyleMap(map: StyleModMap, fetcher = ({ data }: 
 
 export const createTTYRenderer = /* @__PURE__ */ Object.assign(
     function createTTYRenderer<RenderOptions>() {
-        return createRenderPipeline<RenderOptions, string, string, RangeHooksFactoryContext>(() => {
+        return createRenderPipeline<RenderOptions, string, string, TtyFactoryContext>(() => {
             const stack: Style[] = [];
             let currentStyle: Style = initialStyle;
             let renderedStyle: Style = {};
@@ -165,14 +165,14 @@ export const createTTYRenderer = /* @__PURE__ */ Object.assign(
     // Attach helper functions as static methods to the factory function itself
     {
         createStyle: (
-            ...args: Parameters<RangeHooksFactoryContext['createStyle']>
-        ): RangeHooksFactory<any, any, any, RangeHooksFactoryContext> => ({
+            ...args: Parameters<TtyFactoryContext['createStyle']>
+        ): RangeHooksFactory<any, any, any, TtyFactoryContext> => ({
             createRangeHooks: ({ createStyle }) => createStyle(...args)
         }),
 
         createStyleMap: (
-            ...args: Parameters<RangeHooksFactoryContext['createStyleMap']>
-        ): RangeHooksFactory<any, any, any, RangeHooksFactoryContext> => ({
+            ...args: Parameters<TtyFactoryContext['createStyleMap']>
+        ): RangeHooksFactory<any, any, any, TtyFactoryContext> => ({
             createRangeHooks: ({ createStyleMap }) => createStyleMap(...args)
         })
     }

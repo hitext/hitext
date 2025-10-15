@@ -1,14 +1,14 @@
 import { deepEqual } from 'assert';
 import { rangeLines, rangeLineContents, rangeMatch, rangeNewlines } from '../src/index.js';
-import { generateRanges } from '../src/generateRanges.js';
+import { generateRangesFromLayers } from '../src/ranges.js';
 import type { GenerateRanges, Range } from '../src/types.d.js';
 
 const testMarker = Symbol('test');
 
 function gen(source: string, generate: GenerateRanges): Range[] {
-    return generateRanges(source, [{
+    return generateRangesFromLayers(source, [{
         marker: testMarker,
-        generate
+        ranges: generate
     }]);
 }
 

@@ -1,58 +1,85 @@
+import { resolveRangeHooksMap } from './range-hooks-map.js';
 import { StringBuffer } from './string-buffer.js';
-import type { GeneratedRange, RangeHookContext, RangeHooks, RenderHooks, RangeMarker, RangeHooksMap } from './types.d.js';
+import type {
+    GeneratedRange,
+    RangeHookContext,
+    RenderHooks,
+    RangeMarker,
+    RangeHooksDefinitionMap,
+    RangeHooksNormalizedMap
+} from './types.js';
 
-const hasOwn = Object.hasOwn || ((o, k) => Object.prototype.hasOwnProperty.call(o, k));
 const noOutput = () => null;
 
 function ensureFunction<T extends Function>(value: T | undefined, alt: T) {
     return typeof value === 'function' ? value : alt;
 }
 
-export function render<T, R = T>(
+export function render<T, R = T, HC = unknown>(
     source: string,
     ranges: GeneratedRange[],
-    rangeHooksMap: RangeHooksMap<T, R> | null = null,
-    renderHooks: Partial<RenderHooks<T, R>> = {}
+    rangeHooksDefinitionMap: RangeHooksDefinitionMap<any, T, R, HC> | null = null,
+    renderHooks: Partial<RenderHooks<T, R, HC>> = {}
 ) {
     // Renderer output assembly methods
     const createBuffer = ensureFunction(renderHooks.createBuffer, () => new StringBuffer() as any);
-    const renderOpen = ensureFunction(renderHooks.open, noOutput);
-    const renderClose = ensureFunction(renderHooks.close, noOutput);
-    const renderText = ensureFunction(renderHooks.text, (sourceChunk: string) => sourceChunk);
+    const renderOpenHook = ensureFunction(renderHooks.open, noOutput);
+    const renderCloseHook = ensureFunction(renderHooks.close, noOutput);
+    const renderTextHook = ensureFunction(renderHooks.text, (sourceChunk: string) => sourceChunk);
 
     // Helper to append only non-empty content
-    const append = (child: any) => {
+    const appendToBuffer = (child: any) => {
         if ((child ?? '') !== '') { // Skip null/undefined/empty string
-            buffer.append(child);
+            currentBuffer.append(child);
         }
     };
 
     // Get hooks from renderer
-    const rangeHooksSource = rangeHooksMap || {};
-    const rangePriority: Array<symbol | string | number> = [];
-    let closingOffset = Infinity;
+    const rangeHooksMap = resolveRangeHooksMap(rangeHooksDefinitionMap || {}, renderHooks);
+    const rangeHooksNormMap: RangeHooksNormalizedMap<T, R> = Object.create(null);
+    const rangePriority: RangeMarker[] = [];
 
     // Normalize hooks to have all methods
-    const normRangeHooksMap: Record<RangeMarker, RangeHooks<any, any>> = [
-        ...Object.getOwnPropertyNames(rangeHooksSource),
-        ...Object.getOwnPropertySymbols(rangeHooksSource)
-    ].reduce((result, type) => {
-        const rangeHook = rangeHooksSource[type];
+    for (const type of Reflect.ownKeys(rangeHooksMap)) {
+        const rangeHook = rangeHooksMap[type];
 
-        if (rangeHook) {
-            rangePriority.push(type);
-            result[type] = {
-                open: ensureFunction(rangeHook.open, noOutput),
-                close: ensureFunction(rangeHook.close, noOutput),
-                content: rangeHook.content,
-                text: ensureFunction(rangeHook.text, renderText)
-            };
-        }
+        rangePriority.push(type);
+        rangeHooksNormMap[type] = {
+            open: ensureFunction(rangeHook.open, noOutput),
+            close: ensureFunction(rangeHook.close, noOutput),
+            content: rangeHook.content,
+            text: ensureFunction(rangeHook.text, renderTextHook)
+        };
+    }
 
-        return result;
-    }, Object.create(null));
+    // Create renderer context with options
+    const renderContext: RangeHookContext<any> = Object.defineProperties(Object.create(null), {
+        offset: { get: () => renderedOffset },
+        line: { get: () => line },
+        column: { get: () => column },
+        start: { get: () => currentRange.start },
+        end: { get: () => currentRange.end },
+        data: { get: () => currentRange.data }
+    });
+    let renderedOffset = 0;
+    let closingOffset = Infinity;
+    let line = 1;
+    let column = 1;
 
-    // sort ranges
+    // Track buffers stack for nested ranges with content hook
+    const bufferStack: ReturnType<typeof createBuffer>[] = [];
+    let currentBuffer = createBuffer();
+
+    // Track opened ranges
+    const openedRanges: Array<GeneratedRange> = [];
+    let currentRange: GeneratedRange = {
+        type: Symbol('root'),
+        start: 0,
+        end: source.length,
+        data: undefined
+    };
+
+    // sort ranges (avoid input mutation)
     ranges = ranges.slice().sort(
         (a, b) =>
             a.start - b.start ||
@@ -60,38 +87,15 @@ export function render<T, R = T>(
             rangePriority.indexOf(a.type) - rangePriority.indexOf(b.type)
     );
 
-    // Create renderer context with options
-    const renderContext: RangeHookContext<any> =
-        Object.defineProperties(Object.create(null), {
-            offset: { get: () => renderedOffset },
-            line: { get: () => line },
-            column: { get: () => column },
-            start: { get: () => currentRange.start },
-            end: { get: () => currentRange.end },
-            data: { get: () => currentRange.data }
-        });
-    let renderedOffset = 0;
-    let line = 1;
-    let column = 1;
-
-    // Track content accumulation - buffer stack with current buffer pointer
-    const rangeContentStack: ReturnType<typeof createBuffer>[] = [];
-    let buffer = createBuffer();
-
-    // Track opened ranges
-    const openedRanges: Array<GeneratedRange> = [];
-    const nullType = Symbol('root');
-    let currentRange: GeneratedRange = { type: nullType, start: 0, end: source.length, data: undefined };
-
     // Call renderer open hook
-    append(renderOpen(renderContext));
+    appendToBuffer(renderOpenHook(renderContext));
 
     for (let i = 0; i < ranges.length; i++) {
         const range = ranges[i];
         let j = 0;
 
         // Ignore ranges without a type hook
-        if (!hasOwn(normRangeHooksMap, range.type)) {
+        if (!Object.hasOwn(rangeHooksNormMap, range.type)) {
             continue;
         }
 
@@ -132,10 +136,10 @@ export function render<T, R = T>(
     }
 
     // Finish rendering - call renderer close hook
-    append(renderClose(renderContext));
+    appendToBuffer(renderCloseHook(renderContext));
 
     // Final output
-    return buffer.emit();
+    return currentBuffer.emit();
 
     //
     // Handlers
@@ -143,34 +147,34 @@ export function render<T, R = T>(
 
     function openRangeSegment(index: number) {
         currentRange = openedRanges[index];
-        const hook = normRangeHooksMap[currentRange.type];
+        const hook = rangeHooksNormMap[currentRange.type];
 
         // Call open hook (goes to current buffer, or parent if range hook exists)
-        append(hook.open(renderContext));
+        appendToBuffer(hook.open(renderContext));
 
         // Check if this range uses range hook
         if (hook.content) {
             // Start accumulating content for this range
-            rangeContentStack.push(buffer);
-            buffer = createBuffer();
+            bufferStack.push(currentBuffer);
+            currentBuffer = createBuffer();
         }
     }
 
     function closeRangeSegment(index: number) {
         currentRange = openedRanges[index];
-        const hook = normRangeHooksMap[currentRange.type];
+        const hook = rangeHooksNormMap[currentRange.type];
 
         if (hook.content) {
-            const contentBuffer = buffer;
-            buffer = rangeContentStack.pop()!;
+            const contentBuffer = currentBuffer;
+            currentBuffer = bufferStack.pop()!;
 
             // Emit the buffer content
             const content = contentBuffer.emit();
-            append(hook.content(content, renderContext));
+            appendToBuffer(hook.content(content, renderContext));
         }
 
         // Call close hook (goes to current buffer, which is parent after range processing)
-        append(hook.close(renderContext));
+        appendToBuffer(hook.close(renderContext));
     };
 
     function renderChunk(offset: number) {
@@ -179,9 +183,9 @@ export function render<T, R = T>(
         }
 
         const substring = source.slice(renderedOffset, offset);
-        const renderSubstr = openedRanges.length
-            ? normRangeHooksMap[openedRanges[openedRanges.length - 1].type].text
-            : renderText;
+        const renderSubstr = openedRanges.length > 0
+            ? rangeHooksNormMap[openedRanges[openedRanges.length - 1].type].text
+            : renderTextHook;
 
         // Update line and column tracking
         for (let i = renderedOffset; i < offset; i++) {
@@ -196,7 +200,7 @@ export function render<T, R = T>(
         }
 
         // Always append to current buffer
-        append(renderSubstr(substring, renderContext));
+        appendToBuffer(renderSubstr(substring, renderContext));
 
         renderedOffset = offset;
     }

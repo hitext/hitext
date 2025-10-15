@@ -1,5 +1,5 @@
 import { equal } from 'assert';
-import { html, string, rangeLines, rangeMatch, createRenderPipeline } from '../src/index.js';
+import { html, string, rangeLines, rangeMatch, createRenderPipeline, RangeHooks } from '../src/index.js';
 
 describe('Pipeline API', () => {
     describe('basic usage', () => {
@@ -179,9 +179,10 @@ describe('Pipeline API', () => {
             equal(pipeline.layers.length, 2);
 
             // Each layer should have marker, generate, and rangeHooksConfig
-            equal(typeof pipeline.layers[0].marker, 'symbol');
-            equal(typeof pipeline.layers[0].generate, 'function');
-            equal(typeof pipeline.layers[0].rangeHooks, 'object');
+            const firstLayer = pipeline.layers[0];
+            equal(typeof firstLayer.marker, 'symbol');
+            equal(Array.isArray(firstLayer.ranges), true);
+            equal(typeof firstLayer.rangeHooks, 'object');
         });
 
         it('should generate ranges without rendering', () => {
@@ -253,9 +254,34 @@ describe('Pipeline API', () => {
 
             // The hooks should be present
             const firstKey: keyof typeof hooksMap = keys[0];
-            const hooks = hooksMap[firstKey];
-            equal(typeof hooks?.open, 'function');
-            equal(typeof hooks?.close, 'function');
+            const hooks = hooksMap[firstKey] as RangeHooks<any, any>;
+            equal(typeof hooks.open, 'function');
+            equal(typeof hooks.close, 'function');
+        });
+
+        it('should expose rangeHooksDefinitionMap method', () => {
+            const plainHooks = {
+                open: () => '<mark>',
+                close: () => '</mark>'
+            };
+            const shortcut = (content: any) => `[${content}]`;
+
+            const pipeline = html()
+                .addLayer([[0, 5]], plainHooks)
+                .addLayer([[6, 11]], shortcut);
+
+            const definitionMap = pipeline.rangeHooksDefinitionMap();
+
+            equal(typeof definitionMap, 'object');
+
+            const keys = Object.getOwnPropertySymbols(definitionMap);
+            equal(keys.length, 2);
+
+            // First should be the plain hooks object (unresolved)
+            equal(definitionMap[keys[0]], plainHooks);
+
+            // Second should be the function shortcut (unresolved)
+            equal(definitionMap[keys[1]], shortcut);
         });
 
         it('rangeHooksMap should resolve factory-based hooks', () => {
@@ -270,11 +296,11 @@ describe('Pipeline API', () => {
             const hooksMap = pipeline.rangeHooksMap();
             const keys = Object.getOwnPropertySymbols(hooksMap);
             const firstKey: keyof typeof hooksMap = keys[0];
-            const hooks = hooksMap[firstKey];
+            const hooks = hooksMap[firstKey] as RangeHooks<any, any>;
 
             // Should be resolved to actual hooks object
-            equal(typeof hooks?.open, 'function');
-            equal(typeof hooks?.close, 'function');
+            equal(typeof hooks.open, 'function');
+            equal(typeof hooks.close, 'function');
         });
 
         it('rangeHooksMap should convert function shortcuts to range hook', () => {
@@ -284,11 +310,11 @@ describe('Pipeline API', () => {
             const hooksMap = pipeline.rangeHooksMap();
             const keys = Object.getOwnPropertySymbols(hooksMap);
             const firstKey: keyof typeof hooksMap = keys[0];
-            const hooks = hooksMap[firstKey];
+            const rangeHooks = hooksMap[firstKey];
 
             // Function shortcut should be converted to {content: fn}
-            equal(typeof hooks?.content, 'function');
-            equal(hooks?.content!('test', {} as any), '[test]');
+            equal(typeof rangeHooks?.content, 'function');
+            equal(rangeHooks?.content('test', {} as any), '[test]');
         });
 
         it('should test factory logic with rangeHooksContext', () => {
