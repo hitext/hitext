@@ -41,9 +41,7 @@
         "prepublishOnly": "npm run transpile-and-test && npm run bundle-and-test && npm run ts-emit-types",
         "coverage": "c8 --reporter=lcovonly npm run test:all"
     },
-    "dependencies": {
-        "ansi-styles": "^5.2.0"
-    },
+    "dependencies": {},
     "devDependencies": {
         "@eslint/js": "^9.37.0",
         "@types/mocha": "^10.0.10",
