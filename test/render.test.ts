@@ -301,7 +301,7 @@ describe('render', () => {
                     wrap: {
                         open: () => '<',
                         close: () => '>',
-                        content: (content) => `[${content}]`
+                        wrap: (content) => `[${content}]`
                     }
                 }),
                 'Hello <[world]>!'
@@ -317,12 +317,12 @@ describe('render', () => {
                     outer: {
                         open: () => '(',
                         close: () => ')',
-                        content: (content) => `{${content}}`
+                        wrap: (content) => `{${content}}`
                     },
                     inner: {
                         open: () => '<',
                         close: () => '>',
-                        content: (content) => `[${content}]`
+                        wrap: (content) => `[${content}]`
                     }
                 }),
                 '({Hello <[world]>!})'

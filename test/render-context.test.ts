@@ -1,6 +1,6 @@
 import { strictEqual, deepStrictEqual } from 'assert';
 import { render } from '../src/index.js';
-import type { GeneratedRange, RangeHookContext } from '../src/types.js';
+import type { GeneratedRange, RangeHookContext, RangeHooks } from '../src/types.js';
 
 describe('render / context', () => {
     const source = 'Hello, World!';
@@ -92,16 +92,16 @@ describe('render / context', () => {
                 hooks: {
                     test: {
                         open({ start, end, offset, data }: RangeHookContext<any>) {
-                            segments.push({ hook: 'open   ', id: data.id, start, end, offset });
+                            segments.push({ hook: 'open ', id: data.id, start, end, offset });
                         },
                         close({ start, end, offset, data }: RangeHookContext<any>) {
-                            segments.push({ hook: 'close  ', id: data.id, start, end, offset });
+                            segments.push({ hook: 'close', id: data.id, start, end, offset });
                         },
-                        content(content: any, { start, end, offset, data }: RangeHookContext<any>) {
-                            segments.push({ hook: 'content', id: data.id, start, end, offset });
+                        wrap(content: any, { start, end, offset, data }: RangeHookContext<any>) {
+                            segments.push({ hook: 'wrap ', id: data.id, start, end, offset });
                             return content;
                         }
-                    }
+                    } satisfies Partial<RangeHooks<any, any, any>>
                 }
             };
         };
@@ -116,9 +116,9 @@ describe('render / context', () => {
             render(source, ranges, hooks);
 
             deepStrictEqual(segments, [
-                { hook: 'open   ', id: 'a', start: 1, end: 8, offset: 1 },
-                { hook: 'content', id: 'a', start: 1, end: 8, offset: 8 },
-                { hook: 'close  ', id: 'a', start: 1, end: 8, offset: 8 }
+                { hook: 'open ', id: 'a', start: 1, end: 8, offset: 1 },
+                { hook: 'wrap ', id: 'a', start: 1, end: 8, offset: 8 },
+                { hook: 'close', id: 'a', start: 1, end: 8, offset: 8 }
             ]);
         });
 
@@ -133,12 +133,12 @@ describe('render / context', () => {
             render(source, ranges, hooks);
 
             deepStrictEqual(segments, [
-                { hook: 'open   ', id: 'a', start: 1, end: 8, offset: 1 },
-                { hook: 'open   ', id: 'b', start: 3, end: 4, offset: 3 },
-                { hook: 'content', id: 'b', start: 3, end: 4, offset: 4 },
-                { hook: 'close  ', id: 'b', start: 3, end: 4, offset: 4 },
-                { hook: 'content', id: 'a', start: 1, end: 8, offset: 8 },
-                { hook: 'close  ', id: 'a', start: 1, end: 8, offset: 8 }
+                { hook: 'open ', id: 'a', start: 1, end: 8, offset: 1 },
+                { hook: 'open ', id: 'b', start: 3, end: 4, offset: 3 },
+                { hook: 'wrap ', id: 'b', start: 3, end: 4, offset: 4 },
+                { hook: 'close', id: 'b', start: 3, end: 4, offset: 4 },
+                { hook: 'wrap ', id: 'a', start: 1, end: 8, offset: 8 },
+                { hook: 'close', id: 'a', start: 1, end: 8, offset: 8 }
             ]);
         });
 
@@ -154,17 +154,17 @@ describe('render / context', () => {
 
             deepStrictEqual(segments, [
                 // First segment of 'a': [1, 5]
-                { hook: 'open   ', id: 'a', start: 1, end: 5, offset: 1 },
-                { hook: 'content', id: 'a', start: 1, end: 5, offset: 5 },
-                { hook: 'close  ', id: 'a', start: 1, end: 5, offset: 5 },
+                { hook: 'open ', id: 'a', start: 1, end: 5, offset: 1 },
+                { hook: 'wrap ', id: 'a', start: 1, end: 5, offset: 5 },
+                { hook: 'close', id: 'a', start: 1, end: 5, offset: 5 },
                 // Full segment of 'b': [5, 10]
-                { hook: 'open   ', id: 'b', start: 5, end: 10, offset: 5 },
+                { hook: 'open ', id: 'b', start: 5, end: 10, offset: 5 },
                 // Second segment of 'a': [5, 8]
-                { hook: 'open   ', id: 'a', start: 5, end: 8, offset: 5 },
-                { hook: 'content', id: 'a', start: 5, end: 8, offset: 8 },
-                { hook: 'close  ', id: 'a', start: 5, end: 8, offset: 8 },
-                { hook: 'content', id: 'b', start: 5, end: 10, offset: 10 },
-                { hook: 'close  ', id: 'b', start: 5, end: 10, offset: 10 }
+                { hook: 'open ', id: 'a', start: 5, end: 8, offset: 5 },
+                { hook: 'wrap ', id: 'a', start: 5, end: 8, offset: 8 },
+                { hook: 'close', id: 'a', start: 5, end: 8, offset: 8 },
+                { hook: 'wrap ', id: 'b', start: 5, end: 10, offset: 10 },
+                { hook: 'close', id: 'b', start: 5, end: 10, offset: 10 }
             ]);
         });
 
@@ -181,21 +181,21 @@ describe('render / context', () => {
 
             deepStrictEqual(segments, [
                 // First segment of 'a': [1, 5] (interrupted at 5 by 'b')
-                { hook: 'open   ', id: 'a', start: 1, end: 5, offset: 1 },
+                { hook: 'open ', id: 'a', start: 1, end: 5, offset: 1 },
                 // Nested 'c': [3, 4] (doesn't interrupt 'a')
-                { hook: 'open   ', id: 'c', start: 3, end: 4, offset: 3 },
-                { hook: 'content', id: 'c', start: 3, end: 4, offset: 4 },
-                { hook: 'close  ', id: 'c', start: 3, end: 4, offset: 4 },
-                { hook: 'content', id: 'a', start: 1, end: 5, offset: 5 },
-                { hook: 'close  ', id: 'a', start: 1, end: 5, offset: 5 },
+                { hook: 'open ', id: 'c', start: 3, end: 4, offset: 3 },
+                { hook: 'wrap ', id: 'c', start: 3, end: 4, offset: 4 },
+                { hook: 'close', id: 'c', start: 3, end: 4, offset: 4 },
+                { hook: 'wrap ', id: 'a', start: 1, end: 5, offset: 5 },
+                { hook: 'close', id: 'a', start: 1, end: 5, offset: 5 },
                 // Full segment of 'b': [5, 10]
-                { hook: 'open   ', id: 'b', start: 5, end: 10, offset: 5 },
+                { hook: 'open ', id: 'b', start: 5, end: 10, offset: 5 },
                 // Second segment of 'a': [5, 8]
-                { hook: 'open   ', id: 'a', start: 5, end: 8, offset: 5 },
-                { hook: 'content', id: 'a', start: 5, end: 8, offset: 8 },
-                { hook: 'close  ', id: 'a', start: 5, end: 8, offset: 8 },
-                { hook: 'content', id: 'b', start: 5, end: 10, offset: 10 },
-                { hook: 'close  ', id: 'b', start: 5, end: 10, offset: 10 }
+                { hook: 'open ', id: 'a', start: 5, end: 8, offset: 5 },
+                { hook: 'wrap ', id: 'a', start: 5, end: 8, offset: 8 },
+                { hook: 'close', id: 'a', start: 5, end: 8, offset: 8 },
+                { hook: 'wrap ', id: 'b', start: 5, end: 10, offset: 10 },
+                { hook: 'close', id: 'b', start: 5, end: 10, offset: 10 }
             ]);
         });
 
@@ -213,15 +213,15 @@ describe('render / context', () => {
             // Note: Nested ranges don't split the content hook of the outer range.
             // The content hook for 'a' is called once at the end with the full range boundaries.
             deepStrictEqual(segments, [
-                { hook: 'open   ', id: 'a', start: 0, end: 10, offset: 0 },
-                { hook: 'open   ', id: 'b', start: 2, end: 4, offset: 2 },
-                { hook: 'content', id: 'b', start: 2, end: 4, offset: 4 },
-                { hook: 'close  ', id: 'b', start: 2, end: 4, offset: 4 },
-                { hook: 'open   ', id: 'c', start: 6, end: 8, offset: 6 },
-                { hook: 'content', id: 'c', start: 6, end: 8, offset: 8 },
-                { hook: 'close  ', id: 'c', start: 6, end: 8, offset: 8 },
-                { hook: 'content', id: 'a', start: 0, end: 10, offset: 10 },
-                { hook: 'close  ', id: 'a', start: 0, end: 10, offset: 10 }
+                { hook: 'open ', id: 'a', start: 0, end: 10, offset: 0 },
+                { hook: 'open ', id: 'b', start: 2, end: 4, offset: 2 },
+                { hook: 'wrap ', id: 'b', start: 2, end: 4, offset: 4 },
+                { hook: 'close', id: 'b', start: 2, end: 4, offset: 4 },
+                { hook: 'open ', id: 'c', start: 6, end: 8, offset: 6 },
+                { hook: 'wrap ', id: 'c', start: 6, end: 8, offset: 8 },
+                { hook: 'close', id: 'c', start: 6, end: 8, offset: 8 },
+                { hook: 'wrap ', id: 'a', start: 0, end: 10, offset: 10 },
+                { hook: 'close', id: 'a', start: 0, end: 10, offset: 10 }
             ]);
         });
 

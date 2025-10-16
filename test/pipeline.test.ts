@@ -183,7 +183,7 @@ describe('Pipeline API', () => {
             // The hooks should be present
             const firstKey: keyof typeof hooksMap = keys[0];
             const hooks = hooksMap[firstKey];
-            strictEqual(typeof hooks.content, 'function');
+            strictEqual(typeof hooks.wrap, 'function');
         });
 
         it('should expose rangeHooksDefinitionMap method', () => {
@@ -233,8 +233,8 @@ describe('Pipeline API', () => {
             const rangeHooks = hooksMap[firstKey];
 
             // Function shortcut should be converted to {content: fn}
-            strictEqual(typeof rangeHooks?.content, 'function');
-            strictEqual(rangeHooks?.content('test', {} as any), '[test]');
+            strictEqual(typeof rangeHooks?.wrap, 'function');
+            strictEqual(rangeHooks?.wrap('test', {} as any), '[test]');
         });
 
         it('should test factory logic with rangeHooksContext', () => {

@@ -85,7 +85,7 @@ describe('Range Hooks Map Helpers', () => {
             deepStrictEqual(resolved, {
                 open: null,
                 close: null,
-                content: shortcut,
+                wrap: shortcut,
                 text: null
             });
         });
@@ -100,7 +100,7 @@ describe('Range Hooks Map Helpers', () => {
             deepStrictEqual(resolved, {
                 open: hooks.open,
                 close: hooks.close,
-                content: null,
+                wrap: null,
                 text: null
             });
         });
@@ -121,7 +121,7 @@ describe('Range Hooks Map Helpers', () => {
             deepStrictEqual(resolved, {
                 open: hooks?.open,
                 close: hooks?.close,
-                content: null,
+                wrap: null,
                 text: null
             });
 
@@ -138,8 +138,8 @@ describe('Range Hooks Map Helpers', () => {
                 rangeHooksContext: { wrapper: '**' }
             });
 
-            strictEqual(typeof resolved?.content, 'function');
-            strictEqual(resolved?.content?.('test', {} as any), '**test**');
+            strictEqual(typeof resolved?.wrap, 'function');
+            strictEqual(resolved?.wrap?.('test', {} as any), '**test**');
         });
     });
 
@@ -173,19 +173,19 @@ describe('Range Hooks Map Helpers', () => {
                 [marker1]: {
                     open: marker1hooks.open,
                     close: marker1hooks.close,
-                    content: null,
+                    wrap: null,
                     text: null
                 },
                 [marker2]: {
                     open: null,
                     close: null,
-                    content: marker2hooks,
+                    wrap: marker2hooks,
                     text: null
                 },
                 [marker3]: {
                     open: marker3hooks.open,
                     close: marker3hooks.close,
-                    content: null,
+                    wrap: null,
                     text: marker3hooks.text
                 }
             }));
@@ -212,13 +212,13 @@ describe('Range Hooks Map Helpers', () => {
                 [marker1]: {
                     open: null,
                     close: null,
-                    content: shortcut,
+                    wrap: shortcut,
                     text: null
                 },
                 [marker2]: {
                     open: null,
                     close: null,
-                    content: null,
+                    wrap: null,
                     text: null
                 }
             }));

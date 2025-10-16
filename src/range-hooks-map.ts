@@ -50,7 +50,7 @@ export function resolveRangeHooksDefinition<Data, T, R = T, HC = unknown>(
 
     // Function shortcut -> { content: fn }
     if (typeof definition === 'function') {
-        definition = { content: definition };
+        definition = { wrap: definition };
     }
 
     if (definition) {
@@ -58,7 +58,7 @@ export function resolveRangeHooksDefinition<Data, T, R = T, HC = unknown>(
         return {
             open: functionOrValue(definition.open, null),
             close: functionOrValue(definition.close, null),
-            content: functionOrValue(definition.content, null),
+            wrap: functionOrValue(definition.wrap, null),
             text: functionOrValue(definition.text, null)
         };
     }

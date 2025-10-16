@@ -76,7 +76,7 @@ export type RangeHooksFactory<Data = unknown, T, R = T, HC = unknown> = {
 export interface RangeHooks<Data = unknown, T, R = T> {
     open: RangeHookOpen<Data, T> | null;
     close: RangeHookClose<Data, T> | null;
-    content: RangeHookWrap<Data, T, R> | null;
+    wrap: RangeHookWrap<Data, T, R> | null;
     text: RangeHookText<Data, T> | null;
 }
 

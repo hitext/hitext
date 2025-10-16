@@ -6,8 +6,8 @@ import type {
     RenderHooks,
     RangeMarker,
     RangeHooksDefinitionMap,
-    RangeHooks,
-    RangeHookText
+    RangeHookText,
+    RenderBuffer
 } from './types.js';
 
 function functionOrValue<K, T>(value: K, fallback: T): (K extends Function ? K : T) {
@@ -21,7 +21,7 @@ export function render<T, R = T, HC = unknown>(
     renderHooks: Partial<RenderHooks<T, R, HC>> = {}
 ) {
     // Renderer output assembly methods
-    const createBuffer = functionOrValue(renderHooks.createBuffer, () => new StringBuffer() as any);
+    const createBuffer = functionOrValue(renderHooks.createBuffer, () => new StringBuffer() as unknown as RenderBuffer<T, R>);
     const renderOpenHook = functionOrValue(renderHooks.open, null);
     const renderCloseHook = functionOrValue(renderHooks.close, null);
     const renderTextHook = functionOrValue(renderHooks.text, (sourceChunk: string) => sourceChunk);
@@ -33,23 +33,9 @@ export function render<T, R = T, HC = unknown>(
         }
     };
 
-    // Get hooks from renderer
+    // Get hooks map from definitions
     const rangeHooksMap = resolveRangeHooksMap(rangeHooksDefinitionMap || {}, renderHooks);
-    const rangeHooksNormMap: Record<RangeMarker, RangeHooks<any, T, R>> = Object.create(null);
-    const rangePriority: RangeMarker[] = [];
-
-    // Normalize hooks to have all methods
-    for (const type of Reflect.ownKeys(rangeHooksMap)) {
-        const rangeHook = rangeHooksMap[type];
-
-        rangePriority.push(type);
-        rangeHooksNormMap[type] = {
-            open: functionOrValue(rangeHook.open, null),
-            close: functionOrValue(rangeHook.close, null),
-            content: functionOrValue(rangeHook.content, null),
-            text: functionOrValue(rangeHook.text, null)
-        };
-    }
+    const rangePriority: RangeMarker[] = Reflect.ownKeys(rangeHooksMap);
 
     // Create renderer context with options
     const renderContext: RangeHookContext<any> = Object.defineProperties(Object.create(null), {
@@ -90,7 +76,7 @@ export function render<T, R = T, HC = unknown>(
     // Remove ranges without hooks and invalid ranges upfront
     ranges = ranges
         .filter(range =>
-            Object.hasOwn(rangeHooksNormMap, range.type) &&
+            Object.hasOwn(rangeHooksMap, range.type) &&
             range.start <= range.end &&
             Number.isFinite(range.start) &&
             Number.isFinite(range.end)
@@ -189,7 +175,7 @@ export function render<T, R = T, HC = unknown>(
 
     function openRangeSegment(index: number) {
         currentRange = openedRanges[index];
-        const hook = rangeHooksNormMap[currentRange.type];
+        const hook = rangeHooksMap[currentRange.type];
 
         // For open hook: start is the current offset, end is computed lazily
         segmentStart = renderedOffset;
@@ -202,7 +188,7 @@ export function render<T, R = T, HC = unknown>(
         appendToBuffer(hook.open?.(renderContext));
 
         // Check if this range uses range hook
-        if (hook.content) {
+        if (hook.wrap) {
             // Start accumulating content for this range
             bufferStack.push(currentBuffer);
             currentBuffer = createBuffer();
@@ -211,18 +197,18 @@ export function render<T, R = T, HC = unknown>(
 
     function closeRangeSegment(index: number) {
         currentRange = openedRanges[index];
-        const hook = rangeHooksNormMap[currentRange.type];
+        const hook = rangeHooksMap[currentRange.type];
 
         // Set segment boundaries for this closing segment
         segmentStart = rangeSegmentStarts[index];
         segmentEnd = renderedOffset;
 
-        if (hook.content) {
+        if (hook.wrap) {
             const contentBuffer = currentBuffer;
             currentBuffer = bufferStack.pop()!;
 
             // Emit the buffer content
-            appendToBuffer(hook.content(contentBuffer.emit(), renderContext));
+            appendToBuffer(hook.wrap(contentBuffer.emit(), renderContext));
         }
 
         // Call close hook (goes to current buffer, which is parent after range processing)
@@ -240,7 +226,7 @@ export function render<T, R = T, HC = unknown>(
         // to inherit text transformation from parent ranges
         let textHook: RangeHookText<any, T> = renderTextHook;
         for (let i = openedRanges.length - 1; i >= 0; i--) {
-            const rangeTextHook = rangeHooksNormMap[openedRanges[i].type].text;
+            const rangeTextHook = rangeHooksMap[openedRanges[i].type].text;
             if (rangeTextHook !== null) {
                 textHook = rangeTextHook;
                 break;

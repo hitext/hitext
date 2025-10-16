@@ -114,7 +114,7 @@ describe('render / text hook', () => {
             ], {
                 test: {
                     text: (chunk: string) => chunk.replace(/./g, 'x'),
-                    content: (content: string) => `[${content}]`
+                    wrap: (content: string) => `[${content}]`
                 }
             }),
             '01[xxxxx]789'
@@ -128,7 +128,7 @@ describe('render / text hook', () => {
         ], {
             test: {
                 text: (chunk: string) => chunk.toUpperCase(),
-                content: (content: string) => {
+                wrap: (content: string) => {
                     capturedContent = content;
                     return content;
                 }

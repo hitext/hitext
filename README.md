@@ -96,7 +96,7 @@ console.log(highlight.render('Hello world! Welcome to the world.'));
 
 This example highlights all occurrences of "world" in the text. The HTML renderer automatically escapes special characters and properly nests the markup.
 
-> **Tip:** Use the compact function form `(content) => ...` for simple wrapping. It's more readable and works consistently across all renderer types (HTML, DOM, JSX, JSON). For more control, use `{ open, close }` or the full `{ content, open, close, text }` hooks object.
+> **Tip:** Use the compact function form `(content) => ...` for simple wrapping. It's more readable and works consistently across all renderer types (HTML, DOM, JSX, JSON). For more control, use `{ open, close }` or the full `{ wrap, open, close, text }` hooks object.
 
 > Tip: Every `addLayer()` call returns a **new pipeline**. Reuse the pipeline object for multiple `render()` calls for best performance.
 
@@ -141,11 +141,12 @@ Built-in generators:
 
 ### Range Hooks
 
+
 **Range hooks** define how ranges are rendered for a specific output format. Only hooks you need must be provided; missing ones default to no output / identity.
 
 - `open(context)` – Returns opening markup/tag for a range
 - `close(context)` – Returns closing markup/tag for a range  
-- `content(renderedContent, context)` – Wraps the rendered content of the range (alternative to open/close)
+- `wrap(renderedContent, context)` – Wraps the rendered content of the range (alternative to open/close)
 - `text(chunk, context)` – Transforms text chunks within the range
 
 ```js
@@ -155,17 +156,17 @@ Built-in generators:
 }
 ```
 
-**When to use `content` vs `open`/`close`:**
-- **Prefer `content`** – Works consistently across all renderers (string, DOM, JSX, JSON), more readable and straightforward
+**When to use `wrap` vs `open`/`close`:**
+- **Prefer `wrap`** – Works consistently across all renderers (string, DOM, JSX, JSON), more readable and straightforward
 - Use `open`/`close` for side effects or when you need to emit something before/after a range without wrapping (e.g., adding markers, inserting nodes)
 - Note: `open`/`close` is slightly more performant (avoids extra buffer), but the difference is negligible in most cases
 
-**Understanding segments:** When ranges overlap, they are split into segments at interruption points. Each hook (`open`, `close`, `content`) is called once per segment with the segment's boundaries in `context.start` and `context.end`. For example, if range A [1-8] is interrupted by range B [5-10], range A will have two segments: [1-5] and [5-8], and its hooks will be called twice with different segment boundaries each time.
+**Understanding segments:** When ranges overlap, they are split into segments at interruption points. Each hook (`open`, `close`, `wrap`) is called once per segment with the segment's boundaries in `context.start` and `context.end`. For example, if range A [1-8] is interrupted by range B [5-10], range A will have two segments: [1-5] and [5-8], and its hooks will be called twice with different segment boundaries each time.
 
-**Function shortcut:** If you only need the `content` hook, you can pass the function directly:
+**Function shortcut:** If you only need the `wrap` hook, you can pass the function directly:
 
 ```js
-// Instead of: { content: (renderedContent) => `<mark>${renderedContent}</mark>` }
+// Instead of: { wrap: (renderedContent) => `<mark>${renderedContent}</mark>` }
 // You can use:
 (renderedContent) => `<mark>${renderedContent}</mark>`
 ```
@@ -187,7 +188,7 @@ The `context` object provides:
 // Range A: [1, 8], Range B: [5, 10] (B interrupts A)
 // A is split into two segments: [1, 5] and [5, 8]
 {
-    content(renderedContent, context) {
+    wrap(renderedContent, context) {
         console.log(context.start, context.end);        // Segment boundaries
         console.log(context.range.start, context.range.end); // Original range: [1, 8]
         console.log(context.dump());                    // All context properties
@@ -325,7 +326,7 @@ console.log(emphasize.render('This is _emphasized_ text.'));
 
 ### Using Range Hooks
 
-The `content` hook wraps the rendered content of a range segment (alternative to `open`/`close`):
+The `wrap` hook wraps the rendered content of a range segment (alternative to `open`/`close`):
 
 ```js
 import { html, rangeMatch } from 'hitext';
@@ -334,7 +335,7 @@ const highlighter = html()
     .addLayer(
         rangeMatch(/\*\*(.+?)\*\*/g),
         {
-            content: (renderedContent) => `<strong>${renderedContent}</strong>`
+            wrap: (renderedContent) => `<strong>${renderedContent}</strong>`
         }
     );
 
@@ -342,7 +343,7 @@ console.log(highlighter.render('This is **bold** text'));
 // This is <strong>**bold**</strong> text
 ```
 
-**Using function shortcut:** When you only need the `content` hook, pass the function directly:
+**Using function shortcut:** When you only need the `wrap` hook, pass the function directly:
 
 ```js
 const highlighter = html()
@@ -367,7 +368,7 @@ const ranges = [
 const highlighter = html()
     .addLayer(ranges, {
         outer: {
-            content(renderedContent, context) {
+            wrap(renderedContent, context) {
                 // First call: segment [0, 5] (before B starts)
                 // Second call: segment [5, 10] (overlapping with B)
                 console.log(`Segment: [${context.start}, ${context.end}]`);
@@ -376,7 +377,7 @@ const highlighter = html()
             }
         },
         inner: {
-            content(renderedContent, context) {
+            wrap(renderedContent, context) {
                 // Only one call: segment [5, 15]
                 console.log(`Segment: [${context.start}, ${context.end}]`);
                 console.log(`Full range: [${context.range.start}, ${context.range.end}]`);
@@ -393,7 +394,7 @@ Use `context.dump()` to get a snapshot of all context properties for debugging:
 ```js
 const highlighter = html()
     .addLayer(ranges, {
-        content(renderedContent, context) {
+        wrap(renderedContent, context) {
             console.log(context.dump());
             // { offset: 5, line: 1, column: 6, start: 0, end: 5, 
             //   data: {...}, range: {...} }
@@ -629,7 +630,7 @@ const highlighter = jsx()
         (renderedContent) => <mark>{renderedContent}</mark>
     );
 
-// Use content hook to wrap matched text
+// Use wrap hook to wrap matched text
 const MyComponent = () => {
     const highlighted = highlighter.render('This is important text');
 
@@ -798,7 +799,7 @@ function createJsonRenderer() {
 
 const pipeline = createJsonRenderer()
     .addLayer([[0, 5]], {
-        content: (renderedContent, { start, end, data }) => ({
+        wrap: (renderedContent, { start, end, data }) => ({
             type: 'range',
             start,
             end,
@@ -921,7 +922,7 @@ import { jsx } from 'hitext';
 const pipeline = jsx();
 const result = pipeline
     .addLayer([{ start: 0, end: 5 }], {
-        content: (renderedContent) => <span className="highlight">{renderedContent}</span>
+        wrap: (renderedContent) => <span className="highlight">{renderedContent}</span>
     })
     .render('Hello, world!');
 
@@ -997,7 +998,7 @@ Parameters:
 
 **Range hooks forms:**
 
-1. **Function shortcut** (recommended) – When you only need the `content` hook
+1. **Function shortcut** (recommended) – When you only need the `wrap` hook
 ```js
 (renderedContent) => `<mark>${renderedContent}</mark>`
 ```
@@ -1016,7 +1017,7 @@ Use when you need side effects or non-wrapping behavior (e.g., adding attributes
 ```js
 {
     createRangeHooks: (context) => ({
-        content: (renderedContent) => context.transform(renderedContent)
+        wrap: (renderedContent) => context.transform(renderedContent)
     })
 }
 ```
@@ -1174,7 +1175,7 @@ Design goals:
 
 Below, `[` `)` indicate half‑open intervals `[start, end)`. Layers are labeled A, B, C in order of `addLayer()` (A added first). Longer ranges open first when they share the same start.
 
-**Understanding segments:** When ranges overlap, they are split into segments at interruption points. Each segment gets its own `open`, `content`, and `close` hook calls with segment-specific boundaries in `context.start` and `context.end`. The original range boundaries remain accessible via `context.range.start` and `context.range.end`.
+**Understanding segments:** When ranges overlap, they are split into segments at interruption points. Each segment gets its own `open`, `wrap`, and `close` hook calls with segment-specific boundaries in `context.start` and `context.end`. The original range boundaries remain accessible via `context.range.start` and `context.range.end`.
 
 1. Simple nesting (no overlap, no segments)
 
@@ -1215,13 +1216,13 @@ Segments created:
 
 Hook events with context values:
     @0:  open A₁     { start: 0, end: 3,  range: [0, 8) }
-    @3:  content A₁  { start: 0, end: 3,  range: [0, 8) }
+    @3:  wrap A₁     { start: 0, end: 3,  range: [0, 8) }
     @3:  close A₁    { start: 0, end: 3,  range: [0, 8) }
     @3:  open B      { start: 3, end: 11, range: [3, 11) }
     @3:  open A₂     { start: 3, end: 8,  range: [0, 8) }  ← same range, new segment
-    @8:  content A₂  { start: 3, end: 8,  range: [0, 8) }
+    @8:  wrap A₂     { start: 3, end: 8,  range: [0, 8) }
     @8:  close A₂    { start: 3, end: 8,  range: [0, 8) }
-    @11: content B   { start: 3, end: 11, range: [3, 11) }
+    @11: wrap B      { start: 3, end: 11, range: [3, 11) }
     @11: close B     { start: 3, end: 11, range: [3, 11) }
 
 Output: <a>012</a><b><a>34567</a>890</b>
@@ -1306,23 +1307,23 @@ Algorithm: A is interrupted twice, creating three segments:
 
 Events:
     @0:  open A₁     { start: 0, end: 3, range: [0, 12) }
-    @3:  content A₁  { start: 0, end: 3, range: [0, 12) }
+    @3:  wrap A₁     { start: 0, end: 3, range: [0, 12) }
     @3:  close A₁    { start: 0, end: 3, range: [0, 12) }
     @3:  open B      { start: 3, end: 7, range: [3, 7) }
     @3:  open A₂     { start: 3, end: 7, range: [0, 12) }
-    @7:  content A₂  { start: 3, end: 7, range: [0, 12) }
+    @7:  wrap A₂     { start: 3, end: 7, range: [0, 12) }
     @7:  close A₂    { start: 3, end: 7, range: [0, 12) }
     @7:  close B     { start: 3, end: 7, range: [3, 7) }
     @7:  open A₃     { start: 7, end: 9, range: [0, 12) }
-    @9:  content A₃  { start: 7, end: 9, range: [0, 12) }
+    @9:  wrap A₃     { start: 7, end: 9, range: [0, 12) }
     @9:  close A₃    { start: 7, end: 9, range: [0, 12) }
     @9:  open C      { start: 9, end: 11, range: [9, 11) }
     @9:  open A₄     { start: 9, end: 11, range: [0, 12) }
-    @11: content A₄  { start: 9, end: 11, range: [0, 12) }
+    @11: wrap A₄     { start: 9, end: 11, range: [0, 12) }
     @11: close A₄    { start: 9, end: 11, range: [0, 12) }
     @11: close C     { start: 9, end: 11, range: [9, 11) }
     @11: open A₅     { start: 11, end: 12, range: [0, 12) }
-    @12: content A₅  { start: 11, end: 12, range: [0, 12) }
+    @12: wrap A₅     { start: 11, end: 12, range: [0, 12) }
     @12: close A₅    { start: 11, end: 12, range: [0, 12) }
 
 Output: <a>012</a><b><a>3456</a></b><a>78</a><c><a>90</a></c><a>1</a>
@@ -1358,7 +1359,7 @@ Nested ranges that end before their parent don't split the parent into segments.
 
 - **No segmentation** when ranges are purely nested (child ends before parent)
 - **Segmentation occurs** when ranges overlap and extend beyond each other
-- Each segment gets its own `open`, `content`, `close` hook calls
+- Each segment gets its own `open`, `wrap`, `close` hook calls
 - `context.start`/`end` = current segment boundaries
 - `context.range.start`/`end` = original range boundaries (unchanged across segments)
 - Use `context.offset === context.range.start` to detect first opening vs continuation
@@ -1373,7 +1374,7 @@ HiText is designed to be fast; a few practical considerations:
 - Prefer static or cached ranges for expensive analyses (e.g. syntax tokens).
 - Keep generator regex patterns simple; avoid catastrophic backtracking.
 - Avoid generating extremely large numbers of tiny adjacent ranges when a single wrapping range (`open`/`close`) would suffice.
-- Use the function shortcut `(content) => ...` when only `content` is needed; it avoids two extra hook calls.
+- Use the function shortcut `(content) => ...` when only `wrap` is needed; it avoids two extra hook calls.
 
 ### Common Patterns
 - Empty hooks are fine – return `null` or omit keys.
@@ -1406,7 +1407,7 @@ Yes – create a custom renderer via `createRenderPipeline` (see Custom Renderer
 Use `jsx()` – it returns an array of children you can embed directly.
 
 **Q: Are there plans for source maps or position mapping after render?**  
-Positions currently refer to *source* only. If you need mapping, wrap a `content` hook to collect emitted offsets.
+Positions currently refer to *source* only. If you need mapping, wrap a `wrap` hook to collect emitted offsets.
 
 **Q: Why not use an existing highlighter?**  
 HiText is *not* a syntax highlighter; it is an orchestration & rendering core. You can plug in any tokenizer, plus additional decoration layers.
