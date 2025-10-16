@@ -10,14 +10,15 @@
         "decoration"
     ],
     "type": "module",
-    "main": "./lib/index.cjs",
+    "main": "./dist/hitext.umd.cjs",
     "module": "./lib/index.js",
     "types": "./lib/index.d.ts",
     "exports": {
         ".": {
+            "test": "./src/index.ts",
             "types": "./lib/index.d.ts",
             "import": "./lib/index.js",
-            "require": "./lib/index.cjs"
+            "require": "./dist/hitext.umd.cjs"
         }
     },
     "browser": {
@@ -28,37 +29,37 @@
         "lint-and-test": "npm run lint && npm test",
         "ts-check": "tsc --noEmit",
         "ts-emit-types": "tsc --project tsconfig.types.json && cp src/types.d.ts lib/types.d.ts",
-        "test": "mocha --import=tsx --reporter ${REPORTER:-progress} test/**/*.ts",
-        "test:all": "npm run test:cjs && npm run test:esm",
+        "test": "mocha --import=tsx --conditions=test --reporter ${REPORTER:-progress} test/**/*.ts",
+        "test:all": "npm run test:cjs && npm run test:esm && npm run test:dist",
+        "test:all-unit": "npm run test:cjs && npm run test:esm",
         "test:cjs": "mocha --reporter ${REPORTER:-progress} lib-test/*.cjs",
         "test:esm": "mocha --reporter ${REPORTER:-progress} lib-test/*.js",
         "test:dist": "mocha --reporter ${REPORTER:-progress} dist/test",
         "watch": "npm run transpile -- --watch",
+        "build": "npm run bundle && npm run transpile && npm run ts-emit-types",
+        "build-and-test": "npm run build && npm run test:all",
         "transpile": "node scripts/transpile.cjs",
-        "transpile-and-test": "npm run transpile && npm run test:all",
+        "transpile-and-test": "npm run bundle && npm run transpile && npm run test:all",
         "bundle": "node scripts/bundle",
         "bundle-and-test": "npm run bundle && npm run test:dist",
-        "prepublishOnly": "npm run transpile-and-test && npm run bundle-and-test && npm run ts-emit-types",
-        "coverage": "c8 --reporter=lcovonly npm run test:all"
+        "prepublishOnly": "npm run build-and-test",
+        "coverage": "c8 --reporter=lcovonly npm run test:esm"
     },
-    "dependencies": {},
     "devDependencies": {
         "@eslint/js": "^9.37.0",
         "@types/mocha": "^10.0.10",
-        "@types/node": "^24.7.2",
+        "@types/node": "^24.8.0",
         "c8": "^9.1.0",
-        "esbuild": "^0.25.10",
+        "esbuild": "^0.25.11",
         "eslint": "^9.37.0",
         "globals": "^16.4.0",
         "linkedom": "^0.18.12",
         "mocha": "^9.2.2",
         "preact": "^10.27.2",
         "preact-render-to-string": "^6.6.2",
-        "rollup": "^2.67.3",
-        "sucrase": "^3.34.0",
         "tsx": "^4.20.6",
         "typescript": "^5.9.3",
-        "typescript-eslint": "^8.46.0"
+        "typescript-eslint": "^8.46.1"
     },
     "engines": {
         "node": ">=14.14.0"

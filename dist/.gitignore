@@ -1,6 +1,9 @@
 *.js
+*.cjs
 *.map
-!test/hitext.js
-!test/hitext.min.js
+!test/hitext.esm.js
+!test/hitext.umd.js
+!test/hitext.umd.min.js
+!test/test.js
 !.gitignore
 !.npmignore

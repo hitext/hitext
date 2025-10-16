@@ -23,33 +23,48 @@ const banner = { js: `(function (global, factory) {
 const footer = { js: `
   return exports;
 })));` };
-const plugins = [];
 
 async function build() {
-    // bundle
-    await log('dist/hitext.js', (outfile) => esbuild.build({
+    // bundle UMD
+    await log('dist/hitext.umd.cjs', (outfile) => esbuild.build({
         entryPoints: ['src/index.ts'],
-        target: ['es2020'],
+        target: ['es2023'],
         format: 'iife',
         globalName: 'exports',
         outfile,
         banner,
         footer,
         bundle: true,
-        sourcemap: true,
-        plugins
+        sourcemap: true
     }));
 
-    // minified bundle
-    await log('dist/hitext.min.js', (outfile) => esbuild.build({
-        entryPoints: ['dist/hitext.js'],
+    // minified UMD bundle
+    await log('dist/hitext.umd.min.cjs', (outfile) => esbuild.build({
+        entryPoints: ['dist/hitext.umd.cjs'],
+        target: ['es2023'],
         outfile,
         format: 'iife',
         minify: true,
-        sourcemap: true,
-        logOverride: {
-            'commonjs-variable-in-esm': 'silent'
-        }
+        sourcemap: true
+    }));
+
+    // bundle ESM
+    await log('dist/hitext.esm.js', (outfile) => esbuild.build({
+        entryPoints: ['src/index.ts'],
+        target: ['es2023'],
+        format: 'esm',
+        outfile,
+        bundle: true
+    }));
+
+    await log('dist/hitext.esm.min.js', (outfile) => esbuild.build({
+        entryPoints: ['src/index.ts'],
+        target: ['es2023'],
+        format: 'esm',
+        outfile,
+        bundle: true,
+        minify: true,
+        sourcemap: true
     }));
 }
 

@@ -1,77 +1,20 @@
 const fs = require('fs');
 const path = require('path');
 const { exec } = require('child_process');
-const sucrase = require('sucrase');
-const { rollup, watch } = require('rollup');
+const esbuild = require('esbuild');
 const chalk = require('chalk');
-const { version } = require('../package.json');
 
-const external = [
-    'fs',
-    'path',
-    'assert',
-    'preact',
-    'preact-render-to-string',
-    'linkedom',
-    'hitext'
-];
-
-function replaceContent(map) {
+function createPathRewritePlugin() {
     return {
-        name: 'file-content-replacement',
-        transform(code, id) {
-            const key = path.relative('', id);
-
-            if (map.hasOwnProperty(key)) {
-                return map[key](code, id);
-            }
-        }
-    };
-}
-
-function resolvePath(ts = false, ext) {
-    return {
-        name: 'transpile-ts',
-        resolveId(source, parent) {
-            if (parent && !/\/(src|lib)\//.test(parent) && /\/(src|lib)\//.test(source)) {
+        name: 'path-rewrite',
+        setup(build) {
+            build.onLoad({ filter: /test\/.*\.ts$/ }, async (args) => {
+                let text = await fs.promises.readFile(args.path, 'utf8');
                 return {
-                    id: source
-                        // .replace(/\/lib\//, '/cjs/')
-                        .replace(/\/src\//, '/lib/')
-                        .replace(/\.js$/, ext),
-                    external: true
+                    contents: text.replace(/\.\.\/src\/index\.js/, 'hitext'),
+                    loader: 'ts'
                 };
-            }
-            if (ts && parent && source.startsWith('.')) {
-                const resolved = path.resolve(path.dirname(parent), source);
-                const resolvedTs = resolved.replace(/.js$/, '.ts');
-
-                return fs.existsSync(resolvedTs) ? resolvedTs : resolved;
-            }
-            return null;
-        }
-    };
-}
-
-function transpileTypeScript() {
-    return {
-        name: 'transpile-ts',
-        transform(input, id) {
-            if (id.endsWith('.ts')) {
-                const { code: output, sourceMap } = sucrase.transform(input, {
-                    filePath: id,
-                    transforms: ['typescript'],
-                    disableESTransforms: true,
-                    sourceMapOptions: {
-                        compiledFilename: id
-                    }
-                });
-
-                return {
-                    code: output,
-                    map: sourceMap
-                };
-            }
+            });
         }
     };
 }
@@ -81,6 +24,23 @@ function readDir(dir) {
         .readdirSync(dir)
         .filter((fn) => fn.endsWith('.js') || fn.endsWith('.ts'))
         .map((fn) => `${dir}/${fn}`);
+}
+
+function getAllSourceFiles(dir, fileList = []) {
+    const files = fs.readdirSync(dir);
+
+    for (const file of files) {
+        const filePath = path.join(dir, file);
+        const stat = fs.statSync(filePath);
+
+        if (stat.isDirectory()) {
+            getAllSourceFiles(filePath, fileList);
+        } else if (file.endsWith('.ts') && !file.endsWith('.d.ts')) {
+            fileList.push(filePath);
+        }
+    }
+
+    return fileList;
 }
 
 async function transpile({
@@ -97,59 +57,40 @@ async function transpile({
             ts ? 'Compile TypeScript to JavaScript (ESM)' : 'Convert ESM to CommonJS'
         } into "${outputDir}" done in ${duration}ms`;
 
-    const inputOptions = {
-        external,
-        input: entryPoints,
-        plugins: [
-            resolvePath(ts, outputExt),
-            transpileTypeScript(),
-            replaceContent({
-                'src/version.ts': () => `export const version = "${version}";`
-            })
-        ]
-    };
-    const outputOptions = {
-        dir: outputDir,
-        entryFileNames: `[name]${outputExt}`,
-        sourcemap: ts,
+    const buildOptions = {
+        entryPoints,
+        outdir: outputDir,
+        outExtension: { '.js': outputExt },
         format,
-        exports: 'auto',
-        preserveModules: true,
-        interop: false,
-        esModule: format === 'esm',
-        generatedCode: {
-            constBindings: true
-        }
+        platform: 'node',
+        target: 'node14',
+        sourcemap: false, // ts
+        plugins: [createPathRewritePlugin()],
+        logLevel: 'warning',
+        packages: 'external' // Mark all imports as external (don't bundle dependencies)
     };
 
     if (!watchMode) {
         const startTime = Date.now();
-        const bundle = await rollup(inputOptions);
-        await bundle.write(outputOptions);
-        await bundle.close();
-
+        await esbuild.build(buildOptions);
         console.log(doneMessage(Date.now() - startTime));
 
         if (typeof onSuccess === 'function') {
             await onSuccess();
         }
     } else {
-        const watcher = watch({
-            ...inputOptions,
-            output: outputOptions
-        });
+        const ctx = await esbuild.context(buildOptions);
+        await ctx.watch();
 
-        watcher.on('event', ({ code, duration, error }) => {
-            if (code === 'BUNDLE_END') {
-                console.log(doneMessage(duration));
+        console.log(`Watching for changes in ${entryPoints[0]}...`);
 
-                if (typeof onSuccess === 'function') {
-                    onSuccess();
-                }
-            } else if (code === 'ERROR') {
-                console.error(chalk.bgRed.white('ERROR!'), chalk.red(error.message));
-            }
-        });
+        // Call onSuccess initially and on subsequent rebuilds
+        if (typeof onSuccess === 'function') {
+            onSuccess();
+        }
+
+        // Note: In watch mode, we don't have direct access to build completion events
+        // with the same granularity as rollup. Consider using a file watcher if needed.
     }
 }
 
@@ -181,7 +122,7 @@ async function transpileAll(options) {
     const { watch = false, types = false } = options || {};
 
     await transpile({
-        entryPoints: ['src/index.ts'],
+        entryPoints: getAllSourceFiles('src'),
         outputDir: './lib',
         format: 'esm',
         watch,
@@ -190,12 +131,6 @@ async function transpileAll(options) {
             if (types) {
                 await generateTypes(!watch);
             }
-
-            await transpile({
-                entryPoints: ['lib/index.js'],
-                outputDir: './lib',
-                format: 'cjs'
-            });
         }
     });
     await transpile({

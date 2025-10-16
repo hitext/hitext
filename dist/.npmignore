@@ -1,5 +1,3 @@
 *
-!hitext.js
-!hitext.js.map
-!hitext.min.js
-!hitext.min.js.map
+!hitext.esm.js
+!hitext.umd.cjs

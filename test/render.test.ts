@@ -1,6 +1,11 @@
 import { strictEqual, deepStrictEqual } from 'assert';
 import { render } from '../src/index.js';
-import type { GeneratedRange, RangeHookContext, RangeHookContextDump, RangeHooksDefinitionMap } from '../src/types.d.js';
+import type {
+    GeneratedRange,
+    RangeHookContext,
+    RangeHookContextDump,
+    RangeHooksDefinitionMap
+} from '../src/types.js';
 
 const testHooks: RangeHooksDefinitionMap<any, any> = {
     test: {

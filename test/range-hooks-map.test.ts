@@ -1,11 +1,11 @@
 import { strictEqual, deepStrictEqual } from 'assert';
+import type { RangeHooks, RangeHooksDefinition } from '../src/types.js';
 import {
     createRangeHooksMapFromLayers,
     resolveRangeHooksMap,
     resolveRangeHooksDefinition,
     html
 } from '../src/index.js';
-import type { RangeHooks, RangeHooksDefinition } from '../src/types.d.js';
 
 describe('Range Hooks Map Helpers', () => {
     describe('createRangeHooksMapFromLayers', () => {

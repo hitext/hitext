@@ -1,7 +1,12 @@
 import { deepStrictEqual } from 'assert';
-import { rangeLines, rangeLineContents, rangeMatch, rangeNewlines } from '../src/index.js';
-import { generateRangesFromLayers } from '../src/ranges.js';
-import type { GenerateRanges, Range } from '../src/types.d.js';
+import type { GenerateRanges, Range } from '../src/types.js';
+import {
+    generateRangesFromLayers,
+    rangeLines,
+    rangeLineContents,
+    rangeMatch,
+    rangeNewlines
+} from '../src/index.js';
 
 const testMarker = Symbol('test');
 

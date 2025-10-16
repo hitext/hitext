@@ -1,6 +1,6 @@
 import { strictEqual, deepStrictEqual } from 'assert';
 import { generateRanges, generateRangesFromLayers, rangeMatch } from '../src/index.js';
-import type { GenerateRanges, GeneratedRange } from '../src/types.d.js';
+import type { GenerateRanges, GeneratedRange } from '../src/types.js';
 
 const startEndPairs = (ranges: GeneratedRange[]) => ranges.map(r => [r.start, r.end]);
 
