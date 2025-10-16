@@ -256,11 +256,21 @@ import { html, rangeMatch } from 'hitext';
 const highlighter = html()
     .addLayer(
         rangeMatch(/function|const|let|var/g),
-        (content) => `<span class="keyword">${content}</span>`
+        (content, { data }) => `<span class="keyword" data-token="${data[0]}">${content}</span>`
     );
 
 console.log(highlighter.render('const x = function() {}'));
-// <span class="keyword">const</span> x = <span class="keyword">function</span>() {}
+// <span class="keyword" data-token="const">const</span> x = <span class="keyword" data-token="function">function</span>() {}
+
+// Using capture groups with RegExp
+const urlHighlighter = html()
+    .addLayer(
+        rangeMatch(/(https?):\/\/([^\/\s]+)(\/[^\s]*)?/g),
+        (content, { data }) => {
+            const [fullMatch, protocol, host, path] = data;
+            return `<a href="${fullMatch}" class="url" data-protocol="${protocol}" data-host="${host}">${content}</a>`;
+        }
+    );
 ```
 
 ### Search Highlighting
@@ -272,7 +282,7 @@ function createSearchHighlighter(searchTerm) {
     return html()
         .addLayer(
             rangeMatch(new RegExp(searchTerm, 'gi')),
-            (content) => `<mark class="search-match">${content}</mark>`
+            (content, { data }) => `<mark class="search-match" data-match="${data[0]}">${content}</mark>`
         );
 }
 
@@ -571,7 +581,7 @@ console.log(highlighter.render('ERROR: Failed\nWARN: Slow\nINFO: Done'));
 
 The TTY renderer provides helper functions for easy styling:
 - `tty.createStyle(...styles)` – Returns a factory wrapper for specific ANSI styles
-- `tty.createStyleMap(map, fetcher?)` – Returns a factory wrapper that maps data values to styles
+- `tty.createStyleMap(map, fetcher?)` – Returns a factory wrapper that maps data values to styles (automatically handles RegExp match arrays by using `data[0]`, falls back to `data ?? rangeText`)
 
 **Example with `createStyleMap`:**
 ```js
@@ -600,15 +610,17 @@ const highlighter2 = tty()
         )
     );
 
-// Using rangeText when data is not available (falls back to matched text)
+// Using rangeMatch with automatic data - no need for rangeText fallback
 const highlighter3 = tty()
     .addLayer(
-        [{ start: 0, end: 5 }],  // No data provided
+        rangeMatch(/ERROR|WARN|INFO/g),
         tty.createStyleMap({
             'ERROR': 'red',
-            'WARN': 'yellow'
+            'WARN': 'yellow',
+            'INFO': 'blue'
         })
-        // Automatically uses rangeText as fallback when data is undefined
+        // Automatically uses data[0] from rangeMatch RegExp results,
+        // falls back to data ?? rangeText
     );
 ```
 
@@ -1012,7 +1024,10 @@ rangeMatch(/\w+/)
 rangeMatch(/error/i)  // Becomes /error/gi internally
 ```
 
-**Note:** `rangeMatch` does not store any data in the generated ranges. To capture matched text or groups, create a custom generator (see Custom Generator example).
+**Data in generated ranges:**
+- For **string patterns**: The matched string is stored as `data`
+- For **RegExp patterns**: The full match object (including capture groups) is stored as `data`
+- Access the matched text via `data` (strings) or `data[0]` (RegExp match objects)
 
 #### `rangeLines`
 

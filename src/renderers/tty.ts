@@ -89,7 +89,8 @@ function rangeHooksFactoryCreateStyle(...styles: StyleMod[]) {
 
 function rangeHooksFactoryCreateStyleMap(
     map: StyleModMap,
-    fetcher = ({ data, rangeText }: RangeHookContext<any>) => data ?? rangeText
+    fetcher = ({ data, rangeText }: RangeHookContext<any>) =>
+        Array.isArray(data) ? data[0] : data ?? rangeText
 ) {
     const styleMap = createStyleMap(map);
     return (context: RangeHookContext<any>) => styleMap[fetcher(context)];

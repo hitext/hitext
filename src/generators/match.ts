@@ -9,7 +9,11 @@ export function rangeMatch(pattern: RegExp | string) {
             let match: ReturnType<RegExp['exec']>;
 
             while (match = matchRx.exec(source)) {
-                createRange(match.index, match.index + match[0].length);
+                createRange(
+                    match.index,
+                    match.index + match[0].length,
+                    match
+                );
             }
         };
     }
@@ -26,7 +30,7 @@ export function rangeMatch(pattern: RegExp | string) {
                 break;
             }
 
-            createRange(index, index + patternStr.length);
+            createRange(index, index + patternStr.length, patternStr);
         }
     };
 }

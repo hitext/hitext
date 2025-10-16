@@ -1,54 +1,55 @@
 import { deepStrictEqual } from 'assert';
 import type { GenerateRanges, Range } from '../src/types.js';
 import {
-    generateRangesFromLayers,
+    generateRanges,
     rangeLines,
     rangeLineContents,
     rangeMatch,
     rangeNewlines
 } from '../src/index.js';
 
-const testMarker = Symbol('test');
-
 function gen(source: string, ranges: GenerateRanges): Range[] {
-    return generateRangesFromLayers(source, [{
-        marker: testMarker,
-        ranges
-    }]);
+    return generateRanges(source, Symbol('test'), ranges);
 }
 
 const startEndData = (ranges: Range[]) => ranges.map(r => [r.start, r.end, r.data]);
+const regexpMatch = (input: string, match: string[] | null, index: number) => {
+    return match ? Object.assign(match, { input, index, groups: undefined }) : null;
+};
 
 describe('built-in generators', () => {
     describe('rangeMatch', () => {
         it('using string', () => {
             const ranges = gen('Hello world! Hello world!', rangeMatch('world'));
             deepStrictEqual(startEndData(ranges), [
-                [6, 11, undefined],
-                [19, 24, undefined]
+                [6, 11, 'world'],
+                [19, 24, 'world']
             ]);
         });
 
         it('using regexp', () => {
-            const ranges = gen('Hello world!', rangeMatch(/\w+/));
+            const input = 'Hello world!';
+            const ranges = gen(input, rangeMatch(/\w+/));
             deepStrictEqual(startEndData(ranges), [
-                [0, 5, undefined],
-                [6, 11, undefined]
+                [0, 5, regexpMatch(input, ['Hello'], 0)],
+                [6, 11, regexpMatch(input, ['world'], 6)]
             ]);
         });
 
         it('using regexp with flags', () => {
-            const ranges = gen('Hello world!', rangeMatch(/hello|world/ig));
+            const input = 'Hello world!';
+            const ranges = gen(input, rangeMatch(/hello|world/ig));
             deepStrictEqual(startEndData(ranges), [
-                [0, 5, undefined],
-                [6, 11, undefined]
+                [0, 5, regexpMatch(input, ['Hello'], 0)],
+                [6, 11, regexpMatch(input, ['world'], 6)]
             ]);
         });
 
         it('using non-string and non-regexp value', () => {
-            const ranges = gen('1234567890', rangeMatch('234'));
+            const input = '1234567890';
+            const ranges = gen(input, rangeMatch(234 as any));
             deepStrictEqual(startEndData(ranges), [
-                [1, 4, undefined]
+                [1, 4, '234']
             ]);
         });
     });

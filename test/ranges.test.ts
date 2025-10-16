@@ -3,6 +3,9 @@ import { generateRanges, generateRangesFromLayers, rangeMatch } from '../src/ind
 import type { GenerateRanges, GeneratedRange } from '../src/types.js';
 
 const startEndPairs = (ranges: GeneratedRange[]) => ranges.map(r => [r.start, r.end]);
+const regexpMatch = (input: string, match: string[] | null, index: number) => {
+    return match ? Object.assign(match, { input, index, groups: undefined }) : null;
+};
 
 describe('Range Generation Helpers', () => {
     describe('generateRanges', () => {
@@ -125,8 +128,9 @@ describe('Range Generation Helpers', () => {
         });
 
         it('should handle generator functions in layers', () => {
+            const input = 'Hello world';
             const marker = Symbol('words');
-            const ranges = generateRangesFromLayers('Hello world', [
+            const ranges = generateRangesFromLayers(input, [
                 {
                     marker,
                     ranges: rangeMatch(/\w+/g)
@@ -134,8 +138,8 @@ describe('Range Generation Helpers', () => {
             ]);
 
             deepStrictEqual(ranges, [
-                { type: marker, start: 0, end: 5, data: undefined },
-                { type: marker, start: 6, end: 11, data: undefined }
+                { type: marker, start: 0, end: 5, data: regexpMatch(input, ['Hello'], 0) },
+                { type: marker, start: 6, end: 11, data: regexpMatch(input, ['world'], 6) }
             ]);
         });
 
@@ -158,11 +162,12 @@ describe('Range Generation Helpers', () => {
         });
 
         it('should accumulate ranges from all layers', () => {
+            const input = 'Hello world';
             const marker1 = Symbol('all');
             const marker2 = Symbol('words');
             const marker3 = Symbol('specific');
 
-            const ranges = generateRangesFromLayers('Hello world', [
+            const ranges = generateRangesFromLayers(input, [
                 { marker: marker1, ranges: [[0, 11] as [number, number]] },
                 { marker: marker2, ranges: rangeMatch(/\w+/g) },
                 { marker: marker3, ranges: [[0, 5] as [number, number]] }
@@ -170,8 +175,8 @@ describe('Range Generation Helpers', () => {
 
             deepStrictEqual(ranges, [
                 { type: marker1, start: 0, end: 11, data: undefined },
-                { type: marker2, start: 0, end: 5, data: undefined },
-                { type: marker2, start: 6, end: 11, data: undefined },
+                { type: marker2, start: 0, end: 5, data: regexpMatch(input, ['Hello'], 0) },
+                { type: marker2, start: 6, end: 11, data: regexpMatch(input, ['world'], 6) },
                 { type: marker3, start: 0, end: 5, data: undefined }
             ]);
         });
