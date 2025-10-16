@@ -57,9 +57,10 @@ export function render<T, R = T, HC = unknown>(
         offset: { get: () => renderedOffset },
         line: { get: () => line },
         column: { get: () => column },
-        start: { get: () => currentRange.start },
-        end: { get: () => currentRange.end },
+        start: { get: () => segmentStart },
+        end: { get: () => computeSegmentEnd() },
         data: { get: () => currentRange.data },
+        range: { get: () => currentRange },
         dump: { value: () => (Object.fromEntries(Reflect.ownKeys(renderContext)
             .map((key) => [key, (renderContext as any)[key]])
             .filter(key => key[0] !== 'dump')
@@ -67,6 +68,8 @@ export function render<T, R = T, HC = unknown>(
     });
     let renderedOffset = 0;
     let closingOffset = Infinity;
+    let segmentStart = 0;
+    let segmentEnd = -1;
     let line = 1;
     let column = 1;
 
@@ -74,8 +77,9 @@ export function render<T, R = T, HC = unknown>(
     const bufferStack: ReturnType<typeof createBuffer>[] = [];
     let currentBuffer = createBuffer();
 
-    // Track opened ranges
+    // Track opened ranges and their segment start offsets
     const openedRanges: Array<GeneratedRange> = [];
+    const rangeSegmentStarts: number[] = []; // Parallel array to openedRanges
     let currentRange: GeneratedRange = {
         type: Symbol('root'),
         start: 0,
@@ -83,30 +87,29 @@ export function render<T, R = T, HC = unknown>(
         data: undefined
     };
 
-    // sort ranges (avoid input mutation)
-    ranges = ranges.slice().sort(
-        (a, b) =>
-            a.start - b.start ||
-            b.end - a.end ||
-            rangePriority.indexOf(a.type) - rangePriority.indexOf(b.type)
-    );
+    // Filter and sort ranges (avoid input mutation)
+    // Remove ranges without hooks and invalid ranges upfront
+    ranges = ranges
+        .filter(range =>
+            Object.hasOwn(rangeHooksNormMap, range.type) &&
+            range.start <= range.end &&
+            Number.isFinite(range.start) &&
+            Number.isFinite(range.end)
+        )
+        .sort(
+            (a, b) =>
+                a.start - b.start ||
+                b.end - a.end ||
+                rangePriority.indexOf(a.type) - rangePriority.indexOf(b.type)
+        );
 
     // Call renderer open hook
     appendToBuffer(renderOpenHook(renderContext));
 
-    for (let i = 0; i < ranges.length; i++) {
-        const range = ranges[i];
+    let currentRangeIndex = 0;
+    for (; currentRangeIndex < ranges.length; currentRangeIndex++) {
+        const range = ranges[currentRangeIndex];
         let j = 0;
-
-        // Ignore ranges without a type hook
-        if (!Object.hasOwn(rangeHooksNormMap, range.type)) {
-            continue;
-        }
-
-        // Ignore ranges with wrong start/end values
-        if (range.start > range.end || !Number.isFinite(range.start) || !Number.isFinite(range.end)) {
-            continue;
-        }
 
         closeRangeSegments(range.start);
         renderChunk(range.start);
@@ -121,6 +124,7 @@ export function render<T, R = T, HC = unknown>(
         }
 
         openedRanges.splice(j, 0, range);
+        rangeSegmentStarts.splice(j, 0, 0); // Placeholder, will be set in openRangeSegment
 
         for (; j < openedRanges.length; j++) {
             openRangeSegment(j);
@@ -149,9 +153,51 @@ export function render<T, R = T, HC = unknown>(
     // Handlers
     //
 
+    function computeSegmentEnd() {
+        // Lazy computation: if segmentEnd is -1, compute it
+        if (segmentEnd !== -1) {
+            return segmentEnd;
+        }
+
+        // The segment end is determined by the next event:
+        // - The current range's natural end
+        // - Or a new range starts that will cause interruption (has greater end than current range)
+        segmentEnd = currentRange.end;
+
+        // Find next range's start that comes after renderedOffset
+        // and will cause interruption (its end > some opened range's end)
+        for (let i = currentRangeIndex + 1; i < ranges.length; i++) {
+            const nextRange = ranges[i];
+
+            if (nextRange.start > renderedOffset) {
+                // Check if this range will cause an interruption
+                // It causes interruption if its end is greater than any opened range's end
+                for (let j = 0; j < openedRanges.length; j++) {
+                    if (openedRanges[j].end < nextRange.end) {
+                        // This range causes interruption
+                        if (nextRange.start < segmentEnd) {
+                            segmentEnd = nextRange.start;
+                        }
+                        // Found interruption, can stop searching
+                        return segmentEnd;
+                    }
+                }
+            }
+        }
+
+        return segmentEnd;
+    }
+
     function openRangeSegment(index: number) {
         currentRange = openedRanges[index];
         const hook = rangeHooksNormMap[currentRange.type];
+
+        // For open hook: start is the current offset, end is computed lazily
+        segmentStart = renderedOffset;
+        segmentEnd = -1;
+
+        // Track where this segment started (current offset) for close/content hooks
+        rangeSegmentStarts[index] = renderedOffset;
 
         // Call open hook (goes to current buffer, or parent if range hook exists)
         appendToBuffer(hook.open(renderContext));
@@ -167,6 +213,10 @@ export function render<T, R = T, HC = unknown>(
     function closeRangeSegment(index: number) {
         currentRange = openedRanges[index];
         const hook = rangeHooksNormMap[currentRange.type];
+
+        // Set segment boundaries for this closing segment
+        segmentStart = rangeSegmentStarts[index];
+        segmentEnd = renderedOffset;
 
         if (hook.content) {
             const contentBuffer = currentBuffer;
@@ -219,6 +269,7 @@ export function render<T, R = T, HC = unknown>(
                 }
                 closeRangeSegment(j);
                 openedRanges.pop();
+                rangeSegmentStarts.pop();
             }
 
             // Find next closing offset

@@ -92,6 +92,7 @@ export interface RangeHookContext<T = unknown> {
     start: number;
     end: number;
     data: T;
+    range: GeneratedRange<T>;
     dump(): RangeHookContextDump<T>;
 }
 
