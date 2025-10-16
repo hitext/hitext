@@ -120,7 +120,7 @@ describe('Pipeline API', () => {
             strictEqual(typeof pipeline.createRenderHooks, 'function');
 
             const renderHooks = pipeline.createRenderHooks();
-            strictEqual(typeof renderHooks.text, 'function');
+            strictEqual(typeof renderHooks.escape, 'function');
         });
 
         it('should expose layers property', () => {
@@ -316,7 +316,7 @@ describe('Pipeline API', () => {
                             return result;
                         }
                     }),
-                    text: (chunk) => chunk,
+                    escape: (chunk) => chunk,
                     open: () => '',
                     close: () => ''
                 };
@@ -347,7 +347,7 @@ describe('Pipeline API', () => {
                             return result;
                         }
                     }),
-                    text: (chunk) => chunk,
+                    escape: (chunk) => chunk,
                     open: () => '',
                     close: () => '',
                     rangeHooksContext: {
@@ -383,7 +383,7 @@ describe('Pipeline API', () => {
                             return result;
                         }
                     }),
-                    text: (chunk) => chunk,
+                    escape: (chunk) => chunk,
                     open: () => '',
                     close: () => ''
                 };

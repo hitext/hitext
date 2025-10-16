@@ -24,7 +24,7 @@ export function render<T, R = T, HC = unknown>(
     const createBuffer = functionOrValue(renderHooks.createBuffer, () => new StringBuffer() as unknown as RenderBuffer<T, R>);
     const renderOpenHook = functionOrValue(renderHooks.open, null);
     const renderCloseHook = functionOrValue(renderHooks.close, null);
-    const renderTextHook = functionOrValue(renderHooks.text, (sourceChunk: string) => sourceChunk);
+    const renderTextHook = functionOrValue(renderHooks.escape, (sourceChunk: string) => sourceChunk);
 
     // Helper to append only non-empty content
     const appendToBuffer = (child: any) => {
@@ -226,7 +226,7 @@ export function render<T, R = T, HC = unknown>(
         // to inherit text transformation from parent ranges
         let textHook: RangeHookText<any, T> = renderTextHook;
         for (let i = openedRanges.length - 1; i >= 0; i--) {
-            const rangeTextHook = rangeHooksMap[openedRanges[i].type].text;
+            const rangeTextHook = rangeHooksMap[openedRanges[i].type].escape;
             if (rangeTextHook !== null) {
                 textHook = rangeTextHook;
                 break;

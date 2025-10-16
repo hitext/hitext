@@ -103,7 +103,7 @@ export const createTTYRenderer = /* @__PURE__ */ Object.assign(
                 createBuffer: () => new StringBuffer(),
                 open: styleToRender,
                 close: styleToRender,
-                text: (sourceChunk) => styleToRender() + sourceChunk,
+                escape: (sourceChunk) => styleToRender() + sourceChunk,
 
                 // Provide style utils to range hooks factories
                 rangeHooksContext: {

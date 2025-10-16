@@ -77,7 +77,7 @@ export interface RangeHooks<Data = unknown, T, R = T> {
     open: RangeHookOpen<Data, T> | null;
     close: RangeHookClose<Data, T> | null;
     wrap: RangeHookWrap<Data, T, R> | null;
-    text: RangeHookText<Data, T> | null;
+    escape: RangeHookText<Data, T> | null;
 }
 
 export type RangeHookOpen<Data, T> = (
@@ -116,7 +116,7 @@ export interface RenderHooks<T, R = T, HC = unknown> {
 
     open(context: RangeHookContext): T | null;
     close(context: RangeHookContext): T | null;
-    text: RangeHookText<any, T>;
+    escape: RangeHookText<any, T> | null;
 
     rangeHooksContext?: HC;
 }

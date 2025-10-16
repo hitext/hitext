@@ -3,13 +3,13 @@ import { generateRangesFromLayers } from './ranges.js';
 import { createRangeHooksMapFromLayers, resolveRangeHooksMap } from './range-hooks-map.js';
 import { render } from './render.js';
 
-export function createRenderPipeline<RenderOptions, T, R = T, HC = unknown>(
+export function createRenderPipeline<RenderOptions, T, R = T, HC = undefined>(
     createRenderHooks: CreateRenderHooks<T, R, HC>
 ) {
     return createPipelineNode<RenderOptions, T, R, HC>(createRenderHooks, []);
 }
 
-export function createPipelineNode<RenderOptions, T, R = T, HC = unknown>(
+export function createPipelineNode<RenderOptions, T, R = T, HC = undefined>(
     createRenderHooks: CreateRenderHooks<T, R, HC>,
     layers: PipelineLayer<RenderOptions, any, T, R, HC>[]
 ): PipelineNode<RenderOptions, T, R, HC> {
