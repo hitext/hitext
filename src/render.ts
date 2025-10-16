@@ -39,13 +39,15 @@ export function render<T, R = T, HC = unknown>(
 
     // Create renderer context with options
     const renderContext: RangeHookContext<any> = Object.defineProperties(Object.create(null), {
+        source: { value: source },
         offset: { get: () => renderedOffset },
         line: { get: () => line },
         column: { get: () => column },
         start: { get: () => segmentStart },
         end: { get: () => computeSegmentEnd() },
-        data: { get: () => currentRange.data },
+        rangeText: { get: () => source.slice(currentRange.start, currentRange.end) },
         range: { get: () => currentRange },
+        data: { get: () => currentRange.data },
         dump: { value: () => (Object.fromEntries(Reflect.ownKeys(renderContext)
             .map((key) => [key, (renderContext as any)[key]])
             .filter(key => key[0] !== 'dump')

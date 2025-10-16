@@ -358,9 +358,7 @@ describe('render', () => {
             const range = { type: 'test', start: 6, end: 11, data: { foo: 'bar' } };
             let capturedContext: RangeHookContextDump<{ foo: string }> | null = null;
 
-            render('Hello\nworld!', [
-                range
-            ], {
+            render('Hello\nworld!', [range], {
                 test(content, context: RangeHookContext<{ foo: string }>) {
                     capturedContext = context.dump();
                     return content;
@@ -368,11 +366,13 @@ describe('render', () => {
             });
 
             deepStrictEqual(capturedContext, {
+                source: 'Hello\nworld!',
                 offset: 11,
                 line: 2,
                 column: 6,
                 start: 6,
                 end: 11,
+                rangeText: 'world',
                 range,
                 data: {
                     foo: 'bar'

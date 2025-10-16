@@ -1,5 +1,5 @@
 import { strictEqual } from 'assert';
-import { tty } from '../src/index.js';
+import { rangeMatch, tty } from '../src/index.js';
 
 describe('TTY renderer', () => {
     describe('basic styling', () => {
@@ -116,15 +116,15 @@ describe('TTY renderer', () => {
         it('should support array of styles in styleMap', () => {
             const result = tty()
                 .addLayer([
-                    { start: 0, end: 1, data: 'error' },
-                    { start: 1, end: 2, data: 'warning' }
+                    { start: 0, end: 5, data: 'error' },
+                    { start: 8, end: 15, data: 'warning' }
                 ], tty.createStyleMap({
                     'error': ['red', 'bgWhite'],
                     'warning': ['yellow', 'bgBlack']
                 }))
-                .render('12');
+                .render('error & warning');
 
-            strictEqual(result, '\u001b[31m\u001b[47m1\u001b[33m\u001b[40m2\u001b[39m\u001b[49m');
+            strictEqual(result, '\u001b[31m\u001b[47merror\u001b[39m\u001b[49m & \u001b[33m\u001b[40mwarning\u001b[39m\u001b[49m');
         });
 
         it('should support custom data fetcher', () => {
@@ -142,6 +142,17 @@ describe('TTY renderer', () => {
                 .render('12');
 
             strictEqual(result, '\u001b[31m1\u001b[32m2\u001b[39m');
+        });
+
+        it('should work with rangeMatch', () => {
+            const result = tty()
+                .addLayer(rangeMatch(/error|warning/), tty.createStyleMap({
+                    'error': ['red', 'bgWhite'],
+                    'warning': ['yellow', 'bgBlack']
+                }))
+                .render('error & warning');
+
+            strictEqual(result, '\u001b[31m\u001b[47merror\u001b[39m\u001b[49m & \u001b[33m\u001b[40mwarning\u001b[39m\u001b[49m');
         });
 
         it('should support array-based styleMap for numeric indices', () => {

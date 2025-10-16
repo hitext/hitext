@@ -176,13 +176,15 @@ The `escape` hook allows you to control how text content is escaped or transform
 ```
 
 The `context` object provides:
+- `source` – The full source text being processed
 - `offset` – Current position in source text (updated as rendering progresses)
 - `line` – Current line number (1-based, updated as rendering progresses)
 - `column` – Current column number (1-based, updated as rendering progresses)
 - `start` – Current segment start position (where the current hook is called)
 - `end` – Current segment end position (where the segment will be interrupted or end)
-- `data` – Custom data associated with the range (as provided by the generator)
+- `rangeText` – The text content of the current range (`source.slice(range.start, range.end)`)
 - `range` – The full range object being processed (contains original `start`, `end`, `type`, and `data`)
+- `data` – Custom data associated with the range (as provided by the generator, shortcut for `range.data`)
 - `dump()` – Returns a snapshot of all context properties (useful for debugging)
 
 **Note about segments:** When ranges overlap, they are split into segments. Each segment represents a portion of a range between interruption points. The `start` and `end` in the context represent the *segment* boundaries (where hooks are called), not the full range boundaries. To access the original range boundaries, use `context.range.start` and `context.range.end`.
@@ -201,7 +203,7 @@ The `context` object provides:
 }
 ```
 
-**Note:** The `offset`, `line`, and `column` values are dynamic and reflect the current rendering position, while `data` and `range` are specific to the range being processed. The `start` and `end` values represent the current segment boundaries.
+**Note:** The `offset`, `line`, and `column` values are dynamic and reflect the current rendering position, while `source`, `rangeText`, `data` and `range` are specific to the range being processed. The `start` and `end` values represent the current segment boundaries.
 
 ### Renderers
 
@@ -298,6 +300,21 @@ console.log(withLineNumbers.render(code));
 // <div class="line" data-line="1">function hello() {
 // </div><div class="line" data-line="2">  return "world";
 // </div><div class="line" data-line="3">}</div>
+
+// Enhanced line numbers with total line count from source
+const withEnhancedLineNumbers = html()
+    .addLayer(
+        rangeLines,
+        {
+            open: ({ data: lineNum, source }) => {
+                const totalLines = source.split('\n').length;
+                const padding = String(totalLines).length;
+                const paddedLineNum = String(lineNum).padStart(padding, ' ');
+                return `<div class="line" data-line="${lineNum}"><span class="line-number">${paddedLineNum}:</span> `;
+            },
+            close: () => '</div>'
+        }
+    );
 ```
 
 ### Plain Text Decoration with String Renderer
@@ -377,6 +394,7 @@ const highlighter = html()
                 // Second call: segment [5, 10] (overlapping with B)
                 console.log(`Segment: [${context.start}, ${context.end}]`);
                 console.log(`Full range: [${context.range.start}, ${context.range.end}]`);
+                console.log(`Range text: "${context.rangeText}"`); // Full range content
                 return renderedContent;
             }
         },
@@ -385,6 +403,7 @@ const highlighter = html()
                 // Only one call: segment [5, 15]
                 console.log(`Segment: [${context.start}, ${context.end}]`);
                 console.log(`Full range: [${context.range.start}, ${context.range.end}]`);
+                console.log(`Range text: "${context.rangeText}"`); // Full range content
                 return renderedContent;
             }
         }
@@ -400,8 +419,8 @@ const highlighter = html()
     .addLayer(ranges, {
         wrap(renderedContent, context) {
             console.log(context.dump());
-            // { offset: 5, line: 1, column: 6, start: 0, end: 5, 
-            //   data: {...}, range: {...} }
+            // { source: 'Hello world', offset: 5, line: 1, column: 6, start: 0, end: 5, 
+            //   rangeText: 'Hello', range: {...}, data: {...} }
             return renderedContent;
         }
     });
@@ -580,6 +599,17 @@ const highlighter2 = tty()
             ({ data }) => data.level  // Extract the level property
         )
     );
+
+// Using rangeText when data is not available (falls back to matched text)
+const highlighter3 = tty()
+    .addLayer(
+        [{ start: 0, end: 5 }],  // No data provided
+        tty.createStyleMap({
+            'ERROR': 'red',
+            'WARN': 'yellow'
+        })
+        // Automatically uses rangeText as fallback when data is undefined
+    );
 ```
 
 The factory wrapper pattern gives you access to the renderer's context for advanced use cases:
@@ -720,6 +750,35 @@ console.log(highlight1.render('Hello world!'));
 
 console.log(highlight2.render('Hello world!'));
 // <span class="greeting">Hello</span> <span class="noun">world</span>!
+```
+
+### Using `rangeText` for Content-Based Decisions
+
+The `rangeText` field is especially useful when you need to make rendering decisions based on the actual content of the range:
+
+```js
+import { html, rangeMatch } from 'hitext';
+
+// Highlight code identifiers with different styles based on naming convention
+const identifierHighlighter = html()
+    .addLayer(
+        rangeMatch(/\b[a-zA-Z_][a-zA-Z0-9_]*\b/g),
+        (content, { rangeText }) => {
+            // Use rangeText to determine the identifier type
+            if (rangeText.startsWith('_')) {
+                return `<span class="private-var">${content}</span>`;
+            } else if (rangeText === rangeText.toUpperCase()) {
+                return `<span class="constant">${content}</span>`;
+            } else if (rangeText[0] === rangeText[0].toUpperCase()) {
+                return `<span class="class-name">${content}</span>`;
+            } else {
+                return `<span class="variable">${content}</span>`;
+            }
+        }
+    );
+
+console.log(identifierHighlighter.render('const MAX_SIZE = 100; class MyClass { _private = true; }'));
+// const <span class="constant">MAX_SIZE</span> = 100; class <span class="class-name">MyClass</span> { <span class="private-var">_private</span> = true; }
 ```
 
 ### Render Options

@@ -96,14 +96,16 @@ export type RangeHookText<Data, T> = (
 ) => T | string | null | undefined;
 
 export type RangeHookContextDump<T> = Omit<RangeHookContext<T>, 'dump'>;
-export interface RangeHookContext<T = unknown> {
+export type RangeHookContext<T = unknown> = {
+    source: string;
     offset: number;
     line: number;
     column: number;
     start: number;
     end: number;
-    data: T;
+    rangeText: string;
     range: GeneratedRange<T>;
+    data: T;
     dump(): RangeHookContextDump<T>;
 }
 
