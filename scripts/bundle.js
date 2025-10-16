@@ -21,7 +21,7 @@ const banner = { js: `(function (global, factory) {
   (global.hitext = factory());
 }(typeof globalThis != 'undefined' ? globalThis : typeof window != 'undefined' ? window : typeof global != 'undefined' ? global : typeof self != 'undefined' ? self : this, (function () {` };
 const footer = { js: `
-  return exports.default;
+  return exports;
 })));` };
 const plugins = [];
 

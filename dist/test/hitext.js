@@ -7,15 +7,12 @@ describe('dist/hitext.js', () => {
 
     it('basic', () => {
         const expected = 'Hello <foo>world</foo>!';
-        const actual = hitext([{
-            ranges: [[6, 11, 'foo']],
-            printer: {
-                html: {
-                    open: ({ data: marker }) => '<' + marker + '>',
-                    close: ({ data: marker }) => '</' + marker + '>'
-                }
-            }
-        }]).print('Hello world!', 'html');
+        const actual = hitext.html()
+            .addLayer(
+                [[6, 11, 'foo']],
+                (content, { data: marker }) => `<${marker}>${content}</${marker}>`
+            )
+            .render('Hello world!');
 
         assert.strictEqual(actual, expected);
     });
