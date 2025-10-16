@@ -4,7 +4,7 @@ import { RangeHooks, render } from '../src/index.js';
 
 describe('render / text hook', () => {
     const replaceTextHook = (str: string): Partial<RangeHooks<any, any>> => ({
-        escape: (chunk: string) => chunk.replace(/./g, str)
+        text: (chunk: string) => chunk.replace(/./g, str)
     });
 
     it('should use range hook text method when defined', () => {
@@ -19,7 +19,7 @@ describe('render / text hook', () => {
                 b: replaceTextHook('b'),
                 c: {}
             }, {
-                escape: (chunk: string) => chunk.replace(/./g, '_')
+                text: (chunk: string) => chunk.replace(/./g, '_')
             }),
             '_abbba__aa'
         );
@@ -52,7 +52,7 @@ describe('render / text hook', () => {
     });
 
     it('should not ignore text hook when defined', () => {
-        const defaultTextHook = replaceTextHook('x').escape;
+        const defaultTextHook = replaceTextHook('x').text;
         strictEqual(
             render('0123456789AB', [
                 { type: 'a', start: 2, end: 10 },
@@ -60,10 +60,10 @@ describe('render / text hook', () => {
                 { type: 'c', start: 5, end: 7 }
             ], {
                 a: replaceTextHook('a'),
-                b: { escape: defaultTextHook },
+                b: { text: defaultTextHook },
                 c: {}
             }, {
-                escape: defaultTextHook
+                text: defaultTextHook
             }),
             'xxaaxxxxaaxx'
         );
@@ -76,7 +76,7 @@ describe('render / text hook', () => {
             ], {
                 test: {}
             }, {
-                escape: (chunk: string) => chunk.replace(/./g, '_')
+                text: (chunk: string) => chunk.replace(/./g, '_')
             }),
             '__________'
         );
@@ -114,7 +114,7 @@ describe('render / text hook', () => {
                 { type: 'test', start: 2, end: 7 }
             ], {
                 test: {
-                    escape: (chunk: string) => chunk.replace(/./g, 'x'),
+                    text: (chunk: string) => chunk.replace(/./g, 'x'),
                     wrap: (content: string) => `[${content}]`
                 }
             }),
@@ -128,7 +128,7 @@ describe('render / text hook', () => {
             { type: 'test', start: 0, end: 5 }
         ], {
             test: {
-                escape: (chunk: string) => chunk.toUpperCase(),
+                text: (chunk: string) => chunk.toUpperCase(),
                 wrap: (content: string) => {
                     capturedContent = content;
                     return content;
@@ -145,7 +145,7 @@ describe('render / text hook', () => {
                 { type: 'test', start: 2, end: 7 }
             ], {
                 test: {
-                    escape: (chunk: string) => chunk.replace(/./g, 'x'),
+                    text: (chunk: string) => chunk.replace(/./g, 'x'),
                     open: () => '<',
                     close: () => '>'
                 }

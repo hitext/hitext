@@ -59,7 +59,7 @@ export function resolveRangeHooksDefinition<Data, T, R = T, HC = unknown>(
             open: functionOrValue(definition.open, null),
             close: functionOrValue(definition.close, null),
             wrap: functionOrValue(definition.wrap, null),
-            escape: functionOrValue(definition.escape, null)
+            text: functionOrValue(definition.text, null)
         };
     }
 

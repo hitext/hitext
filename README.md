@@ -147,7 +147,7 @@ Built-in generators:
 - `open(context)` – Returns opening markup/tag for a range
 - `close(context)` – Returns closing markup/tag for a range  
 - `wrap(renderedContent, context)` – Wraps the rendered content of the range (alternative to open/close)
-- `escape(chunk, context)` – Escapes or transforms text chunks within the range
+- `text(chunk, context)` – Converts source text chunks into renderer-specific units (e.g., TextNode for DOM, object for JSON) or transforms text content
 
 ```js
 {
@@ -161,11 +161,11 @@ Built-in generators:
 - Use `open`/`close` for side effects or when you need to emit something before/after a range without wrapping (e.g., adding markers, inserting nodes)
 - Note: `open`/`close` is slightly more performant (avoids extra buffer), but the difference is negligible in most cases
 
-**Understanding segments:** When ranges overlap, they are split into segments at interruption points. Each hook (`open`, `close`, `wrap`, `escape`) is called once per segment with the segment's boundaries in `context.start` and `context.end`. For example, if range A [1-8] is interrupted by range B [5-10], range A will have two segments: [1-5] and [5-8], and its hooks will be called twice with different segment boundaries each time.
+**Understanding segments:** When ranges overlap, they are split into segments at interruption points. Each hook (`open`, `close`, `wrap`, `text`) is called once per segment with the segment's boundaries in `context.start` and `context.end`. For example, if range A [1-8] is interrupted by range B [5-10], range A will have two segments: [1-5] and [5-8], and its hooks will be called twice with different segment boundaries each time.
 
-**About the `escape` hook:**
+**About the `text` hook:**
 
-The `escape` hook allows you to control how text content is escaped or transformed when emitted into the result. This is especially useful for HTML rendering, where you may want to escape special characters, or for disabling escaping in regions that contain raw HTML markup. You can also use `escape` to obfuscate or remove text content from the output, however, it may have unwanted side effects. Ranges inherit escaping behavior from render hooks or the closest outer range with an `escape` hook. Use with care, as disabling escaping may have unwanted side effects.
+The `text` hook is primarily used by structured renderers to convert source text chunks into their specific units (e.g., TextNode for DOM rendering, object entries for JSON rendering). It can also be used for escaping special characters (especially useful for HTML rendering), obfuscating or removing text content from the output, or disabling escaping in regions that contain raw markup. Ranges inherit text transformation behavior from render hooks or the closest outer range with a `text` hook. Use with care, as disabling escaping or transforming content may have unwanted side effects.
 
 **Function shortcut:** If you only need the `wrap` hook, you can pass the function directly:
 
@@ -842,7 +842,7 @@ const result = render(
         highlight: (content) => `<mark>${content}</mark>`
     },
     {
-        escape: (chunk) => chunk.replace(/</g, '&lt;') // HTML escape
+        text: (chunk) => chunk.replace(/</g, '&lt;') // HTML escape
     }
 );
 ```
@@ -862,7 +862,7 @@ function createJsonRenderer() {
                 append(child) { this.nodes.push(child); },
                 emit() { return this.nodes; }
             }),
-            escape: (chunk, { start, end }) => ({
+            text: (chunk, { start, end }) => ({
                 type: 'text',
                 start,
                 end,
@@ -1145,7 +1145,7 @@ import { createRenderPipeline } from 'hitext';
 
 const myRenderer = createRenderPipeline(() => ({
     createBuffer: () => ({ /* ... */ }),
-    escape: (chunk) => chunk,
+    text: (chunk) => chunk,
     open: (context) => null,
     close: (context) => null
 }));
@@ -1476,7 +1476,7 @@ You can, but it's better (and cheaper) to regenerate or wrap via another layer. 
 Yes. When two ranges have identical `start` and `end`, earlier layers take precedence (open earlier / close later) due to the ordering rule.
 
 **Q: How do I escape HTML?**  
-Use the `html()` renderer – it escapes `&`, `<`, `>` automatically. For custom renderer, supply an `escape` hook.
+Use the `html()` renderer – it escapes `&`, `<`, `>` automatically. For custom renderer, supply a `text` hook.
 
 **Q: Can I render to AST / JSON?**  
 Yes – create a custom renderer via `createRenderPipeline` (see Custom Renderer example).

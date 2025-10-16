@@ -86,7 +86,7 @@ describe('Range Hooks Map Helpers', () => {
                 open: null,
                 close: null,
                 wrap: shortcut,
-                escape: null
+                text: null
             });
         });
 
@@ -101,7 +101,7 @@ describe('Range Hooks Map Helpers', () => {
                 open: hooks.open,
                 close: hooks.close,
                 wrap: null,
-                escape: null
+                text: null
             });
         });
 
@@ -122,7 +122,7 @@ describe('Range Hooks Map Helpers', () => {
                 open: hooks?.open,
                 close: hooks?.close,
                 wrap: null,
-                escape: null
+                text: null
             });
 
             strictEqual(resolved?.open?.({} as any), '<custom>');
@@ -156,7 +156,7 @@ describe('Range Hooks Map Helpers', () => {
             const marker3hooks = {
                 open: () => '<b>',
                 close: () => '</b>',
-                escape: (chunk: string) => chunk.toUpperCase()
+                text: (chunk: string) => chunk.toUpperCase()
             };
 
             const definitionMap = {
@@ -174,19 +174,19 @@ describe('Range Hooks Map Helpers', () => {
                     open: marker1hooks.open,
                     close: marker1hooks.close,
                     wrap: null,
-                    escape: null
+                    text: null
                 },
                 [marker2]: {
                     open: null,
                     close: null,
                     wrap: marker2hooks,
-                    escape: null
+                    text: null
                 },
                 [marker3]: {
                     open: marker3hooks.open,
                     close: marker3hooks.close,
                     wrap: null,
-                    escape: marker3hooks.escape
+                    text: marker3hooks.text
                 }
             }));
         });
@@ -213,13 +213,13 @@ describe('Range Hooks Map Helpers', () => {
                     open: null,
                     close: null,
                     wrap: shortcut,
-                    escape: null
+                    text: null
                 },
                 [marker2]: {
                     open: null,
                     close: null,
                     wrap: null,
-                    escape: null
+                    text: null
                 }
             }));
         });
