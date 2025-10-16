@@ -372,6 +372,7 @@ describe('render', () => {
                 column: 6,
                 start: 6,
                 end: 11,
+                rangeIndex: 0,
                 rangeText: 'world',
                 range,
                 data: {

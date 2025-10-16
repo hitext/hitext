@@ -84,6 +84,44 @@ describe('render / context', () => {
         ].join(''));
     });
 
+    describe('rangeIndex', () => {
+        it('should provide correct rangeIndex for simple ranges', () => {
+            const source = 'Hello, World!';
+            const ranges = [
+                { type: 'test' as const, start: 1, end: 8, data: 'a' },
+                { type: 'test' as const, start: 5, end: 12, data: 'b' }
+            ];
+
+            const segments: Array<{ hook: string; rangeIndex: number; start: number; end: number; data: string }> = [];
+            render(source, ranges, {
+                test: {
+                    open({ rangeIndex, start, end, data }) {
+                        segments.push({ hook: 'open ', rangeIndex, start, end, data });
+                    },
+                    close({ rangeIndex, start, end, data }) {
+                        segments.push({ hook: 'close', rangeIndex, start, end, data });
+                    },
+                    wrap(content, { rangeIndex, start, end, data }) {
+                        segments.push({ hook: 'wrap ', rangeIndex, start, end, data });
+                        return content;
+                    }
+                }
+            });
+
+            deepStrictEqual(segments, [
+                { hook: 'open ', data: 'a', rangeIndex: 0, start: 1, end: 5 },
+                { hook: 'wrap ', data: 'a', rangeIndex: 0, start: 1, end: 5 },
+                { hook: 'close', data: 'a', rangeIndex: 0, start: 1, end: 5 },
+                { hook: 'open ', data: 'b', rangeIndex: 1, start: 5, end: 12 },
+                { hook: 'open ', data: 'a', rangeIndex: 0, start: 5, end: 8 },
+                { hook: 'wrap ', data: 'a', rangeIndex: 0, start: 5, end: 8 },
+                { hook: 'close', data: 'a', rangeIndex: 0, start: 5, end: 8 },
+                { hook: 'wrap ', data: 'b', rangeIndex: 1, start: 5, end: 12 },
+                { hook: 'close', data: 'b', rangeIndex: 1, start: 5, end: 12 }
+            ]);
+        });
+    });
+
     describe('segment start/end', () => {
         const captureSegmentHooks = () => {
             const segments: Array<{ hook: string; id: string; start: number; end: number; offset: number }> = [];

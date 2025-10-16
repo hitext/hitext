@@ -36,20 +36,22 @@ export function render<T, R = T, HC = unknown>(
     // Get hooks map from definitions
     const rangeHooksMap = resolveRangeHooksMap(rangeHooksDefinitionMap || {}, renderHooks);
     const rangePriority: RangeMarker[] = Reflect.ownKeys(rangeHooksMap);
+    const rangeIndexMap = new Map<GeneratedRange, number>();
 
     // Create renderer context with options
-    const renderContext: RangeHookContext<any> = Object.defineProperties(Object.create(null), {
+    const rangeHookContext: RangeHookContext<any> = Object.defineProperties(Object.create(null), {
         source: { value: source },
         offset: { get: () => renderedOffset },
         line: { get: () => line },
         column: { get: () => column },
         start: { get: () => segmentStart },
-        end: { get: () => computeSegmentEnd() },
+        end: { get: computeSegmentEnd },
+        rangeIndex: { get: getRangeIndex },
         rangeText: { get: () => source.slice(currentRange.start, currentRange.end) },
         range: { get: () => currentRange },
         data: { get: () => currentRange.data },
-        dump: { value: () => (Object.fromEntries(Reflect.ownKeys(renderContext)
-            .map((key) => [key, (renderContext as any)[key]])
+        dump: { value: () => (Object.fromEntries(Reflect.ownKeys(rangeHookContext)
+            .map((key) => [key, (rangeHookContext as any)[key]])
             .filter(key => key[0] !== 'dump')
         )) }
     });
@@ -91,7 +93,7 @@ export function render<T, R = T, HC = unknown>(
         );
 
     // Call renderer open hook
-    appendToBuffer(renderOpenHook?.(renderContext));
+    appendToBuffer(renderOpenHook?.(rangeHookContext));
 
     let currentRangeIndex = 0;
     for (; currentRangeIndex < ranges.length; currentRangeIndex++) {
@@ -131,7 +133,7 @@ export function render<T, R = T, HC = unknown>(
     }
 
     // Finish rendering - call renderer close hook
-    appendToBuffer(renderCloseHook?.(renderContext));
+    appendToBuffer(renderCloseHook?.(rangeHookContext));
 
     // Final output
     return currentBuffer.emit();
@@ -139,6 +141,16 @@ export function render<T, R = T, HC = unknown>(
     //
     // Handlers
     //
+
+    function getRangeIndex(): number {
+        let rangeIndex = rangeIndexMap.get(currentRange);
+
+        if (rangeIndex === undefined) {
+            rangeIndexMap.set(currentRange, rangeIndex = rangeIndexMap.size);
+        }
+
+        return rangeIndex;
+    }
 
     function computeSegmentEnd() {
         // Lazy computation: if segmentEnd is -1, compute it
@@ -187,7 +199,7 @@ export function render<T, R = T, HC = unknown>(
         rangeSegmentStarts[index] = renderedOffset;
 
         // Call open hook (goes to current buffer, or parent if range hook exists)
-        appendToBuffer(hook.open?.(renderContext));
+        appendToBuffer(hook.open?.(rangeHookContext));
 
         // Check if this range uses range hook
         if (hook.wrap) {
@@ -210,11 +222,11 @@ export function render<T, R = T, HC = unknown>(
             currentBuffer = bufferStack.pop()!;
 
             // Emit the buffer content
-            appendToBuffer(hook.wrap(contentBuffer.emit(), renderContext));
+            appendToBuffer(hook.wrap(contentBuffer.emit(), rangeHookContext));
         }
 
         // Call close hook (goes to current buffer, which is parent after range processing)
-        appendToBuffer(hook.close?.(renderContext));
+        appendToBuffer(hook.close?.(rangeHookContext));
     };
 
     function renderChunk(offset: number) {
@@ -248,7 +260,7 @@ export function render<T, R = T, HC = unknown>(
         }
 
         // Always append to current buffer
-        appendToBuffer(textHook(substring, renderContext));
+        appendToBuffer(textHook(substring, rangeHookContext));
 
         renderedOffset = offset;
     }

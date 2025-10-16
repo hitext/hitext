@@ -182,6 +182,7 @@ The `context` object provides:
 - `column` – Current column number (1-based, updated as rendering progresses)
 - `start` – Current segment start position (where the current hook is called)
 - `end` – Current segment end position (where the segment will be interrupted or end)
+- `rangeIndex` – Unique index of the current range in the render session (useful for identifying range segments in the output)
 - `rangeText` – The text content of the current range (`source.slice(range.start, range.end)`)
 - `range` – The full range object being processed (contains original `start`, `end`, `type`, and `data`)
 - `data` – Custom data associated with the range (as provided by the generator, shortcut for `range.data`)

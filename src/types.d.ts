@@ -103,6 +103,7 @@ export type RangeHookContext<T = unknown> = {
     column: number;
     start: number;
     end: number;
+    rangeIndex: number;
     rangeText: string;
     range: GeneratedRange<T>;
     data: T;
