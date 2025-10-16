@@ -51,25 +51,20 @@ export interface GeneratedRange<Data = unknown> {
 // Render range hooks
 //
 
-export type RangeHooksMap<Data, T, R = T, HC = unknown> = Record<
+export type RangeHooksMap<Data, T, R = T> = Record<
     RangeMarker,
-    Partial<RangeHooks<Data, T, R, HC>>
->;
-export type RangeHooksNormalizedMap<Data, T, R = T, HC = unknown> = Record<
-    RangeMarker,
-    RangeHooks<Data, T, R, HC>
+    RangeHooks<Data, T, R>
 >;
 export type RangeHooksDefinitionMap<Data, T, R = T, HC = unknown> = Record<
     RangeMarker,
     RangeHooksDefinition<Data, T, R, HC> | undefined | null
 >;
-
 export type RangeHooksDefinition<Data = unknown, T, R = T, HC = unknown> =
     | Partial<RangeHooks<Data, T, R>>
     | RangeHooksShortcut<Data, T, R>
     | RangeHooksFactory<Data, T, R, HC>;
 export type RangeHooksShortcut<Data = unknown, T, R = T> =
-    Exclude<RangeHooks<Data, T, R>['content'], undefined | null>;
+    Exclude<RangeHookWrap<Data, T, R>, undefined | null>;
 export type RangeHooksFactory<Data = unknown, T, R = T, HC = unknown> = {
     createRangeHooks: (createRangeHooksContext: HC) =>
         | Partial<RangeHooks<Data, T, R>>
@@ -79,11 +74,27 @@ export type RangeHooksFactory<Data = unknown, T, R = T, HC = unknown> = {
 };
 
 export interface RangeHooks<Data = unknown, T, R = T> {
-    open: (context: RangeHookContext<Data>) => T | string | null;
-    close: (context: RangeHookContext<Data>) => T | string | null;
-    content: ((content: T | R, context: RangeHookContext<Data>) => T | string | null) | null | undefined;
-    text: (sourceChunk: string, context: RangeHookContext<Data>) => string | null;
+    open: RangeHookOpen<Data, T> | null;
+    close: RangeHookClose<Data, T> | null;
+    content: RangeHookWrap<Data, T, R> | null;
+    text: RangeHookText<Data, T> | null;
 }
+
+export type RangeHookOpen<Data, T> = (
+    context: RangeHookContext<Data>
+) => T | string | null | undefined;
+export type RangeHookClose<Data, T> = (
+    context: RangeHookContext<Data>
+) => T | string | null | undefined;
+export type RangeHookWrap<Data, T, R = T> = (
+    content: T | R,
+    context: RangeHookContext<Data>
+) => T | R | string | null | undefined;
+export type RangeHookText<Data, T> = (
+    sourceChunk: string,
+    context: RangeHookContext<Data>
+) => T | string | null | undefined;
+
 export type RangeHookContextDump<T> = Omit<RangeHookContext<T>, 'dump'>;
 export interface RangeHookContext<T = unknown> {
     offset: number;
@@ -102,9 +113,10 @@ export interface RangeHookContext<T = unknown> {
 
 export interface RenderHooks<T, R = T, HC = unknown> {
     createBuffer(): RenderBuffer<T, R>;
-    text(sourceChunk: string): string;
+
     open(context: RangeHookContext): T | null;
     close(context: RangeHookContext): T | null;
+    text: RangeHookText<any, T>;
 
     rangeHooksContext?: HC;
 }

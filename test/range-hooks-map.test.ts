@@ -5,7 +5,7 @@ import {
     resolveRangeHooksDefinition,
     html
 } from '../src/index.js';
-import type { RangeHooksDefinition } from '../src/types.d.js';
+import type { RangeHooks, RangeHooksDefinition } from '../src/types.d.js';
 
 describe('Range Hooks Map Helpers', () => {
     describe('createRangeHooksMapFromLayers', () => {
@@ -83,7 +83,10 @@ describe('Range Hooks Map Helpers', () => {
             const resolved = resolveRangeHooksDefinition(shortcut, {});
 
             deepStrictEqual(resolved, {
-                content: shortcut
+                open: null,
+                close: null,
+                content: shortcut,
+                text: null
             });
         });
 
@@ -94,13 +97,18 @@ describe('Range Hooks Map Helpers', () => {
             };
             const resolved = resolveRangeHooksDefinition(hooks, {});
 
-            deepStrictEqual(resolved, hooks);
-            strictEqual(resolved, hooks);
+            deepStrictEqual(resolved, {
+                open: hooks.open,
+                close: hooks.close,
+                content: null,
+                text: null
+            });
         });
 
         it('should resolve factory definitions', () => {
+            let hooks: Partial<RangeHooks<any, any, any>> | undefined;
             const factory: RangeHooksDefinition<any, any, any, { prefix: string }> = {
-                createRangeHooks: ({ prefix }) => ({
+                createRangeHooks: ({ prefix }) => (hooks = {
                     open: () => `<${prefix}>`,
                     close: () => `</${prefix}>`
                 })
@@ -110,9 +118,13 @@ describe('Range Hooks Map Helpers', () => {
                 rangeHooksContext: { prefix: 'custom' }
             });
 
-            strictEqual(typeof resolved, 'object');
-            strictEqual(typeof resolved?.open, 'function');
-            strictEqual(typeof resolved?.close, 'function');
+            deepStrictEqual(resolved, {
+                open: hooks?.open,
+                close: hooks?.close,
+                content: null,
+                text: null
+            });
+
             strictEqual(resolved?.open?.({} as any), '<custom>');
             strictEqual(resolved?.close?.({} as any), '</custom>');
         });
@@ -136,50 +148,80 @@ describe('Range Hooks Map Helpers', () => {
             const marker1 = Symbol('plain');
             const marker2 = Symbol('shortcut');
             const marker3 = Symbol('factory');
+            const marker1hooks = {
+                open: () => '<a>',
+                close: () => '</a>'
+            };
+            const marker2hooks = (content: string) => `[${content}]`;
+            const marker3hooks = {
+                open: () => '<b>',
+                close: () => '</b>',
+                text: (chunk: string) => chunk.toUpperCase()
+            };
 
             const definitionMap = {
-                [marker1]: {
-                    open: () => '<a>',
-                    close: () => '</a>'
-                },
-                [marker2]: (content: string) => `[${content}]`,
+                [marker1]: marker1hooks,
+                [marker2]: marker2hooks,
                 [marker3]: {
-                    createRangeHooks: () => ({
-                        open: () => '<b>',
-                        close: () => '</b>'
-                    })
+                    createRangeHooks: () => marker3hooks
                 }
             };
 
             const resolved = resolveRangeHooksMap(definitionMap, {});
 
-            // All three should be resolved
-            strictEqual(Object.getOwnPropertySymbols(resolved).length, 3);
-
-            // Plain object should be unchanged
-            strictEqual(resolved[marker1], definitionMap[marker1]);
-
-            // Shortcut should be converted
-            strictEqual(typeof resolved[marker2]?.content, 'function');
-
-            // Factory should be resolved
-            strictEqual(typeof resolved[marker3]?.open, 'function');
+            deepStrictEqual(resolved, Object.assign(Object.create(null), {
+                [marker1]: {
+                    open: marker1hooks.open,
+                    close: marker1hooks.close,
+                    content: null,
+                    text: null
+                },
+                [marker2]: {
+                    open: null,
+                    close: null,
+                    content: marker2hooks,
+                    text: null
+                },
+                [marker3]: {
+                    open: marker3hooks.open,
+                    close: marker3hooks.close,
+                    content: null,
+                    text: marker3hooks.text
+                }
+            }));
         });
 
-        it('should skip missing definitions', () => {
+        it('should skip null/undefined definitions', () => {
+            const shortcut = (content: string) => `<a>${content}</a>`;
             const marker1 = Symbol('valid');
-            const marker2 = Symbol('missing');
+            const marker2 = Symbol('empty');
+            const marker3 = Symbol('null');
+            const marker4 = Symbol('undefined');
 
             const definitionMap = {
-                [marker1]: (content: string) => `<a>${content}</a>`
+                [marker1]: shortcut,
+                [marker2]: {},
+                [marker3]: null,
+                [marker4]: undefined
             };
 
             const resolved = resolveRangeHooksMap(definitionMap, {});
 
             // Only valid definition should be present
-            strictEqual(Object.getOwnPropertySymbols(resolved).length, 1);
-            strictEqual(typeof resolved[marker1]?.content, 'function');
-            strictEqual(resolved[marker2], undefined);
+            deepStrictEqual(resolved, Object.assign(Object.create(null), {
+                [marker1]: {
+                    open: null,
+                    close: null,
+                    content: shortcut,
+                    text: null
+                },
+                [marker2]: {
+                    open: null,
+                    close: null,
+                    content: null,
+                    text: null
+                }
+            }));
         });
 
         it('should pass rangeHooksContext to factories', () => {
