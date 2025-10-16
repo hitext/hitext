@@ -77,7 +77,6 @@ Node >=14.14 is required (see `engines` field). The package ships dual ESM/CJS e
 ## Why not just mutate strings?
 
 String or DOM mutation approaches break as soon as overlapping decorations appear (e.g. highlight + selection + diff). HiText builds a *single* well‑nested tree from independent intent declarations (ranges) – no intermediate markup parsing, no regex cascading on generated HTML.
-```
 
 ## Quick Start
 
