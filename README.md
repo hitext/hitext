@@ -7,66 +7,52 @@
 [![NPM version](https://img.shields.io/npm/v/hitext.svg)](https://www.npmjs.com/package/hitext)
 [![Coverage Status](https://coveralls.io/repos/github/hitext/hitext/badge.svg?branch=master)](https://coveralls.io/github/hitext/hitext?branch=master)
 
-HiText is a flexible text decoration engine that allows you to **combine multiple text decorators** (like syntax highlighters, search matches, line numbers, etc.) and output the result in any format (HTML, terminal colors, etc.). 
+A powerful text decoration engine that enables combining multiple decorators (syntax highlighting, search highlighting, line numbers, diagnostics, search results, etc.) **without conflicts**. HiText uses a range-based approach: decorators generate ranges independently, then a renderer deterministically merges them and produces output in any format (HTML, terminal, DOM, JSX, or custom).
 
-Instead of applying decorations directly to text (which makes combining them difficult), HiText uses a two-phase approach:
-1. **Generators** analyze text and produce ranges (e.g., "characters 5-10 are a keyword")
-2. **Printers** use these ranges to output decorated text in your desired format
+> Current version: 1.0.0 beta – API is close to stable. Feedback & issues welcome.
 
-This separation makes it trivial to combine any number of decorations without conflicts.
+## Table of Contents
 
-> **Note:** This package is ESM-only and requires Node.js 14.14.0 or higher.
+1. [Why HiText?](#why-hitext)
+2. [Features](#features)
+3. [Installation](#installation)
+4. [Quick Start](#quick-start)
+5. [Core Concepts](#core-concepts)
+    - [Ranges](#ranges)
+    - [Range Generators](#range-generators)
+    - [Range Hooks](#range-hooks)
+    - [Renderers](#renderers)
+    - [Pipeline](#pipeline)
+6. [Examples](#examples)
+7. [AST-Based Highlighting (No CST Required)](#ast-based-highlighting-no-cst-required)
+8. [Advanced Usage](#advanced-usage)
+9. [API Reference](#api-reference)
+10. [TypeScript Support](#typescript-support)
+11. [Design Principles & Range Ordering](#design-principles--range-ordering)
+12. [Performance Tips](#performance-tips)
+13. [FAQ](#faq)
+14. [License](#license)
 
-<!-- TOC depthfrom:2 -->
+## Why HiText?
 
-- [Why?](#why)
-- [Features](#features)
-- [Installation](#installation)
-- [Quick Start](#quick-start)
-- [Core Concepts](#core-concepts)
-- [Examples](#examples)
-    - [Basic highlighting](#basic-highlighting)
-    - [Search highlighting](#search-highlighting)
-    - [Line numbers](#line-numbers)
-    - [Combining decorators](#combining-decorators)
-- [Setup Patterns](#setup-patterns)
-- [Built-in generators](#built-in-generators)
-    - [lines](#lines)
-    - [lineContents](#linecontents)
-    - [newlines](#newlines)
-    - [matches(pattern)](#matchespattern)
-- [Built-in printers](#built-in-printers)
-    - [html](#html)
-    - [tty](#tty)
-- [API Reference](#api-reference)
-- [License](#license)
+When applying multiple text decorations sequentially (like adding HTML tags for syntax highlighting, then search highlighting, then line numbers), each decoration can interfere with the previous ones. For example, if you add `<span>` tags for syntax, then try to add more tags for search results, your search might match inside the tags you just added, or produce invalid nesting.
 
-<!-- /TOC -->
+**HiText solves this by separating concerns:**
 
-## Why?
+1. **Range Generation** – Each decorator analyzes the **original source text** and generates ranges (e.g., "characters 5-10 are a keyword")
+2. **Rendering** – A renderer merges all ranges intelligently and outputs properly nested, non-conflicting formatted text
 
-**The Problem:** Imagine you want to display JavaScript code with:
-- Syntax highlighting
-- Search term highlighting
-- Line numbers
-
-If you apply these decorations sequentially by inserting HTML tags, each step interferes with the next. The syntax highlighter might split your search term highlighting, or line numbers might break your carefully crafted HTML structure.
-
-**The Solution:** HiText uses a **range-based approach**:
-1. Each decorator generates ranges independently (e.g., "characters 10-15 are a string", "characters 12-14 match search")
-2. HiText intelligently merges overlapping ranges
-3. A printer generates the final output with proper nesting
-
-This means decorators never interfere with each other, and you can add or remove them freely.
+This means decorators work on clean source text and never interfere with each other, allowing you to freely combine any number of them. You describe *what* should be annotated; HiText handles *how* they nest.
 
 ## Features
 
 - ✅ **Combine unlimited decorators** without conflicts
-- ✅ **Format-agnostic** - Output to HTML, terminal, or create custom printers
-- ✅ **Zero dependencies** (except for ANSI terminal colors)
+- ✅ **Multiple output formats** – HTML, terminal (TTY), DOM nodes, JSX, or plain text
+- ✅ **Flexible API** – Use static ranges, generator functions, or build complex pipelines
 - ✅ **TypeScript support** with full type definitions
-- ✅ **Simple decorator API** - Just return ranges, HiText handles the rest
-- ✅ **Smart range merging** - Proper nesting and overlap handling
+- ✅ **Zero dependencies**
+- ✅ **Dual package** – Supports both ESM and CommonJS
+- ✅ **Smart range merging** – Proper nesting and overlap handling
 
 ## Installation
 
@@ -74,687 +60,1389 @@ This means decorators never interfere with each other, and you can add or remove
 npm install hitext
 ```
 
+ESM (recommended):
+
+```js
+import { html, rangeMatch } from 'hitext';
+```
+
+CommonJS:
+
+```js
+const { html, rangeMatch } = require('hitext');
+```
+
+Node >=14.14 is required (see `engines` field). The package ships dual ESM/CJS entries with types.
+
+## Why not just mutate strings?
+
+String or DOM mutation approaches break as soon as overlapping decorations appear (e.g. highlight + selection + diff). HiText builds a *single* well‑nested tree from independent intent declarations (ranges) – no intermediate markup parsing, no regex cascading on generated HTML.
+```
+
 ## Quick Start
 
 ```js
-import hitext from 'hitext';
+import { html, rangeMatch } from 'hitext';
 
-// Highlight all occurrences of "world"
-const highlight = hitext()
-    .use(hitext.gen.matches('world'), {
-        html: {
-            open: () => '<mark>',
-            close: () => '</mark>'
-        }
-    })
-    .printer('html');
+// Create a pipeline with HTML renderer
+const highlight = html()
+    .addLayer(
+        rangeMatch('world'),
+        (content) => `<mark>${content}</mark>`
+    );
 
-console.log(highlight('Hello world! Welcome to the world.'));
+console.log(highlight.render('Hello world! Welcome to the world.'));
 // Hello <mark>world</mark>! Welcome to the <mark>world</mark>.
 ```
 
+This example highlights all occurrences of "world" in the text. The HTML renderer automatically escapes special characters and properly nests the markup.
+
+> **Tip:** Use the compact function form `(content) => ...` for simple wrapping. It's more readable and works consistently across all renderer types (HTML, DOM, JSX, JSON). For more control, use `{ open, close }` or the full `{ content, open, close, text }` hooks object.
+
+> Tip: Every `addLayer()` call returns a **new pipeline**. Reuse the pipeline object for multiple `render()` calls for best performance.
+
 ## Core Concepts
 
-### Generators
+### Ranges
 
-A **generator** analyzes text and produces ranges. Each range has:
-- `start` - Starting position (inclusive)
-- `end` - Ending position (exclusive)
-- `data` - Optional metadata (like line number, token type, etc.)
+A **range** defines a segment of text with optional data:
 
 ```js
-// Simple generator function
+// Object form: { start, end, data? }
+{ start: 0, end: 5 }
+{ start: 0, end: 5, data: { type: 'keyword' } }
+
+// Tuple form: [start, end, data?]
+[0, 5]
+[0, 5, { type: 'keyword' }]
+```
+
+**Note:** All positions use zero-based indexing and the `end` is exclusive (like typical JS string slice semantics). Ensure `start <= end`; invalid ranges are ignored.
+
+### Range Generators
+
+A **range generator** is a function that analyzes source text and produces ranges:
+
+```js
 function highlightNumbers(source, createRange) {
     const regex = /\d+/g;
     let match;
+    
     while (match = regex.exec(source)) {
         createRange(match.index, match.index + match[0].length);
     }
 }
 ```
 
-### Printers
+Built-in generators:
+- `rangeMatch(pattern)` – Find pattern matches (string or RegExp). Automatically adds 'g' flag to RegExp patterns if not present.
+- `rangeLines` – Split text into lines, including newline characters (line numbers stored in `data` as 1-based integers)
+- `rangeLineContents` – Line content without newline characters (line numbers stored in `data` as 1-based integers)
+- `rangeNewlines` – Just the newline characters (`\n`, `\r`, or `\r\n`)
 
-A **printer** defines how to render ranges for a specific output format. Each printer has three hooks:
+### Range Hooks
 
-- `open(context)` - Returns the opening markup/tag for a range
-- `close(context)` - Returns the closing markup/tag for a range
-- `print(chunk, context)` - **Important**: Transforms/escapes text content before output
+**Range hooks** define how ranges are rendered for a specific output format. Only hooks you need must be provided; missing ones default to no output / identity.
+
+- `open(context)` – Returns opening markup/tag for a range
+- `close(context)` – Returns closing markup/tag for a range  
+- `content(renderedContent, context)` – Wraps the rendered content of the range (alternative to open/close)
+- `text(chunk, context)` – Transforms text chunks within the range
 
 ```js
-const printer = {
-    html: {
-        open: (context) => '<span class="number">',
-        close: (context) => '</span>',
-        print: (chunk) => chunk
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')  // Escape HTML entities!
-    }
-};
+{
+    open: ({ data }) => `<span class="${data.type}">`,
+    close: () => '</span>'
+}
 ```
 
-> **Why `print` matters:** The `print` hook processes the actual text content. For HTML output, this is where you escape special characters (`<`, `>`, `&`) to prevent breaking your markup. The built-in HTML printer does this automatically.
+**When to use `content` vs `open`/`close`:**
+- **Prefer `content`** – Works consistently across all renderers (string, DOM, JSX, JSON), more readable and straightforward
+- Use `open`/`close` for side effects or when you need to emit something before/after a range without wrapping (e.g., adding markers, inserting nodes)
+- Note: `open`/`close` is slightly more performant (avoids extra buffer), but the difference is negligible in most cases
+
+**Understanding segments:** When ranges overlap, they are split into segments at interruption points. Each hook (`open`, `close`, `content`) is called once per segment with the segment's boundaries in `context.start` and `context.end`. For example, if range A [1-8] is interrupted by range B [5-10], range A will have two segments: [1-5] and [5-8], and its hooks will be called twice with different segment boundaries each time.
+
+**Function shortcut:** If you only need the `content` hook, you can pass the function directly:
+
+```js
+// Instead of: { content: (renderedContent) => `<mark>${renderedContent}</mark>` }
+// You can use:
+(renderedContent) => `<mark>${renderedContent}</mark>`
+```
+
+The `context` object provides:
+- `offset` – Current position in source text (updated as rendering progresses)
+- `line` – Current line number (1-based, updated as rendering progresses)
+- `column` – Current column number (1-based, updated as rendering progresses)
+- `start` – Current segment start position (where the current hook is called)
+- `end` – Current segment end position (where the segment will be interrupted or end)
+- `data` – Custom data associated with the range (as provided by the generator)
+- `range` – The full range object being processed (contains original `start`, `end`, `type`, and `data`)
+- `dump()` – Returns a snapshot of all context properties (useful for debugging)
+
+**Note about segments:** When ranges overlap, they are split into segments. Each segment represents a portion of a range between interruption points. The `start` and `end` in the context represent the *segment* boundaries (where hooks are called), not the full range boundaries. To access the original range boundaries, use `context.range.start` and `context.range.end`.
+
+**Example:**
+```js
+// Range A: [1, 8], Range B: [5, 10] (B interrupts A)
+// A is split into two segments: [1, 5] and [5, 8]
+{
+    content(renderedContent, context) {
+        console.log(context.start, context.end);        // Segment boundaries
+        console.log(context.range.start, context.range.end); // Original range: [1, 8]
+        console.log(context.dump());                    // All context properties
+        return renderedContent;
+    }
+}
+```
+
+**Note:** The `offset`, `line`, and `column` values are dynamic and reflect the current rendering position, while `data` and `range` are specific to the range being processed. The `start` and `end` values represent the current segment boundaries.
+
+### Renderers
+
+A **renderer** creates a pipeline for a specific output format:
+
+- `string()` – Plain text string output (base renderer, no escaping). Use for plain text decoration or generating formats like Markdown.
+- `html()` – HTML string output (extends string renderer, auto-escapes `<`, `>`, `&` in text content)
+- `dom(options?)` – DOM DocumentFragment (for browser environments)
+- `tty()` – Terminal output with ANSI color codes
+- `jsx()` – JSX children array (for React, Preact, Solid, etc.)
+
+Each renderer provides a chainable API for building decoration pipelines. The `string()` renderer serves as the foundation for other text-based renderers. All renderers share the same pipeline semantics.
+
+Example:
+
+```js
+import { html } from 'hitext';
+
+const pipeline = html();
+```
 
 ### Pipeline
 
-Chain decorators together to create a processing pipeline:
+A **pipeline** is a renderer with layers of decorators:
 
 ```js
-const pipeline = hitext()
-    .use(generator1, printer1)
-    .use(generator2, printer2)
-    .printer('html');
-
-const result = pipeline(sourceText);
+const pipeline = html()
+    .addLayer(ranges1, hooks1)
+    .addLayer(ranges2, hooks2)
+    .render(sourceText);
 ```
 
-### Plugins
+Pipeline methods:
+- `addLayer(ranges, hooks)` – Add a decoration layer (**returns new pipeline**, immutable)
+- `render(source, options?)` – Process source text and return formatted output
+- `ranges(source, options?)` – Get generated ranges without rendering
+- `rangeHooksMap()` – Get the complete range hooks map
 
-A **plugin** is an object that combines a generator with its printer configuration:
-
-```js
-const myPlugin = {
-    name: 'my-plugin',           // Optional: plugin name for debugging
-    ranges: generatorFunction,   // Generator function or array of ranges
-    printer: {                   // Printer configuration
-        html: { /* ... */ },
-        tty: { /* ... */ }
-    }
-};
-```
-
-You can also use range tuples instead of a generator:
-
-```js
-const plugin = {
-    name: 'highlight-specific',
-    ranges: [[0, 5], [10, 15]],  // Array of [start, end, data?] tuples
-    printer: { /* ... */ }
-};
-```
+**Note:** Pipelines are immutable. Each `addLayer()` call returns a new pipeline without modifying the original. (Internally, a shallow copy of layer metadata is created; no expensive cloning of ranges occurs until `render()`.)
 
 ## Examples
 
-### Basic highlighting
+### Basic Text Highlighting
 
-Highlight specific words or patterns:
+Highlight specific words:
 
 ```js
-import hitext from 'hitext';
+import { html, rangeMatch } from 'hitext';
 
-const highlighter = hitext()
-    .use(hitext.gen.matches(/function|const|let|var/), {
-        html: {
-            open: () => '<span class="keyword">',
-            close: () => '</span>'
-        }
-    });
+const highlighter = html()
+    .addLayer(
+        rangeMatch(/function|const|let|var/g),
+        (content) => `<span class="keyword">${content}</span>`
+    );
 
-console.log(highlighter.print('const x = function() {}', 'html'));
+console.log(highlighter.render('const x = function() {}'));
 // <span class="keyword">const</span> x = <span class="keyword">function</span>() {}
 ```
 
-### Search highlighting
-
-Highlight search results in text:
+### Search Highlighting
 
 ```js
-import hitext from 'hitext';
+import { html, rangeMatch } from 'hitext';
 
 function createSearchHighlighter(searchTerm) {
-    return hitext()
-        .use(hitext.gen.matches(searchTerm), {
-            html: {
-                open: () => '<mark class="search-result">',
-                close: () => '</mark>'
-            },
-            tty: ({ createStyle }) => createStyle('bgYellow', 'black')
-        });
+    return html()
+        .addLayer(
+            rangeMatch(new RegExp(searchTerm, 'gi')),
+            (content) => `<mark class="search-match">${content}</mark>`
+        );
 }
 
 const highlight = createSearchHighlighter('error');
-const text = 'Error: Connection error on line 42';
-
-console.log(highlight.print(text, 'html'));
-// Error: Connection <mark class="search-result">error</mark> on line 42
-
-console.log(highlight.print(text, 'tty'));
-// (Shows highlighted text in terminal with yellow background)
+console.log(highlight.render('Error: Connection error on line 42'));
+// <mark class="search-match">Error</mark>: Connection <mark class="search-match">error</mark> on line 42
 ```
 
-### Line numbers
-
-Add line numbers to code:
+### Line Numbers
 
 ```js
-import hitext from 'hitext';
+import { html, rangeLines } from 'hitext';
 
-const withLineNumbers = hitext()
-    .use(hitext.gen.lines, {
-        html: {
-            open: ({ line }) => `<div class="line" data-line="${line}">`,
+const withLineNumbers = html()
+    .addLayer(
+        rangeLines,
+        {
+            open: ({ data: lineNum }) => `<div class="line" data-line="${lineNum}">`,
             close: () => '</div>'
         }
-    });
+    );
 
 const code = 'function hello() {\n  return "world";\n}';
-console.log(withLineNumbers.print(code, 'html'));
+console.log(withLineNumbers.render(code));
 // <div class="line" data-line="1">function hello() {
 // </div><div class="line" data-line="2">  return "world";
 // </div><div class="line" data-line="3">}</div>
 ```
 
-### Combining decorators
+### Plain Text Decoration with String Renderer
 
-Combine multiple decorations seamlessly:
+The string renderer is perfect for generating plain text formats like Markdown:
 
 ```js
-import hitext from 'hitext';
+import { string, rangeMatch } from 'hitext';
 
-const codeDisplay = hitext()
-    // Highlight keywords
-    .use(hitext.gen.matches(/function|return|const/), {
-        html: {
-            open: () => '<span class="keyword">',
-            close: () => '</span>'
-        }
-    })
-    // Highlight strings
-    .use(hitext.gen.matches(/"[^"]*"/), {
-        html: {
-            open: () => '<span class="string">',
-            close: () => '</span>'
-        }
-    })
-    // Add line numbers
-    .use(hitext.gen.lineContents, {
-        html: {
-            open: ({ line }) => `<span class="line-number">${line}</span><span class="line-content">`,
-            close: () => '</span>'
-        }
-    })
-    .printer('html');
+// Generate Markdown from search results
+const markdownHighlight = string()
+    .addLayer(
+        rangeMatch(/important|critical|warning/gi),
+        (content) => `**${content}**`  // Wrap in Markdown bold syntax
+    );
 
-const code = 'const greet = function() {\n  return "Hello";\n}';
-console.log(codeDisplay(code));
-// Properly nested HTML with keywords, strings, and line numbers all working together
+console.log(markdownHighlight.render('This is important and critical information.'));
+// This is **important** and **critical** information.
+
+// Create emphasis with custom markers
+const emphasize = string()
+    .addLayer(
+        rangeMatch(/_([^_]+)_/g),
+        (content) => `*${content}*`  // Convert underscores to asterisks
+    );
+
+console.log(emphasize.render('This is _emphasized_ text.'));
+// This is *_emphasized_* text.
 ```
 
-### Custom generator
+### Using Range Hooks
 
-Create your own generator to highlight TODO comments:
+The `content` hook wraps the rendered content of a range segment (alternative to `open`/`close`):
 
 ```js
-import hitext from 'hitext';
+import { html, rangeMatch } from 'hitext';
 
-function todoGenerator(source, createRange) {
-    const regex = /(TODO|FIXME|NOTE):[^\n]*/gi;
-    let match;
-    while (match = regex.exec(source)) {
-        createRange(match.index, match.index + match[0].length, {
-            type: match[1].toUpperCase()
-        });
+const highlighter = html()
+    .addLayer(
+        rangeMatch(/\*\*(.+?)\*\*/g),
+        {
+            content: (renderedContent) => `<strong>${renderedContent}</strong>`
+        }
+    );
+
+console.log(highlighter.render('This is **bold** text'));
+// This is <strong>**bold**</strong> text
+```
+
+**Using function shortcut:** When you only need the `content` hook, pass the function directly:
+
+```js
+const highlighter = html()
+    .addLayer(
+        rangeMatch(/\*\*(.+?)\*\*/g),
+        (renderedContent) => `<strong>${renderedContent}</strong>` // Function shortcut!
+    );
+```
+
+**Accessing segment vs range boundaries:**
+
+When ranges overlap, they are split into segments. Use `context.start`/`context.end` for segment boundaries, and `context.range.start`/`context.range.end` for the original range boundaries:
+
+```js
+import { html } from 'hitext';
+
+const ranges = [
+    { type: 'outer', start: 0, end: 10, data: { id: 'A' } },
+    { type: 'inner', start: 5, end: 15, data: { id: 'B' } }
+];
+
+const highlighter = html()
+    .addLayer(ranges, {
+        outer: {
+            content(renderedContent, context) {
+                // First call: segment [0, 5] (before B starts)
+                // Second call: segment [5, 10] (overlapping with B)
+                console.log(`Segment: [${context.start}, ${context.end}]`);
+                console.log(`Full range: [${context.range.start}, ${context.range.end}]`);
+                return renderedContent;
+            }
+        },
+        inner: {
+            content(renderedContent, context) {
+                // Only one call: segment [5, 15]
+                console.log(`Segment: [${context.start}, ${context.end}]`);
+                console.log(`Full range: [${context.range.start}, ${context.range.end}]`);
+                return renderedContent;
+            }
+        }
+    });
+```
+
+**Debugging with `dump()`:**
+
+Use `context.dump()` to get a snapshot of all context properties for debugging:
+
+```js
+const highlighter = html()
+    .addLayer(ranges, {
+        content(renderedContent, context) {
+            console.log(context.dump());
+            // { offset: 5, line: 1, column: 6, start: 0, end: 5, 
+            //   data: {...}, range: {...} }
+            return renderedContent;
+        }
+    });
+```
+
+### Combining Multiple Decorators
+
+HiText's power lies in seamlessly combining multiple decorators that work on the original source text:
+
+```js
+import { html, rangeMatch, rangeLines } from 'hitext';
+
+const codeDisplay = html()
+    // Layer 1: Add line numbers
+    .addLayer(
+        rangeLines,
+        {
+            open: ({ data: lineNum }) => `<div class="line" data-line="${lineNum}">`,
+            close: () => '</div>'
+        }
+    )
+    // Layer 2: Highlight keywords
+    .addLayer(
+        rangeMatch(/\b(const|function|return)\b/g),
+        (content) => `<span class="keyword">${content}</span>`
+    )
+    // Layer 3: Highlight strings
+    .addLayer(
+        rangeMatch(/"[^"]*"/g),
+        (content) => `<span class="string">${content}</span>`
+    );
+
+const code = 'const greet = function() {\n  return "Hello";\n}';
+console.log(codeDisplay.render(code));
+// <div class="line" data-line="1"><span class="keyword">const</span> greet = <span class="keyword">function</span>() {
+// </div><div class="line" data-line="2">  <span class="keyword">return</span> <span class="string">"Hello"</span>;
+// </div><div class="line" data-line="3">}</div>
+```
+
+All three decorators analyze the original source text independently, and HiText ensures they're properly nested in the output without conflicts.
+
+## AST-Based Highlighting (No CST Required)
+
+Many syntax highlighters build or depend on a Concrete Syntax Tree (CST) that includes whitespace, comments, and exact token boundaries. Constructing / preserving a CST can be heavy, especially if you only need highlighting & lightweight annotations.
+
+With HiText you can skip generating a CST: produce ranges directly from an Abstract Syntax Tree (AST) plus auxiliary token information (if available) and apply them to the original source. This keeps parsing logic separate while still enabling rich combined decorations (syntax, diagnostics, search hits, selections, VCS blame, etc.).
+
+### Why this works
+
+AST nodes (or tokens) already contain `start` / `end` offsets (common in parsers like Acorn, Babel, SWC, TypeScript, Esprima). You can walk the AST and emit ranges based on semantic roles instead of reconstructing concrete text. Whitespace and comments simply remain undecorated segments; other layers (e.g. comment highlighting or TODO markers) can supply those separately.
+
+### Basic pattern
+
+1. Parse source → obtain AST with node offsets
+2. Walk nodes and emit ranges (e.g. keywords, identifiers, literals)
+3. Add additional layers (diagnostics, search, line numbers, lint hints)
+4. Render once – HiText merges everything safely
+
+### Example (TypeScript / Babel style offsets)
+
+```js
+import { html } from 'hitext';
+import * as acorn from 'acorn';
+
+function astSyntaxRanges(source, createRange) {
+    const ast = acorn.parse(source, { ecmaVersion: 'latest', ranges: true });
+
+    walk(ast, node => {
+        switch (node.type) {
+            case 'FunctionDeclaration':
+                if (node.id) createRange(node.id.start, node.id.end, 'fn');
+                break;
+            case 'VariableDeclarator':
+                if (node.id) createRange(node.id.start, node.id.end, 'var');
+                break;
+            case 'Literal':
+                createRange(node.start, node.end, 'lit');
+                break;
+        }
+    });
+}
+
+// Minimal walker (depth-first)
+function walk(node, visit) {
+    visit(node);
+    for (const key in node) {
+        const value = node[key];
+        if (!value) continue;
+        if (Array.isArray(value)) {
+            for (const item of value) if (item && typeof item.type === 'string') walk(item, visit);
+        } else if (value && typeof value.type === 'string') {
+            walk(value, visit);
+        }
     }
 }
 
-const highlighter = hitext()
-    .use(todoGenerator, {
-        html: {
-            open: ({ data }) => `<span class="comment ${data.type.toLowerCase()}">`,
-            close: () => '</span>'
-        },
-        tty: ({ createStyleMap }) => createStyleMap({
-            'TODO': 'yellow',
-            'FIXME': 'red',
-            'NOTE': 'blue'
-        }, ({ data }) => data.type)
+const pipeline = html()
+    .addLayer(
+        astSyntaxRanges,
+        (content, { data }) => `<span class="${data}">${content}</span>`
+    );
+
+const source = 'function greet() { const x = 1; return x; }';
+console.log(pipeline.render(source));
+```
+
+// Same astSyntaxRanges generator can be reused with other renderers:
+//   jsx().addLayer(astSyntaxRanges, (content, { data }) => <span className={data}>{content}</span>)
+//   tty().addLayer(astSyntaxRanges, tty.createStyleMap({ fn: 'cyan', var: 'yellow', lit: 'magenta' }))
+
+### Layering diagnostics & hints
+
+```js
+const diagnostics = [
+    { start: 9, end: 14, severity: 'warn', message: 'Prefer arrow function' }
+];
+
+const withDiagnostics = pipeline.addLayer(
+    diagnostics.map(d => [d.start, d.end, d]),
+    (content, { data }) => `<span class="diag diag-${data.severity}" title="${data.message}">${content}</span>`
+);
+
+console.log(withDiagnostics.render(source));
+```
+
+### Benefits vs CST reconstruction
+
+| Aspect | CST Reconstruction | AST → Ranges (HiText) |
+| ------ | ------------------ | -------------------- |
+| Complexity | High (must preserve trivia) | Low (reuse parser offsets) |
+| Memory | Larger tree incl. trivia | Just offsets & metadata |
+| Extensibility | Hard to mix foreign layers | Arbitrary new layers | 
+| Maintenance | Parser-specific hacks | Generic offset walker |
+| Combination | Manual merge logic | Automatic nesting merge |
+
+### Other comparable approaches?
+
+Most existing highlighters either: (1) tokenize and inject markup directly (hard to blend multiple concerns), or (2) produce incremental token streams. HiText generalizes this by accepting *any* semantic layer as ranges. Instead of adopting a specialized “CST + printer” architecture for highlighting + annotations, you can: parse once → emit semantic ranges → add orthogonal layers (lint, search, selection, VCS) → render.
+
+If you later need whitespace-sensitive formatting, you can still introduce a formatter-specific CST without changing how highlighting layers work.
+
+### Terminal Output
+
+```js
+import { tty } from 'hitext';
+
+// Custom generator that captures log level in data
+function logLevelGenerator(source, createRange) {
+    const regex = /ERROR|WARN|INFO/g;
+    let match;
+    
+    while (match = regex.exec(source)) {
+        createRange(
+            match.index,
+            match.index + match[0].length,
+            match[0]  // Store matched text as data
+        );
+    }
+}
+
+const highlighter = tty()
+    .addLayer(
+        logLevelGenerator,
+        tty.createStyleMap({
+            'ERROR': ['red', 'bold'],
+            'WARN': 'yellow',
+            'INFO': 'blue'
+        })
+    );
+
+console.log(highlighter.render('ERROR: Failed\nWARN: Slow\nINFO: Done'));
+// Output with colored text in terminal
+```
+
+The TTY renderer provides helper functions for easy styling:
+- `tty.createStyle(...styles)` – Returns a factory wrapper for specific ANSI styles
+- `tty.createStyleMap(map, fetcher?)` – Returns a factory wrapper that maps data values to styles
+
+**Example with `createStyleMap`:**
+```js
+import { tty } from 'hitext';
+
+const highlighter = tty()
+    .addLayer(
+        // Ranges with data values
+        [
+            { start: 0, end: 5, data: 'error' },
+            { start: 6, end: 11, data: 'warning' }
+        ],
+        tty.createStyleMap({
+            'error': ['red', 'bold'],
+            'warning': 'yellow'
+        })
+    );
+
+// With custom fetcher to extract data from complex objects
+const highlighter2 = tty()
+    .addLayer(
+        [{ start: 0, end: 5, data: { level: 'error' } }],
+        tty.createStyleMap(
+            { 'error': 'red' },
+            ({ data }) => data.level  // Extract the level property
+        )
+    );
+```
+
+The factory wrapper pattern gives you access to the renderer's context for advanced use cases:
+
+```js
+// Manual factory for complex cases
+{
+    createRangeHooks: ({ createStyle, createStyleMap, pushStyle, popStyle }) => ({
+        open: () => { pushStyle({color: '\u001b[31m'}); return ''; },
+        close: () => { popStyle(); return ''; }
+    })
+}
+```
+
+The TTY renderer provides special context methods for styling:
+- `context.createStyle(...styles)` – Create hooks for specific ANSI styles
+- `context.createStyleMap(map, fetcher?)` – Map data values to styles
+- `context.pushStyle(style)` – Manually push a style to the stack
+- `context.popStyle()` – Manually pop a style from the stack
+
+Available style names: `black`, `red`, `green`, `yellow`, `blue`, `magenta`, `cyan`, `white`, `blackBright`, `redBright`, `greenBright`, `yellowBright`, `blueBright`, `magentaBright`, `cyanBright`, `whiteBright` (foreground colors), and corresponding background colors like `bgRed`, `bgBlue`, etc., plus modifiers like `bold` and `reset`.
+
+### DOM Rendering
+
+```js
+import { dom, rangeMatch } from 'hitext';
+
+const highlighter = dom()
+    .addLayer(
+        rangeMatch('important'),
+        {
+            open: () => {
+                const span = document.createElement('span');
+                span.className = 'highlight';
+                return span;
+            },
+            close: () => null
+        }
+    );
+
+const fragment = highlighter.render('This is important text');
+document.body.appendChild(fragment);
+```
+
+### JSX Rendering
+
+```jsx
+import { jsx, rangeMatch } from 'hitext';
+
+// Create JSX renderer - returns an array of JSX children
+const highlighter = jsx();
+
+// Use content hook to wrap matched text
+const MyComponent = () => {
+    const highlighted = highlighter
+        .addLayer(
+            rangeMatch(/important/g),
+            (renderedContent) => <mark>{renderedContent}</mark>
+        )
+        .render('This is important text');
+
+    // highlighted is an array: ['This is ', <mark>important</mark>, ' text']
+    return <div>{highlighted}</div>;
+};
+
+// Works with React, Preact, Solid, etc.
+const SearchHighlight = ({ text, searchTerm }) => {
+    const result = jsx()
+        .addLayer(
+            rangeMatch(new RegExp(searchTerm, 'gi')),
+            (content) => <span className="highlight">{content}</span>
+        )
+        .render(text);
+
+    return <div className="search-result">{result}</div>;
+};
+```
+
+The JSX renderer returns an array of JSX children (`JSXChild[]`) that can be used directly in any JSX element. Works with React, Preact, Solid, or any JSX implementation.
+
+### Custom Generator
+
+```js
+import { html } from 'hitext';
+
+// Generator to highlight TODO comments
+function todoGenerator(source, createRange) {
+    const regex = /(TODO|FIXME|NOTE):[^\n]*/gi;
+    let match;
+    
+    while (match = regex.exec(source)) {
+        createRange(
+            match.index,
+            match.index + match[0].length,
+            match[1].toUpperCase() // Store the marker type
+        );
+    }
+}
+
+const highlighter = html()
+    .addLayer(
+        todoGenerator,
+        (content, { data }) => `<span class="comment comment-${data.toLowerCase()}">${content}</span>`
+    );
+
+const code = `
+// TODO: Add error handling
+// FIXME: Memory leak here  
+// NOTE: Optimize later
+`;
+
+console.log(highlighter.render(code));
+```
+
+### Static Ranges
+
+You can pass ranges directly instead of using generators:
+
+```js
+import { html } from 'hitext';
+
+// Using array of tuples
+const highlight1 = html()
+    .addLayer(
+        [[0, 5], [12, 17]], // Highlight positions 0-5 and 12-17
+        (content) => `<mark>${content}</mark>`
+    );
+
+// Using array of range objects
+const highlight2 = html()
+    .addLayer(
+        [
+            { start: 0, end: 5, data: 'greeting' },
+            { start: 6, end: 11, data: 'noun' }
+        ],
+        (content, { data }) => `<span class="${data}">${content}</span>`
+    );
+
+console.log(highlight1.render('Hello world!'));
+// <mark>Hello</mark> <mark>world</mark>!
+
+console.log(highlight2.render('Hello world!'));
+// <span class="greeting">Hello</span> <span class="noun">world</span>!
+```
+
+### Render Options
+
+Pass options to all generators in the pipeline when calling `render()`:
+
+```js
+import { html } from 'hitext';
+
+function customGenerator(source, createRange, options) {
+    // Use options to customize behavior
+    const pattern = options?.pattern || /\w+/g;
+    let match;
+    
+    while (match = pattern.exec(source)) {
+        createRange(match.index, match.index + match[0].length);
+    }
+}
+
+const pipeline = html()
+    .addLayer(
+        customGenerator,
+        (content) => `<mark>${content}</mark>`
+    );
+
+// Pass options as second argument to render()
+console.log(pipeline.render('Hello world', { pattern: /world/g }));
+// Hello <mark>world</mark>
+```
+
+The same options object is passed to all generator functions in the pipeline, allowing you to configure multiple generators with a single options object.
+
+## Advanced Usage
+
+### Direct Rendering
+
+For one-off rendering without creating a pipeline:
+
+```js
+import { render } from 'hitext';
+
+const result = render(
+    'Hello world',
+    [
+        { type: 'highlight', start: 0, end: 5, data: null },
+        { type: 'highlight', start: 6, end: 11, data: null }
+    ],
+    {
+        highlight: {
+            open: () => '<mark>',
+            close: () => '</mark>'
+        }
+    },
+    {
+        text: (chunk) => chunk.replace(/</g, '&lt;') // HTML escape
+    }
+);
+```
+
+### Custom Renderer
+
+Create your own renderer for custom output formats:
+
+```js
+import { createRenderPipeline } from 'hitext';
+
+function createJsonRenderer() {
+    return createRenderPipeline(() => {
+        return {
+            createBuffer: () => ({
+                nodes: [],
+                append(child) { this.nodes.push(child); },
+                emit() { return this.nodes; }
+            }),
+            text: (chunk, { start, end }) => ({
+                type: 'text',
+                start,
+                end,
+                value: chunk
+            })
+        };
+    });
+}
+
+const pipeline = createJsonRenderer()
+    .addLayer([[0, 5]], {
+        content: (renderedContent, { start, end, data }) => ({
+            type: 'range',
+            start,
+            end,
+            data,
+            content: renderedContent
+        })
     });
 
-const code = '// TODO: Add error handling\n// FIXME: Memory leak here\n// NOTE: Optimize later';
-console.log(highlighter.print(code, 'html'));
+console.log(JSON.stringify(pipeline.render('Hello world'), null, 2));
 ```
 
-## Setup Patterns
+### Reusable Pipeline
 
-HiText supports multiple ways to set up a pipeline, giving you flexibility based on your needs.
-
-### Pattern 1: Direct initialization with plugins array
-
-Pass plugins directly when creating the pipeline:
+Create reusable pipeline builders:
 
 ```js
-import hitext from 'hitext';
+import { html, rangeMatch } from 'hitext';
 
-const pluginA = {
-    name: 'keywords',
-    ranges: keywordGenerator,
-    printer: keywordPrinter
-};
-
-const pluginB = {
-    name: 'strings',
-    ranges: stringGenerator,
-    printer: stringPrinter
-};
-
-// Initialize with plugins array and printer type
-const pipeline = hitext([pluginA, pluginB], 'html');
-const result = pipeline(sourceCode);
-```
-
-### Pattern 2: Chaining with `.use()`
-
-Build the pipeline step by step:
-
-```js
-import hitext from 'hitext';
-
-const pipeline = hitext()
-    .use(pluginA)
-    .use(pluginB)
-    .printer('html');
-
-const result = pipeline(sourceCode);
-```
-
-### Pattern 3: Using `hitext.use()` shorthand
-
-Skip the empty initialization:
-
-```js
-import hitext from 'hitext';
-
-const pipeline = hitext.use(pluginA)
-    .use(pluginB)
-    .printer('html');
-
-const result = pipeline(sourceCode);
-```
-
-### Pattern 4: Separate generator and printer
-
-Pass generator and printer as separate arguments:
-
-```js
-import hitext from 'hitext';
-
-const pipeline = hitext()
-    .use(generatorFunction, printerConfig)
-    .use(anotherGenerator, anotherPrinter)
-    .printer('html');
-```
-
-### Pattern 5: Plugin with inline configuration
-
-Create plugins on the fly:
-
-```js
-import hitext from 'hitext';
-
-const pipeline = hitext([
-    // Plugin as array: [generator, printer]
-    [myGenerator, myPrinter],
+function createCodeHighlighter(language) {
+    const keywords = {
+        javascript: /\b(const|let|var|function|return|if|else)\b/g,
+        python: /\b(def|class|import|from|return|if|else)\b/g
+    };
     
-    // Plugin as object
-    {
-        name: 'inline-plugin',
-        ranges: anotherGenerator,
-        printer: anotherPrinter
-    },
-    
-    // Plugin with range tuples
-    {
-        name: 'static-ranges',
-        ranges: [[0, 10], [20, 30]],
-        printer: highlightPrinter
-    }
-], 'html');
-```
-
-### Pattern 6: Override plugin printer
-
-Override a plugin's default printer when using it:
-
-```js
-import hitext from 'hitext';
-
-// Plugin with default printer
-const plugin = {
-    name: 'my-plugin',
-    ranges: myGenerator,
-    printer: {
-        html: {
-            open: () => '<span>',
-            close: () => '</span>'
-        }
-    }
-};
-
-// Override the printer when using the plugin
-const pipeline = hitext()
-    .use(plugin, {
-        html: {
-            open: () => '<strong>',
-            close: () => '</strong>'
-        }
-    })
-    .printer('html');
-```
-
-### Pattern 7: Set printer later
-
-Define the printer type after building the pipeline:
-
-```js
-import hitext from 'hitext';
-
-// Build pipeline without specifying printer
-const basePipeline = hitext([pluginA, pluginB]);
-
-// Create variants with different printers
-const htmlPipeline = basePipeline.printer('html');
-const ttyPipeline = basePipeline.printer('tty');
-
-// Or specify when calling
-const result1 = basePipeline(sourceCode, 'html');
-const result2 = basePipeline(sourceCode, 'tty');
-```
-
-## Built-in generators
-
-HiText includes several built-in generators for common use cases.
-
-### lines
-
-Generates ranges for entire lines (including newline characters). Useful for line-based decorations where you want to include the newline in the decorated range.
-
-```js
-import hitext from 'hitext';
-
-console.log(
-    hitext()
-        .use(hitext.gen.lines, {
-            html: {
-                open: ({ line }) => `<span title="line #${line}">`,
-                close: () => '</span>'
-            }
-        })
-        .print('foo\nbar', 'html')
-);
-// '<span title="line #1">foo\n</span><span title="line #2">bar</span>'
-```
-
-**Context properties:**
-- `line` - Line number (1-based)
-- `start`, `end` - Range boundaries
-- `offset` - Current position in source
-- `column` - Column number (1-based)
-
-### lineContents
-
-Generates ranges for line content only (excluding newline characters). Useful when you want to wrap content without including the newline.
-
-```js
-import hitext from 'hitext';
-
-console.log(
-    hitext()
-        .use(hitext.gen.lineContents, {
-            html: {
-                open: ({ line }) => `<span title="line #${line}">`,
-                close: () => '</span>'
-            }
-        })
-        .print('foo\nbar', 'html')
-);
-// '<span title="line #1">foo</span>\n<span title="line #2">bar</span>'
-```
-
-### newlines
-
-Generates ranges for newline characters only. Useful for custom newline rendering.
-
-```js
-import hitext from 'hitext';
-
-console.log(
-    hitext()
-        .use(hitext.gen.newlines, {
-            html: {
-                open: ({ line }) => `<span title="line #${line}">`,
-                close: () => '</span>'
-            }
-        })
-        .print('foo\nbar', 'html')
-);
-// 'foo<span title="line #1">\n</span>bar'
-```
-
-### matches(pattern)
-
-Generates ranges for all matches of a string or regular expression.
-
-**Parameters:**
-- `pattern` - String or RegExp to match
-
-**String matching:**
-
-```js
-import hitext from 'hitext';
-
-const matchPrinter = {
-    html: {
-        open: () => `<span class="match">`,
-        close: () => '</span>'
-    }
-};
-
-console.log(
-    hitext()
-        .use(hitext.gen.matches('world'), matchPrinter)
-        .print('Hello world! Hello world!', 'html')
-);
-// Hello <span class="match">world</span>! Hello <span class="match">world</span>!
-```
-
-**RegExp matching:**
-
-```js
-console.log(
-    hitext()
-        .use(hitext.gen.matches(/\w+/), matchPrinter)
-        .print('Hello world!', 'html')
-);
-// <span class="match">Hello</span> <span class="match">world</span>!
-```
-
-> **Note:** Regular expressions are automatically made global (the `g` flag is added if not present).
-
-## Built-in printers
-
-### html
-
-The HTML printer escapes HTML entities and provides hooks for generating HTML tags.
-
-**Printer hooks:**
-- `open(context)` - Returns opening HTML tag
-- `close(context)` - Returns closing HTML tag  
-- `print(chunk, context)` - Optional: Transform text chunks (default: escape HTML)
-
-**Example:**
-
-```js
-import hitext from 'hitext';
-
-hitext()
-    .use(myGenerator, {
-        html: {
-            open: ({ data }) => `<span class="token ${data.type}">`,
-            close: () => '</span>'
-        }
-    })
-    .printer('html');
-```
-
-**HTML entities are automatically escaped:**
-```js
-const result = hitext().print('<div>Hello & goodbye</div>', 'html');
-// &lt;div&gt;Hello &amp; goodbye&lt;/div&gt;
-```
-
-### tty
-
-The TTY (terminal) printer provides ANSI color styling for terminal output.
-
-**Helper functions:**
-- `createStyle(...styles)` - Creates a style from ANSI color names
-- `createStyleMap(map, fetcher?)` - Creates a style map for data-driven styling
-
-**Available colors:**
-- Foreground: `black`, `red`, `green`, `yellow`, `blue`, `magenta`, `cyan`, `white`, `gray`, etc.
-- Background: `bgBlack`, `bgRed`, `bgGreen`, `bgYellow`, `bgBlue`, `bgMagenta`, `bgCyan`, `bgWhite`, etc.
-- Modifiers: `reset`, `bold`, `dim`, `italic`, `underline`
-
-**Simple style example:**
-
-```js
-import hitext from 'hitext';
-
-hitext()
-    .use(myGenerator, {
-        tty: ({ createStyle }) => createStyle('bgWhite', 'red')
-    })
-    .printer('tty');
-```
-
-**Style map example (data-driven):**
-
-```js
-hitext()
-    .use(myGenerator, {
-        tty: ({ createStyleMap }) => createStyleMap({
-            keyword: 'cyan',
-            string: 'green',
-            error: ['bgRed', 'white']
-        })
-    })
-    .printer('tty');
-```
-
-**Custom data mapping:**
-
-```js
-hitext()
-    .use(myGenerator, {
-        tty: ({ createStyleMap }) => createStyleMap(
-            {
-                high: 'red',
-                medium: 'yellow',
-                low: 'green'
-            },
-            ({ data }) => data.severity  // Extract severity from range data
+    return html()
+        .addLayer(
+            rangeMatch(keywords[language] || /(?!)/),
+            (content) => `<span class="keyword">${content}</span>`
         )
-    })
-    .printer('tty');
+        .addLayer(
+            rangeMatch(/"[^"]*"|'[^']*'/g),
+            (content) => `<span class="string">${content}</span>`
+        );
+}
+
+const jsHighlighter = createCodeHighlighter('javascript');
+const pyHighlighter = createCodeHighlighter('python');
+
+console.log(jsHighlighter.render('const x = "hello";'));
+console.log(pyHighlighter.render('def hello(): return "world"'));
 ```
 
 ## API Reference
 
-### hitext([plugins], [printerType], [printerSet])
+### Renderers
 
-Creates a processing pipeline.
+#### `string()`
 
-**Parameters:**
-- `plugins` - Array of plugins (optional)
-- `printerType` - Default printer type: `'html'`, `'tty'`, or custom (optional)
-- `printerSet` - Custom printer set (optional)
+Creates a pipeline that outputs plain text strings without any escaping. This is the base renderer that serves as the foundation for text-based rendering.
 
-**Returns:** Pipeline function
-
-**Example:**
 ```js
-const pipeline = hitext([generator1, generator2], 'html');
-const result = pipeline(sourceText);
+import { string } from 'hitext';
+const pipeline = string();
+
+// No escaping - output as-is
+const result = pipeline.render('<div>Hello</div>');
+// Result: <div>Hello</div>
 ```
 
-### pipeline(source, [printerType])
+Use cases:
+- Plain text decoration
+- Generating Markdown or other text formats
+- Custom text transformations
+- When you need full control over output without automatic escaping
 
-Process source text with the pipeline.
+#### `html()`
 
-**Parameters:**
-- `source` - Source text to process
-- `printerType` - Override default printer type (optional)
+Creates a pipeline that outputs HTML strings. Built on top of the string renderer, automatically escapes `<`, `>`, and `&` in text content to prevent XSS vulnerabilities.
 
-**Returns:** Decorated string
-
-### pipeline.use(plugin, [printer])
-
-Add a decorator to the pipeline.
-
-**Parameters:**
-- `plugin` - Generator function, plugin object, or array of ranges
-- `printer` - Printer definition (optional if plugin has `printer` property)
-
-**Returns:** New pipeline
-
-**Plugin formats:**
 ```js
-// Generator function
-pipeline.use((source, createRange) => { /* ... */ }, printer);
+import { html } from 'hitext';
+const pipeline = html();
 
-// Plugin object
-pipeline.use({ 
-    name: 'my-plugin',
-    ranges: generatorFn,
-    printer: printerDef 
+// Example: special characters are automatically escaped
+const result = pipeline.render('<script>alert("xss")</script>');
+// Result: &lt;script&gt;alert("xss")&lt;/script&gt;
+```
+
+#### `tty()`
+
+Creates a pipeline that outputs terminal strings with ANSI color codes.
+
+```js
+import { tty } from 'hitext';
+const pipeline = tty();
+```
+
+Provides helper functions for styling:
+- `tty.createStyle(...styles)` – Returns a factory wrapper for given ANSI styles
+- `tty.createStyleMap(map, fetcher?)` – Returns a factory wrapper that maps data to styles
+
+Example:
+```js
+const pipeline = tty()
+    .addLayer(
+        [[0, 5]],
+        tty.createStyle('cyan', 'bold')
+    );
+```
+
+#### `dom(options?)`
+
+Creates a pipeline that outputs DOM DocumentFragment.
+
+```js
+import { dom } from 'hitext';
+const pipeline = dom({ document: customDocument });
+```
+
+Options:
+- `document` (optional) – Custom document object (defaults to `globalThis.document`)
+
+#### `jsx()`
+
+Creates a pipeline that outputs an array of JSX children (`JSXChild[]`). Works with React, Preact, Solid, or any JSX implementation.
+
+```jsx
+import { jsx } from 'hitext';
+
+const pipeline = jsx();
+const result = pipeline
+    .addLayer([{ start: 0, end: 5 }], {
+        content: (renderedContent) => <span className="highlight">{renderedContent}</span>
+    })
+    .render('Hello, world!');
+
+// result is an array: [<span class="highlight">Hello</span>, ', world!']
+// Use directly in JSX: <div>{result}</div>
+```
+
+The renderer returns an array that can be used directly as JSX children in any JSX element.
+
+### Generators
+
+#### `rangeMatch(pattern)`
+
+Generates ranges for all pattern matches. RegExp patterns are automatically given the global flag if not present.
+
+```js
+import { rangeMatch } from 'hitext';
+
+// String pattern - finds all occurrences
+rangeMatch('hello')
+
+// RegExp pattern - 'g' flag automatically added if missing
+rangeMatch(/\w+/)
+rangeMatch(/error/i)  // Becomes /error/gi internally
+```
+
+**Note:** `rangeMatch` does not store any data in the generated ranges. To capture matched text or groups, create a custom generator (see Custom Generator example).
+
+#### `rangeLines`
+
+Generates ranges for each line (including newline characters). Line numbers (1-based) are stored in `data`.
+
+```js
+import { rangeLines } from 'hitext';
+
+pipeline.addLayer(rangeLines, {
+    open: ({ data: lineNum }) => `Line ${lineNum}: `
 });
-
-// Array of ranges
-pipeline.use([[0, 5], [10, 15]], printer);
 ```
 
-### pipeline.printer(printerType)
+#### `rangeLineContents`
 
-Set the default printer type.
+Generates ranges for line content without newline characters. Line numbers (1-based) are stored in `data`.
 
-**Parameters:**
-- `printerType` - Printer type: `'html'`, `'tty'`, or custom
+```js
+import { rangeLineContents } from 'hitext';
+```
 
-**Returns:** New pipeline
+#### `rangeNewlines`
 
-### pipeline.print(source, [printerType])
+Generates ranges for just the newline characters.
 
-Alias for calling the pipeline as a function.
+```js
+import { rangeNewlines } from 'hitext';
+```
 
-### pipeline.generateRanges(source)
+### Pipeline Methods
 
-Generate ranges without rendering.
+#### `pipeline.addLayer(ranges, hooks)`
 
-**Parameters:**
-- `source` - Source text
+Adds a decoration layer to the pipeline. Returns a new pipeline instance without modifying the original (immutable).
 
-**Returns:** Array of range objects
+```js
+const basePipeline = html();
+const withHighlight = basePipeline.addLayer(ranges, hooks);
 
-### hitext.gen
+// basePipeline is unchanged, withHighlight is a new pipeline
+```
 
-Built-in generators:
-- `hitext.gen.lines` - Line ranges (including newlines)
-- `hitext.gen.lineContents` - Line content ranges (excluding newlines)
-- `hitext.gen.newlines` - Newline character ranges
-- `hitext.gen.matches(pattern)` - Pattern match ranges
+Parameters:
+- `ranges` – Array of ranges, range tuples, or a generator function
+- `hooks` – Range hooks object, function shortcut, or factory wrapper
 
-### hitext.printer
+**Range hooks forms:**
 
-Access or create printers:
-- `hitext.printer('html')` - Get pipeline with HTML printer
-- `hitext.printer('tty')` - Get pipeline with TTY printer
-- `hitext.printer.html` - HTML printer object
-- `hitext.printer.tty` - TTY printer object
+1. **Function shortcut** (recommended) – When you only need the `content` hook
+```js
+(renderedContent) => `<mark>${renderedContent}</mark>`
+```
+This is the most common and readable form. Works consistently across all renderer types.
 
-### hitext.use(plugin, [printer])
+2. **Plain object** – For using `open`/`close` hooks or multiple hooks
+```js
+{
+    open: () => '<span>',
+    close: () => '</span>'
+}
+```
+Use when you need side effects or non-wrapping behavior (e.g., adding attributes, inserting markers).
 
-Shorthand for `hitext().use(plugin, printer)`.
+3. **Factory wrapper** – For accessing renderer context (e.g., TTY styling)
+```js
+{
+    createRangeHooks: (context) => ({
+        content: (renderedContent) => context.transform(renderedContent)
+    })
+}
+```
+
+#### `pipeline.render(source, options?)`
+
+Processes source text and returns formatted output.
+
+```js
+const output = pipeline.render('Hello world', { /* options */ });
+```
+
+#### `pipeline.ranges(source, options?)`
+
+Generates ranges without rendering.
+
+```js
+const ranges = pipeline.ranges('Hello world');
+```
+
+#### `pipeline.rangeHooksMap()`
+
+Returns the complete range hooks map.
+
+```js
+const hooksMap = pipeline.rangeHooksMap();
+```
+
+### Low-Level APIs
+
+#### `render(source, ranges, rangeHooksMap, renderHooks?)`
+
+Low-level rendering function.
+
+```js
+import { render } from 'hitext';
+
+const output = render(source, ranges, rangeHooksMap, renderHooks);
+```
+
+#### `createRenderPipeline(createRenderHooks)`
+
+Creates a custom renderer pipeline.
+
+```js
+import { createRenderPipeline } from 'hitext';
+
+const myRenderer = createRenderPipeline(() => ({
+    createBuffer: () => ({ /* ... */ }),
+    text: (chunk) => chunk,
+    open: (context) => null,
+    close: (context) => null
+}));
+```
+
+## TypeScript Support
+
+HiText is written in TypeScript and provides full type definitions.
+
+### Typing Range Data
+
+```typescript
+import { html, RangeHookContext } from 'hitext';
+
+interface TokenData {
+    type: 'keyword' | 'string' | 'number';
+}
+
+// Custom generator with typed data
+function tokenGenerator(source: string, createRange) {
+    // ... your logic here
+    createRange(0, 5, { type: 'keyword' } as TokenData);
+}
+
+const highlighter = html()
+    .addLayer<TokenData>(
+        tokenGenerator,
+        (content, context: RangeHookContext<TokenData>) => {
+            // context.data is properly typed as TokenData
+            // Access segment boundaries: context.start, context.end
+            // Access full range: context.range.start, context.range.end
+            // Debug with: context.dump()
+            return `<span class="${context.data.type}">${content}</span>`;
+        }
+    );
+```
+
+### Typing Render Options
+
+You can specify custom render options that will be passed to all generators:
+
+```typescript
+import { html } from 'hitext';
+
+type MyRenderOptions = { 
+    lang: 'js' | 'css';
+    theme?: 'light' | 'dark';
+};
+
+function languageAwareGenerator(
+    source: string, 
+    createRange, 
+    options?: MyRenderOptions
+) {
+    if (options?.lang === 'js') {
+        // JavaScript-specific highlighting
+    } else if (options?.lang === 'css') {
+        // CSS-specific highlighting
+    }
+}
+
+// Specify render options type when creating the pipeline
+const highlighter = html<MyRenderOptions>()
+    .addLayer(
+        languageAwareGenerator,  // options parameter is typed as MyRenderOptions
+        (content) => `<span class="token">${content}</span>`
+    );
+
+// render() method expects MyRenderOptions as second argument
+const result = highlighter.render('const x = 1;', { lang: 'js' });
+```
+
+### Exported Types
+
+All core types are exported for use in your application:
+- `Range`, `RangeTuple` – Range type definitions
+- `RangeHooks`, `RangeHookContext` – Hook-related types
+- `GenerateRanges`, `CreateRange` – Generator function types
+- `PipelineNode` – Pipeline type
+- `RenderHooks`, `RenderBuffer` – Renderer-related types
+
+## Design Principles & Range Ordering
+
+HiText's rendering algorithm sorts and walks ranges to produce a *well‑nested* output even when input ranges overlap arbitrarily:
+
+Ordering sort keys (in priority):
+1. `start` ascending
+2. `end` descending (longer ranges open first so shorter ones nest inside)
+3. Layer insertion order (earlier `addLayer()` → higher priority when tie remains)
+
+During traversal:
+* Ranges that start before the currently closing set are opened immediately.
+* When a new range overlaps and extends beyond already opened shorter ranges, those shorter ranges get closed first to maintain proper nesting.
+* Invalid ranges (`start > end`, non‑finite numbers) are skipped silently.
+
+This approach guarantees deterministic, valid nesting without requiring a tree structure upfront.
+
+Design goals:
+* Pure, side‑effect free range generation
+* Deterministic rendering
+* Zero dependencies & small surface area
+* Extensibility via custom renderers / hooks factories
+
+### ASCII Diagrams
+
+Below, `[` `)` indicate half‑open intervals `[start, end)`. Layers are labeled A, B, C in order of `addLayer()` (A added first). Longer ranges open first when they share the same start.
+
+**Understanding segments:** When ranges overlap, they are split into segments at interruption points. Each segment gets its own `open`, `content`, and `close` hook calls with segment-specific boundaries in `context.start` and `context.end`. The original range boundaries remain accessible via `context.range.start` and `context.range.end`.
+
+1. Simple nesting (no overlap, no segments)
+
+```
+Source:  0 1 2 3 4 5 6 7 8 9
+Ranges:
+    A: [0-----------10)     layer added first
+    B:     [3---7)          layer added second
+
+Sorting: A before B (A starts earlier)
+Events:
+    @0:  open A    context: { start: 0, end: 10, range: [0, 10) }
+    @3:  open B    context: { start: 3, end: 7, range: [3, 7) }
+    @7:  close B   context: { start: 3, end: 7, range: [3, 7) }
+    @10: close A   context: { start: 0, end: 10, range: [0, 10) }
+
+Output: <A>0 1 2 <B>3 4 5 6</B> 7 8 9</A>
+
+Note: No segmentation here - B is fully nested inside A, so each range
+has only one segment matching its original boundaries.
+```
+
+2. Overlap (crossing) - ranges split into segments
+
+```
+Source:  0 1 2 3 4 5 6 7 8 9 10
+Ranges:
+    A: [0--------8)         starts first
+    B:     [3-----------11) starts later, extends beyond A
+
+Algorithm: When B opens at offset 3, range A must be closed temporarily
+to maintain proper nesting. A is split into two segments: [0, 3) and [3, 8).
+
+Segments created:
+    A₁: [0, 3)   - before B starts
+    A₂: [3, 8)   - overlapping with B  
+    B:  [3, 11)  - one segment (not interrupted)
+
+Hook events with context values:
+    @0:  open A₁     { start: 0, end: 3,  range: [0, 8) }
+    @3:  content A₁  { start: 0, end: 3,  range: [0, 8) }
+    @3:  close A₁    { start: 0, end: 3,  range: [0, 8) }
+    @3:  open B      { start: 3, end: 11, range: [3, 11) }
+    @3:  open A₂     { start: 3, end: 8,  range: [0, 8) }  ← same range, new segment
+    @8:  content A₂  { start: 3, end: 8,  range: [0, 8) }
+    @8:  close A₂    { start: 3, end: 8,  range: [0, 8) }
+    @11: content B   { start: 3, end: 11, range: [3, 11) }
+    @11: close B     { start: 3, end: 11, range: [3, 11) }
+
+Output: <a>012</a><b><a>34567</a>890</b>
+
+Key insight: Range A's hooks are called twice (once per segment) with different
+segment boundaries, but context.range always shows [0, 8). This allows hooks to
+distinguish between first opening vs. continuation: check if offset === range.start.
+```
+
+3. Same start, different lengths
+
+```
+Ranges:
+    A: [0------------12)    longer, opens first (end desc rule)
+    B: [0----4)             shorter, opens after A
+
+Sort: Both start at 0, but A has later end (12 > 4), so A opens before B
+Events:
+    @0:  open A    context: { start: 0, end: 12, range: [0, 12) }
+    @0:  open B    context: { start: 0, end: 4,  range: [0, 4) }
+    @4:  close B   context: { start: 0, end: 4,  range: [0, 4) }
+    @12: close A   context: { start: 0, end: 12, range: [0, 12) }
+
+Output: <A><B>0 1 2 3</B> 4 5 ... 11</A>
+
+Note: No segmentation - B is fully nested inside A at the same starting point.
+```
+
+4. Equal spans resolved by layer order
+
+```
+Ranges:
+    A: [2----6)    layer added first
+    B: [2----6)    layer added second (same span)
+
+Sort: Identical start & end, so layer order (priority) decides: A before B
+Events:
+    @2: open A    context: { start: 2, end: 6, range: [2, 6) }
+    @2: open B    context: { start: 2, end: 6, range: [2, 6) }
+    @6: close B   context: { start: 2, end: 6, range: [2, 6) }
+    @6: close A   context: { start: 2, end: 6, range: [2, 6) }
+
+Output: <A><B>2 3 4 5</B></A>
+```
+
+5. Multiple nested levels (chain)
+
+```
+Ranges:
+    A: [0--------------14)
+    B:    [4------10)
+    C:         [7--9)
+
+Events:
+    @0:  open A    context: { start: 0, end: 14, range: [0, 14) }
+    @4:  open B    context: { start: 4, end: 10, range: [4, 10) }
+    @7:  open C    context: { start: 7, end: 9,  range: [7, 9) }
+    @9:  close C   context: { start: 7, end: 9,  range: [7, 9) }
+    @10: close B   context: { start: 4, end: 10, range: [4, 10) }
+    @14: close A   context: { start: 0, end: 14, range: [0, 14) }
+
+Output: <A>0 1 2 3 <B>4 5 6 <C>7 8</C> 9</B> 10 11 12 13</A>
+
+Note: Pure nesting with no interruptions - each range has one segment.
+```
+
+6. Complex: Multiple interruptions create multiple segments
+
+```
+Source:  0 1 2 3 4 5 6 7 8 9 10 11 12
+Ranges:
+    A: [0------------------12)  outer range
+    B:     [3-----7)             interrupts A
+    C:             [9---11)      interrupts A again
+
+Algorithm: A is interrupted twice, creating three segments:
+    A₁: [0, 3)   - before B
+    A₂: [3, 7)   - between B's open and close (nested)
+    A₃: [7, 9)   - between B and C
+    A₄: [9, 11)  - between C's open and close (nested)
+    A₅: [11, 12) - after C
+
+Events:
+    @0:  open A₁     { start: 0, end: 3, range: [0, 12) }
+    @3:  content A₁  { start: 0, end: 3, range: [0, 12) }
+    @3:  close A₁    { start: 0, end: 3, range: [0, 12) }
+    @3:  open B      { start: 3, end: 7, range: [3, 7) }
+    @3:  open A₂     { start: 3, end: 7, range: [0, 12) }
+    @7:  content A₂  { start: 3, end: 7, range: [0, 12) }
+    @7:  close A₂    { start: 3, end: 7, range: [0, 12) }
+    @7:  close B     { start: 3, end: 7, range: [3, 7) }
+    @7:  open A₃     { start: 7, end: 9, range: [0, 12) }
+    @9:  content A₃  { start: 7, end: 9, range: [0, 12) }
+    @9:  close A₃    { start: 7, end: 9, range: [0, 12) }
+    @9:  open C      { start: 9, end: 11, range: [9, 11) }
+    @9:  open A₄     { start: 9, end: 11, range: [0, 12) }
+    @11: content A₄  { start: 9, end: 11, range: [0, 12) }
+    @11: close A₄    { start: 9, end: 11, range: [0, 12) }
+    @11: close C     { start: 9, end: 11, range: [9, 11) }
+    @11: open A₅     { start: 11, end: 12, range: [0, 12) }
+    @12: content A₅  { start: 11, end: 12, range: [0, 12) }
+    @12: close A₅    { start: 11, end: 12, range: [0, 12) }
+
+Output: <a>012</a><b><a>3456</a></b><a>78</a><c><a>90</a></c><a>1</a>
+
+Wait, this doesn't match reality - nested ranges DON'T interrupt! Let me reconsider...
+
+Actually, B and C are fully nested in A (they end before A ends), so they DON'T
+create interruptions. A has only ONE segment [0, 12) with nested B and C inside:
+
+Corrected events:
+    @0:  open A      { start: 0, end: 12, range: [0, 12) }
+    @3:  open B      { start: 3, end: 7, range: [3, 7) }
+    @7:  close B     { start: 3, end: 7, range: [3, 7) }
+    @9:  open C      { start: 9, end: 11, range: [9, 11) }
+    @11: close C     { start: 9, end: 11, range: [9, 11) }
+    @12: close A     { start: 0, end: 12, range: [0, 12) }
+
+Output: <A>0 1 2 <B>3 4 5 6</B> 7 8 <C>9 10</C> 11</A>
+
+Key insight: Only ranges that EXTEND BEYOND a parent range cause interruptions.
+Nested ranges that end before their parent don't split the parent into segments.
+```
+
+7. Invalid ranges (silently ignored)
+
+```
+    X: [5, 3)       (start > end)  → skipped
+    Y: [2, NaN)     (non-finite)   → skipped  
+    Z: [2--4)       (valid)         → rendered normally
+```
+
+### Summary
+
+- **No segmentation** when ranges are purely nested (child ends before parent)
+- **Segmentation occurs** when ranges overlap and extend beyond each other
+- Each segment gets its own `open`, `content`, `close` hook calls
+- `context.start`/`end` = current segment boundaries
+- `context.range.start`/`end` = original range boundaries (unchanged across segments)
+- Use `context.offset === context.range.start` to detect first opening vs continuation
+
+These rules ensure a single linear pass can maintain a stack of active ranges and always emit well‑nested output.
+
+## Performance Tips
+
+HiText is designed to be fast; a few practical considerations:
+
+- Reuse pipelines instead of rebuilding them each time you render.
+- Prefer static or cached ranges for expensive analyses (e.g. syntax tokens).
+- Keep generator regex patterns simple; avoid catastrophic backtracking.
+- Avoid generating extremely large numbers of tiny adjacent ranges when a single wrapping range (`open`/`close`) would suffice.
+- Use the function shortcut `(content) => ...` when only `content` is needed; it avoids two extra hook calls.
+
+### Common Patterns
+- Empty hooks are fine – return `null` or omit keys.
+- Provide `data` in ranges to drive styling (e.g. token type, severity).
+- Compose pipelines by starting from a base (e.g. `baseSyntax = html().addLayer(...);` then `search = baseSyntax.addLayer(...);`).
+
+### Debugging
+- `pipeline.ranges(source)` – inspect raw computed ranges.
+- `pipeline.rangeHooksMap()` – verify which markers have hooks.
+- Ensure indices are zero-based and `end` is exclusive.
+
+## FAQ
+
+**Q: How do I nest decorations that partially overlap?**  
+Just generate each independently. HiText enforces proper nesting order automatically.
+
+**Q: Can I mutate the generated ranges?**  
+You can, but it's better (and cheaper) to regenerate or wrap via another layer. Pipelines are immutable.
+
+**Q: Does order of `addLayer()` matter?**  
+Yes. When two ranges have identical `start` and `end`, earlier layers take precedence (open earlier / close later) due to the ordering rule.
+
+**Q: How do I escape HTML?**  
+Use the `html()` renderer – it escapes `&`, `<`, `>` automatically. For custom renderer, supply a `text()` hook.
+
+**Q: Can I render to AST / JSON?**  
+Yes – create a custom renderer via `createRenderPipeline` (see Custom Renderer example).
+
+**Q: How to integrate with React / Preact?**  
+Use `jsx()` – it returns an array of children you can embed directly.
+
+**Q: Are there plans for source maps or position mapping after render?**  
+Positions currently refer to *source* only. If you need mapping, wrap a `content` hook to collect emitted offsets.
+
+**Q: Why not use an existing highlighter?**  
+HiText is *not* a syntax highlighter; it is an orchestration & rendering core. You can plug in any tokenizer, plus additional decoration layers.
 
 ## License
 
