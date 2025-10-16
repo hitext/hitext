@@ -413,10 +413,8 @@ const codeDisplay = html()
     // Layer 1: Add line numbers
     .addLayer(
         rangeLines,
-        {
-            open: ({ data: lineNum }) => `<div class="line" data-line="${lineNum}">`,
-            close: () => '</div>'
-        }
+        (content, { data: lineNum }) =>
+            `<div class="line" data-line="${lineNum}">${content}</div>`
     )
     // Layer 2: Highlight keywords
     .addLayer(
@@ -440,22 +438,20 @@ All three decorators analyze the original source text independently, and HiText 
 
 ## AST-Based Highlighting (No CST Required)
 
-Many syntax highlighters build or depend on a Concrete Syntax Tree (CST) that includes whitespace, comments, and exact token boundaries. Constructing / preserving a CST can be heavy, especially if you only need highlighting & lightweight annotations.
+Many syntax highlighters require a Concrete Syntax Tree (CST) that preserves all whitespace, comments, and token boundaries. HiText offers a lighter approach: generate ranges directly from an Abstract Syntax Tree (AST) using the node offsets already provided by most parsers.
 
-With HiText you can skip generating a CST: produce ranges directly from an Abstract Syntax Tree (AST) plus auxiliary token information (if available) and apply them to the original source. This keeps parsing logic separate while still enabling rich combined decorations (syntax, diagnostics, search hits, selections, VCS blame, etc.).
+**Why this works:** Modern parsers (Acorn, Babel, SWC, TypeScript, Esprima) already include `start`/`end` offsets in AST nodes. Walk the tree, emit ranges for semantic elements, and let whitespace/comments remain undecorated (or add them as separate layers).
 
-### Why this works
+**Benefits over CST reconstruction:**
 
-AST nodes (or tokens) already contain `start` / `end` offsets (common in parsers like Acorn, Babel, SWC, TypeScript, Esprima). You can walk the AST and emit ranges based on semantic roles instead of reconstructing concrete text. Whitespace and comments simply remain undecorated segments; other layers (e.g. comment highlighting or TODO markers) can supply those separately.
+| Aspect | CST Reconstruction | AST + Ranges |
+| ------ | ------------------ | ------------ |
+| Complexity | High (preserve trivia) | Low (reuse offsets) |
+| Memory | Full concrete tree | Just offsets + metadata |
+| Extensibility | Hard to mix layers | Arbitrary layers |
+| Maintenance | Parser-specific | Generic walker |
 
-### Basic pattern
-
-1. Parse source → obtain AST with node offsets
-2. Walk nodes and emit ranges (e.g. keywords, identifiers, literals)
-3. Add additional layers (diagnostics, search, line numbers, lint hints)
-4. Render once – HiText merges everything safely
-
-### Example (TypeScript / Babel style offsets)
+### Example
 
 ```js
 import { html } from 'hitext';
@@ -463,7 +459,7 @@ import * as acorn from 'acorn';
 
 function astSyntaxRanges(source, createRange) {
     const ast = acorn.parse(source, { ecmaVersion: 'latest', ranges: true });
-
+    
     walk(ast, node => {
         switch (node.type) {
             case 'FunctionDeclaration':
@@ -479,87 +475,65 @@ function astSyntaxRanges(source, createRange) {
     });
 }
 
-// Minimal walker (depth-first)
 function walk(node, visit) {
     visit(node);
     for (const key in node) {
         const value = node[key];
-        if (!value) continue;
         if (Array.isArray(value)) {
-            for (const item of value) if (item && typeof item.type === 'string') walk(item, visit);
-        } else if (value && typeof value.type === 'string') {
+            value.forEach(item => item?.type && walk(item, visit));
+        } else if (value?.type) {
             walk(value, visit);
         }
     }
 }
 
+// Use with any renderer
 const pipeline = html()
-    .addLayer(
-        astSyntaxRanges,
-        (content, { data }) => `<span class="${data}">${content}</span>`
-    );
+    .addLayer(astSyntaxRanges, (content, { data }) => `<span class="${data}">${content}</span>`);
 
-const source = 'function greet() { const x = 1; return x; }';
-console.log(pipeline.render(source));
+console.log(pipeline.render('function greet() { const x = 1; return x; }'));
+// Output: <span class="fn">greet</span>... styled output
 ```
 
-// Same astSyntaxRanges generator can be reused with other renderers:
-//   jsx().addLayer(astSyntaxRanges, (content, { data }) => <span className={data}>{content}</span>)
-//   tty().addLayer(astSyntaxRanges, tty.createStyleMap({ fn: 'cyan', var: 'yellow', lit: 'magenta' }))
+**Reusable across renderers:**
 
-### Layering diagnostics & hints
+```js
+// HTML
+html().addLayer(astSyntaxRanges, (content, { data }) => `<span class="${data}">${content}</span>`)
+
+// JSX
+jsx().addLayer(astSyntaxRanges, (content, { data }) => <span className={data}>{content}</span>)
+
+// TTY
+tty().addLayer(astSyntaxRanges, tty.createStyleMap({ fn: 'cyan', var: 'yellow', lit: 'magenta' }))
+```
+
+### Adding Diagnostics
 
 ```js
 const diagnostics = [
     { start: 9, end: 14, severity: 'warn', message: 'Prefer arrow function' }
 ];
 
-const withDiagnostics = pipeline.addLayer(
-    diagnostics.map(d => [d.start, d.end, d]),
-    (content, { data }) => `<span class="diag diag-${data.severity}" title="${data.message}">${content}</span>`
-);
-
-console.log(withDiagnostics.render(source));
+const withDiagnostics = pipeline
+    .addLayer(
+        diagnostics.map(d => [d.start, d.end, d]),
+        (content, { data }) => `<span class="diag-${data.severity}" title="${data.message}">${content}</span>`
+    );
 ```
 
-### Benefits vs CST reconstruction
+All layers work on the original source—HiText handles merging and proper nesting automatically.
 
-| Aspect | CST Reconstruction | AST → Ranges (HiText) |
-| ------ | ------------------ | -------------------- |
-| Complexity | High (must preserve trivia) | Low (reuse parser offsets) |
-| Memory | Larger tree incl. trivia | Just offsets & metadata |
-| Extensibility | Hard to mix foreign layers | Arbitrary new layers | 
-| Maintenance | Parser-specific hacks | Generic offset walker |
-| Combination | Manual merge logic | Automatic nesting merge |
-
-### Other comparable approaches?
-
-Most existing highlighters either: (1) tokenize and inject markup directly (hard to blend multiple concerns), or (2) produce incremental token streams. HiText generalizes this by accepting *any* semantic layer as ranges. Instead of adopting a specialized “CST + printer” architecture for highlighting + annotations, you can: parse once → emit semantic ranges → add orthogonal layers (lint, search, selection, VCS) → render.
-
-If you later need whitespace-sensitive formatting, you can still introduce a formatter-specific CST without changing how highlighting layers work.
+## Examples
 
 ### Terminal Output
 
 ```js
-import { tty } from 'hitext';
-
-// Custom generator that captures log level in data
-function logLevelGenerator(source, createRange) {
-    const regex = /ERROR|WARN|INFO/g;
-    let match;
-    
-    while (match = regex.exec(source)) {
-        createRange(
-            match.index,
-            match.index + match[0].length,
-            match[0]  // Store matched text as data
-        );
-    }
-}
+import { tty, rangeMatch } from 'hitext';
 
 const highlighter = tty()
     .addLayer(
-        logLevelGenerator,
+        rangeMatch(/ERROR|WARN|INFO/g),
         tty.createStyleMap({
             'ERROR': ['red', 'bold'],
             'WARN': 'yellow',
@@ -631,13 +605,11 @@ import { dom, rangeMatch } from 'hitext';
 const highlighter = dom()
     .addLayer(
         rangeMatch('important'),
-        {
-            open: () => {
-                const span = document.createElement('span');
-                span.className = 'highlight';
-                return span;
-            },
-            close: () => null
+        (content) => {
+            const span = document.createElement('span');
+            span.className = 'highlight';
+            span.append(content);
+            return span;
         }
     );
 
@@ -651,16 +623,15 @@ document.body.appendChild(fragment);
 import { jsx, rangeMatch } from 'hitext';
 
 // Create JSX renderer - returns an array of JSX children
-const highlighter = jsx();
+const highlighter = jsx()
+    .addLayer(
+        rangeMatch(/important/g),
+        (renderedContent) => <mark>{renderedContent}</mark>
+    );
 
 // Use content hook to wrap matched text
 const MyComponent = () => {
-    const highlighted = highlighter
-        .addLayer(
-            rangeMatch(/important/g),
-            (renderedContent) => <mark>{renderedContent}</mark>
-        )
-        .render('This is important text');
+    const highlighted = highlighter.render('This is important text');
 
     // highlighted is an array: ['This is ', <mark>important</mark>, ' text']
     return <div>{highlighted}</div>;
@@ -725,7 +696,7 @@ import { html } from 'hitext';
 // Using array of tuples
 const highlight1 = html()
     .addLayer(
-        [[0, 5], [12, 17]], // Highlight positions 0-5 and 12-17
+        [[0, 5], [5, 11]], // Highlight positions 0-5 and 5-11
         (content) => `<mark>${content}</mark>`
     );
 
@@ -792,10 +763,7 @@ const result = render(
         { type: 'highlight', start: 6, end: 11, data: null }
     ],
     {
-        highlight: {
-            open: () => '<mark>',
-            close: () => '</mark>'
-        }
+        highlight: (content) => `<mark>${content}</mark>`
     },
     {
         text: (chunk) => chunk.replace(/</g, '&lt;') // HTML escape
