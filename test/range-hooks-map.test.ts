@@ -86,7 +86,9 @@ describe('Range Hooks Map Helpers', () => {
                 open: null,
                 close: null,
                 wrap: shortcut,
-                text: null
+                text: null,
+                replace: null,
+                break: false
             });
         });
 
@@ -101,7 +103,9 @@ describe('Range Hooks Map Helpers', () => {
                 open: hooks.open,
                 close: hooks.close,
                 wrap: null,
-                text: null
+                text: null,
+                replace: null,
+                break: false
             });
         });
 
@@ -122,7 +126,9 @@ describe('Range Hooks Map Helpers', () => {
                 open: hooks?.open,
                 close: hooks?.close,
                 wrap: null,
-                text: null
+                text: null,
+                replace: null,
+                break: false
             });
 
             strictEqual(resolved?.open?.({} as any), '<custom>');
@@ -174,19 +180,25 @@ describe('Range Hooks Map Helpers', () => {
                     open: marker1hooks.open,
                     close: marker1hooks.close,
                     wrap: null,
-                    text: null
+                    text: null,
+                    replace: null,
+                    break: false
                 },
                 [marker2]: {
                     open: null,
                     close: null,
                     wrap: marker2hooks,
-                    text: null
+                    text: null,
+                    replace: null,
+                    break: false
                 },
                 [marker3]: {
                     open: marker3hooks.open,
                     close: marker3hooks.close,
                     wrap: null,
-                    text: marker3hooks.text
+                    text: marker3hooks.text,
+                    replace: null,
+                    break: false
                 }
             }));
         });
@@ -213,13 +225,17 @@ describe('Range Hooks Map Helpers', () => {
                     open: null,
                     close: null,
                     wrap: shortcut,
-                    text: null
+                    text: null,
+                    replace: null,
+                    break: false
                 },
                 [marker2]: {
                     open: null,
                     close: null,
                     wrap: null,
-                    text: null
+                    text: null,
+                    replace: null,
+                    break: false
                 }
             }));
         });

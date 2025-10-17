@@ -78,6 +78,8 @@ export interface RangeHooks<Data = unknown, T, R = T> {
     close: RangeHookClose<Data, T> | null;
     wrap: RangeHookWrap<Data, T, R> | null;
     text: RangeHookText<Data, T> | null;
+    replace: RangeHookReplace<Data, T> | null;
+    break: boolean;
 }
 
 export type RangeHookOpen<Data, T> = (
@@ -92,6 +94,9 @@ export type RangeHookWrap<Data, T, R = T> = (
 ) => T | R | string | null | undefined;
 export type RangeHookText<Data, T> = (
     sourceChunk: string,
+    context: RangeHookContext<Data>
+) => T | string | null | undefined;
+export type RangeHookReplace<Data, T> = (
     context: RangeHookContext<Data>
 ) => T | string | null | undefined;
 

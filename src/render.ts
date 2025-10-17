@@ -36,6 +36,12 @@ export function render<T, R = T, HC = unknown>(
     // Get hooks map from definitions
     const rangeHooksMap = resolveRangeHooksMap(rangeHooksDefinitionMap || {}, renderHooks);
     const rangePriority: RangeMarker[] = Reflect.ownKeys(rangeHooksMap);
+    const rangeWeight = new Map<RangeMarker, number>(
+        rangePriority.map((marker) => [marker,
+            (rangeHooksMap[marker].break ? 2 : 0) +
+            (rangeHooksMap[marker].replace ? 1 : 0)
+        ])
+    );
     const rangeIndexMap = new Map<GeneratedRange, number>();
 
     // Create renderer context with options
@@ -56,9 +62,9 @@ export function render<T, R = T, HC = unknown>(
         )) }
     });
     let renderedOffset = 0;
-    let closingOffset = Infinity;
     let segmentStart = 0;
     let segmentEnd = -1;
+    let lineColumnOffset = 0;
     let line = 1;
     let column = 1;
 
@@ -67,8 +73,10 @@ export function render<T, R = T, HC = unknown>(
     let currentBuffer = createBuffer();
 
     // Track opened ranges and their segment start offsets
-    const openedRanges: Array<GeneratedRange> = [];
-    const rangeSegmentStarts: number[] = []; // Parallel array to openedRanges
+    // rangeStack is sorted by end descending, i.e. [[2, 10], [1, 6], [3, 3]]
+    const rangeStack: Array<GeneratedRange> = [];
+    const rangeStackSegmentStarts: number[] = []; // Parallel array to activeRanges
+    let rangeStackOpenIndex = 0;
     let currentRange: GeneratedRange = {
         type: Symbol('root'),
         start: 0,
@@ -88,6 +96,7 @@ export function render<T, R = T, HC = unknown>(
         .sort(
             (a, b) =>
                 a.start - b.start ||
+                rangeWeight.get(b.type)! - rangeWeight.get(a.type)! ||
                 b.end - a.end ||
                 rangePriority.indexOf(a.type) - rangePriority.indexOf(b.type)
         );
@@ -98,38 +107,57 @@ export function render<T, R = T, HC = unknown>(
     let currentRangeIndex = 0;
     for (; currentRangeIndex < ranges.length; currentRangeIndex++) {
         const range = ranges[currentRangeIndex];
-        let j = 0;
+        const hook = rangeHooksMap[range.type];
+        const replaceMode = Boolean(hook.replace);
+        const breakFlag = hook.break === true;
 
+        // Close any ranges that end before the new range starts
         closeRangeSegments(range.start);
-        renderChunk(range.start);
 
-        for (j = 0; j < openedRanges.length; j++) {
-            if (openedRanges[j].end < range.end) {
-                for (let k = openedRanges.length - 1; k >= j; k--) {
-                    closeRangeSegment(k);
-                }
+        // Close any ranges that end before the new range ends in replace mode
+        if (replaceMode) {
+            closeRangeSegments(range.end, true);
+        }
+
+        // Find position to insert the new range in ordered by end descending
+        // so that ranges with later end are opened first (higher priority)
+        while (rangeStackOpenIndex > 0) {
+            // Stop when we find a range that ends after or at the same time as the new range;
+            // However, if break flag is set, continue closing ranges even if they end after
+            if (!breakFlag && rangeStack[rangeStackOpenIndex - 1].end >= range.end) {
                 break;
             }
+
+            // Temporarily close any ranges that were opened after this one
+            // to maintain correct nesting order
+            rangeStackOpenIndex--;
+            closeRangeSegment(rangeStack[rangeStackOpenIndex], rangeStackSegmentStarts[rangeStackOpenIndex]);
         }
 
-        openedRanges.splice(j, 0, range);
-        rangeSegmentStarts.splice(j, 0, 0); // Placeholder, will be set in openRangeSegment
-
-        for (; j < openedRanges.length; j++) {
-            openRangeSegment(j);
+        if (!replaceMode) {
+            // Normal flow: insert new range
+            rangeStack.splice(rangeStackOpenIndex, 0, range);
+            rangeStackSegmentStarts.splice(rangeStackOpenIndex, 0, 0); // Set segment start to openAt
+        } else {
+            // Handle replace range
+            handleReplaceRange(range);
         }
 
-        if (range.end < closingOffset) {
-            closingOffset = range.end;
+        // Reopen ranges that were closed to insert new range
+        for (; rangeStackOpenIndex < rangeStack.length; rangeStackOpenIndex++) {
+            openRangeSegment(rangeStack[rangeStackOpenIndex]);
+
+            // Track where this segment started (current offset) for close/content hooks
+            rangeStackSegmentStarts[rangeStackOpenIndex] = renderedOffset;
         }
     }
 
     closeRangeSegments(source.length);
-    renderChunk(source.length);
 
-    // Render ranges out of source boundaries
-    for (let i = openedRanges.length - 1; i >= 0; i--) {
-        closeRangeSegment(i);
+    // Close ranges that end out of source boundaries
+    while (rangeStackOpenIndex > 0) {
+        rangeStackOpenIndex--;
+        closeRangeSegment(rangeStack[rangeStackOpenIndex], source.length);
     }
 
     // Finish rendering - call renderer close hook
@@ -141,6 +169,21 @@ export function render<T, R = T, HC = unknown>(
     //
     // Handlers
     //
+
+    function updateLineAndColumn(upToOffset: number) {
+        for (; lineColumnOffset < upToOffset; lineColumnOffset++) {
+            const ch = source.charCodeAt(lineColumnOffset);
+
+            if (ch === 0x0a /* \n */ || (ch === 0x0d /* \r */ && (
+                lineColumnOffset >= source.length || source.charCodeAt(lineColumnOffset + 1) !== 0x0a
+            ))) {
+                line++;
+                column = 1;
+            } else {
+                column++;
+            }
+        }
+    }
 
     function getRangeIndex(): number {
         let rangeIndex = rangeIndexMap.get(currentRange);
@@ -171,8 +214,8 @@ export function render<T, R = T, HC = unknown>(
             if (nextRange.start > renderedOffset) {
                 // Check if this range will cause an interruption
                 // It causes interruption if its end is greater than any opened range's end
-                for (let j = 0; j < openedRanges.length; j++) {
-                    if (openedRanges[j].end < nextRange.end) {
+                for (let j = 0; j < rangeStack.length; j++) {
+                    if (rangeStack[j].end < nextRange.end) {
                         // This range causes interruption
                         if (nextRange.start < segmentEnd) {
                             segmentEnd = nextRange.start;
@@ -187,104 +230,146 @@ export function render<T, R = T, HC = unknown>(
         return segmentEnd;
     }
 
-    function openRangeSegment(index: number) {
-        currentRange = openedRanges[index];
-        const hook = rangeHooksMap[currentRange.type];
+    function openRangeSegment(range: GeneratedRange) {
+        const rangeHooks = rangeHooksMap[range.type];
+
+        // Set current range for context
+        currentRange = range;
 
         // For open hook: start is the current offset, end is computed lazily
         segmentStart = renderedOffset;
         segmentEnd = -1;
 
-        // Track where this segment started (current offset) for close/content hooks
-        rangeSegmentStarts[index] = renderedOffset;
+        // Call open hook (goes to current buffer)
+        appendToBuffer(rangeHooks.open?.(rangeHookContext));
 
-        // Call open hook (goes to current buffer, or parent if range hook exists)
-        appendToBuffer(hook.open?.(rangeHookContext));
-
-        // Check if this range uses range hook
-        if (hook.wrap) {
-            // Start accumulating content for this range
+        // Create new buffer for accumulating content
+        if (rangeHooks.wrap) {
             bufferStack.push(currentBuffer);
             currentBuffer = createBuffer();
         }
+
+        // Inject replace content if applicable
+        if (rangeHooks.replace) {
+            appendToBuffer(rangeHooks.replace(rangeHookContext));
+        }
     }
 
-    function closeRangeSegment(index: number) {
-        currentRange = openedRanges[index];
-        const hook = rangeHooksMap[currentRange.type];
+    function closeRangeSegment(range: GeneratedRange, rangeSegmentStart: number) {
+        const rangeHooks = rangeHooksMap[range.type];
 
-        // Set segment boundaries for this closing segment
-        segmentStart = rangeSegmentStarts[index];
+        // Set current range for context
+        currentRange = range;
+
+        // Set segment boundaries
+        segmentStart = rangeSegmentStart;
         segmentEnd = renderedOffset;
 
-        if (hook.wrap) {
-            const contentBuffer = currentBuffer;
+        if (rangeHooks.wrap) {
+            // Get accumulated content and restore parent buffer
+            const content = currentBuffer.emit();
             currentBuffer = bufferStack.pop()!;
 
-            // Emit the buffer content
-            appendToBuffer(hook.wrap(contentBuffer.emit(), rangeHookContext));
+            // Emit wrapped accumulated content
+            appendToBuffer(rangeHooks.wrap(content, rangeHookContext));
         }
 
-        // Call close hook (goes to current buffer, which is parent after range processing)
-        appendToBuffer(hook.close?.(rangeHookContext));
+        // Call close hook (goes to current buffer)
+        appendToBuffer(rangeHooks.close?.(rangeHookContext));
     };
 
-    function renderChunk(offset: number) {
+    function renderText(offset: number) {
         if (renderedOffset === offset) {
             return;
         }
 
-        const substring = source.slice(renderedOffset, offset);
+        // Update line and column tracking
+        updateLineAndColumn(offset);
 
         // Find the text hook by walking up the stack of opened ranges
         // to inherit text transformation from parent ranges
         let textHook: RangeHookText<any, T> = renderTextHook;
-        for (let i = openedRanges.length - 1; i >= 0; i--) {
-            const rangeTextHook = rangeHooksMap[openedRanges[i].type].text;
+        for (let i = rangeStack.length - 1; i >= 0; i--) {
+            const rangeTextHook = rangeHooksMap[rangeStack[i].type].text;
             if (rangeTextHook !== null) {
                 textHook = rangeTextHook;
                 break;
             }
         }
 
-        // Update line and column tracking
-        for (let i = renderedOffset; i < offset; i++) {
-            const ch = source.charCodeAt(i);
-
-            if (ch === 0x0a /* \n */ || (ch === 0x0d /* \r */ && (i >= source.length || source.charCodeAt(i + 1) !== 0x0a))) {
-                line++;
-                column = 1;
-            } else {
-                column++;
-            }
-        }
-
-        // Always append to current buffer
+        // Append to current buffer
+        const substring = source.slice(renderedOffset, offset);
         appendToBuffer(textHook(substring, rangeHookContext));
-
         renderedOffset = offset;
     }
 
-    function closeRangeSegments(offset: number) {
-        while (closingOffset <= offset) {
-            renderChunk(closingOffset);
+    function closeRangeSegments(offset: number, replaceMode: boolean = false) {
+        while (rangeStackOpenIndex > 0) {
+            const topRangeEnd = rangeStack[rangeStackOpenIndex - 1].end;
 
-            for (let j = openedRanges.length - 1; j >= 0; j--) {
-                if (openedRanges[j].end !== closingOffset) {
-                    break;
-                }
-                closeRangeSegment(j);
-                openedRanges.pop();
-                rangeSegmentStarts.pop();
+            if (topRangeEnd > offset) {
+                break;
             }
 
-            // Find next closing offset
-            closingOffset = Infinity;
+            if (!replaceMode) {
+                renderText(topRangeEnd);
+            }
 
-            for (let j = 0; j < openedRanges.length; j++) {
-                if (openedRanges[j].end < closingOffset) {
-                    closingOffset = openedRanges[j].end;
+            rangeStackOpenIndex--;
+            closeRangeSegment(rangeStack[rangeStackOpenIndex], rangeStackSegmentStarts[rangeStackOpenIndex]);
+            rangeStack.pop();
+            rangeStackSegmentStarts.pop();
+        }
+
+        if (!replaceMode) {
+            renderText(offset);
+        }
+    }
+
+    function handleReplaceRange(replaceRange: GeneratedRange) {
+        openRangeSegment(replaceRange);
+        renderedOffset = replaceRange.end;
+        closeRangeSegment(replaceRange, renderedOffset);
+
+        // Process ranges that start within the replaced range
+        for (; currentRangeIndex < ranges.length - 1; currentRangeIndex++) {
+            const nextRange = ranges[currentRangeIndex + 1];
+
+            // Break when the range past the replaced range
+            if (nextRange.start >= replaceRange.end) {
+                break;
+            }
+
+            // If the next range ends after the replaced range, it needs to be opened
+            if (nextRange.end > replaceRange.end) {
+                const nextRangeHooks = rangeHooksMap[nextRange.type];
+                const breakFlag = nextRangeHooks.break;
+                let insertIndex = rangeStack.length;
+
+                // Find insert position in range stack
+                for (let k = rangeStack.length - 1; k >= 0; k--) {
+                    if (!breakFlag && rangeStack[k].end >= nextRange.end) {
+                        break;
+                    }
+                    insertIndex--;
                 }
+
+                // Close any ranges that would be interrupted by the new range
+                while (rangeStackOpenIndex > insertIndex) {
+                    rangeStackOpenIndex--;
+                    closeRangeSegment(rangeStack[rangeStackOpenIndex], rangeStackSegmentStarts[rangeStackOpenIndex]);
+                }
+
+                // Just skip the range and its content if it also has replace hook
+                if (nextRangeHooks.replace) {
+                    closeRangeSegments(nextRange.end, true);
+                    renderedOffset = nextRange.end;
+                    continue;
+                }
+
+                // Insert new range
+                rangeStack.splice(insertIndex, 0, nextRange);
+                rangeStackSegmentStarts.splice(insertIndex, 0, 0);
             }
         }
     }
