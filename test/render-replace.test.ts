@@ -91,6 +91,23 @@ function renderTest(
     return render(source, ranges, normalizedHooks);
 }
 
+/**
+ * Helper to create hooks that show segment boundaries in the output.
+ *
+ * @param name - The tag name to use in the output
+ * @returns Hook object with open and close that display start:end positions
+ *
+ * @example
+ * boundaryHook('outer') → { open: ..., close: ... }
+ * // Output: <outer:0:10>content</outer:0:10>
+ */
+function boundaryHook(name: string) {
+    return {
+        open: ({ start, end }: any) => `<${name}:${start}:${end}>`,
+        close: ({ start, end }: any) => `</${name}:${start}:${end}>`
+    };
+}
+
 describe('Replace Hook', () => {
     describe('Visual test helper examples', () => {
         it('should work with simple range wrapping', () => {
@@ -770,6 +787,181 @@ describe('Replace Hook', () => {
             );
             // All levels close before break, reopen after
             assert.strictEqual(result, '<o>A <m>B </m></o>X<o><m> C</m> D</o>');
+        });
+    });
+
+    describe('Segment boundaries (start/end) in replace hook context', () => {
+        it('should show correct boundaries for simple replace', () => {
+            const result = renderTest(
+                'Hello [REPLACE] World',
+                '      rrrrrrrrr',  // [REPLACE] at 6-15
+                {
+                    r: {
+                        ...boundaryHook('r'),
+                        replace: () => 'XXX'
+                    }
+                }
+            );
+            assert.strictEqual(result, 'Hello <r:6:15>XXX</r:6:15> World');
+        });
+
+        it('should show correct boundaries for replace with wrap', () => {
+            const result = renderTest(
+                'AAA [REPLACE] BBB',
+                '    rrrrrrrrr',  // [REPLACE] at 4-13
+                {
+                    r: {
+                        ...boundaryHook('r'),
+                        replace: () => 'XXX',
+                        wrap: (content: string) => `[${content}]`
+                    }
+                }
+            );
+            assert.strictEqual(result, 'AAA <r:4:13>[XXX]</r:4:13> BBB');
+        });
+
+        it('should show correct boundaries for replace inside spanning range', () => {
+            const result = renderTest(
+                'AAA [REPLACE] BBB',
+                'ooooooooooooooooo',  // outer: 0-17
+                '    rrrrrrrrr',      // replace: 4-13
+                {
+                    o: boundaryHook('o'),
+                    r: {
+                        replace: () => 'XXX'
+                    }
+                }
+            );
+            assert.strictEqual(result, '<o:0:17>AAA XXX BBB</o:0:17>');
+        });
+
+        it('should show correct boundaries for replace with break', () => {
+            const result = renderTest(
+                'AAA [BREAK] BBB',
+                'ooooooooooooooo',  // outer: 0-15
+                '    xxxxxxx',      // replace with break: 4-11
+                {
+                    o: boundaryHook('o'),
+                    x: {
+                        replace: () => 'X',
+                        break: true
+                    }
+                }
+            );
+            // Outer opens at 0, closes at 4 (actual close position due to break), then reopens at 11
+            assert.strictEqual(result, '<o:0:4>AAA </o:0:4>X<o:11:15> BBB</o:11:15>');
+        });
+
+
+        it('should show correct boundaries for spanning range through replace', () => {
+            const result = renderTest(
+                'AAA [REPLACE] BBB',
+                'sssssssssssssssss',     // spanning: entire string (0-17)
+                '    rrrrrrrrr',         // replace: [REPLACE] (4-13)
+                {
+                    s: boundaryHook('s'),
+                    r: {
+                        replace: () => 'XXX'
+                    }
+                }
+            );
+            // Spanning range stays open through replace (doesn't close/reopen)
+            assert.strictEqual(result, '<s:0:17>AAA XXX BBB</s:0:17>');
+        });
+
+        it('should show correct boundaries for range ending inside replace', () => {
+            const result = renderTest(
+                'AAA [REPLACE] BBB',
+                'eeeeeeee',              // ends: "AAA [REP" (0-8, ends inside replace)
+                '    rrrrrrrrr',         // replace: [REPLACE] (4-13)
+                {
+                    e: boundaryHook('e'),
+                    r: {
+                        replace: () => 'XXX'
+                    }
+                }
+            );
+            // Range 'e' closes at position 4 (before replace starts) even though its end is 8
+            // The segment end reflects where it was actually closed, not its declared end
+            assert.strictEqual(result, '<e:0:4>AAA </e:0:4>XXX BBB');
+        });
+
+        it('should show correct boundaries for range starting inside replace', () => {
+            const result = renderTest(
+                'AAA [REPLACE] BBB CCC',
+                '    rrrrrrrrr',         // replace: [REPLACE] (4-13)
+                '        sssssssss',     // starts: "LACE] BBB" (8-17, starts inside)
+                {
+                    r: {
+                        replace: () => 'XXX'
+                    },
+                    s: boundaryHook('s')
+                }
+            );
+            // Range 's' should open after replace ends
+            assert.strictEqual(result, 'AAA XXX<s:13:17> BBB</s:13:17> CCC');
+        });
+
+        it('should show correct boundaries for multiple ranges ending/starting in replace', () => {
+            const result = renderTest(
+                'A B [REPLACE] C D E',
+                'eeeeeee',                // ends1: "A B [RE" (0-7, ends inside)
+                '  fffffff',              // ends2: "B [REPL" (2-9, ends inside)
+                '    rrrrrrrrr',          // replace: [REPLACE] (4-13)
+                '        sssssssss',      // starts1: "LACE] C D" (8-17, starts inside)
+                '            ttttttt',    // starts2: "E] C D E" (12-19, starts inside)
+                {
+                    e: boundaryHook('e'),
+                    f: boundaryHook('f'),
+                    r: {
+                        replace: () => 'XXX'
+                    },
+                    s: boundaryHook('s'),
+                    t: boundaryHook('t')
+                }
+            );
+            // Ranges ending inside close before replace at actual close position (not declared end)
+            // e closes at 2, f closes at 4 (before replace), s and t open at 13 (after replace)
+            assert.strictEqual(result, '<e:0:2>A </e:0:2><f:2:4><e:2:4>B </e:2:4></f:2:4>XXX<t:13:19><s:13:17> C D</s:13:17> E</t:13:19>');
+        });
+
+        it('should show correct boundaries when replace has break and ranges span it', () => {
+            const result = renderTest(
+                'A B [BREAK] C D',
+                'sssssssssssssss',       // spanning: entire string (0-15)
+                '  mmmmmmmmmmm',         // middle: "B [BREAK] C" (2-13)
+                '    bbbbbbb',           // replace with break: [BREAK] (4-11)
+                {
+                    s: boundaryHook('s'),
+                    m: boundaryHook('m'),
+                    b: {
+                        replace: () => 'X',
+                        break: true
+                    }
+                }
+            );
+            // Both spanning ranges close before break at position 4
+            // The segment end shows where they're actually closed (4), not their declared end
+            assert.strictEqual(result, '<s:0:4>A <m:2:4>B </m:2:4></s:0:4>X<s:11:15><m:11:13> C</m:11:13> D</s:11:15>');
+        });
+
+        it('should show correct boundaries for nested replace ranges', () => {
+            const result = renderTest(
+                'AAA [OUTER [INNER] END] BBB',
+                '    ooooooooooooooooooo',     // outer: [OUTER [INNER] END] (4-23)
+                '           iiiiiii',          // inner: [INNER] (11-18, inside outer)
+                {
+                    o: {
+                        ...boundaryHook('o'),
+                        replace: () => 'OUTER'
+                    },
+                    i: {
+                        replace: () => 'INNER'  // This is skipped (inside outer replace)
+                    }
+                }
+            );
+            // Inner replace is entirely inside outer replace and gets skipped
+            assert.strictEqual(result, 'AAA <o:4:23>OUTER</o:4:23> BBB');
         });
     });
 });

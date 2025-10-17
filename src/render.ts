@@ -145,7 +145,7 @@ export function render<T, R = T, HC = unknown>(
 
         // Reopen ranges that were closed to insert new range
         for (; rangeStackOpenIndex < rangeStack.length; rangeStackOpenIndex++) {
-            openRangeSegment(rangeStack[rangeStackOpenIndex]);
+            openRangeSegment(rangeStack[rangeStackOpenIndex], -1);
 
             // Track where this segment started (current offset) for close/content hooks
             rangeStackSegmentStarts[rangeStackOpenIndex] = renderedOffset;
@@ -204,6 +204,7 @@ export function render<T, R = T, HC = unknown>(
         // The segment end is determined by the next event:
         // - The current range's natural end
         // - Or a new range starts that will cause interruption (has greater end than current range)
+        // - Or a replace/break range that will close the current range early
         segmentEnd = currentRange.end;
 
         // Find next range's start that comes after renderedOffset
@@ -211,18 +212,20 @@ export function render<T, R = T, HC = unknown>(
         for (let i = currentRangeIndex + 1; i < ranges.length; i++) {
             const nextRange = ranges[i];
 
-            if (nextRange.start > renderedOffset) {
-                // Check if this range will cause an interruption
-                // It causes interruption if its end is greater than any opened range's end
-                for (let j = 0; j < rangeStack.length; j++) {
-                    if (rangeStack[j].end < nextRange.end) {
-                        // This range causes interruption
-                        if (nextRange.start < segmentEnd) {
-                            segmentEnd = nextRange.start;
-                        }
-                        // Found interruption, can stop searching
-                        return segmentEnd;
-                    }
+            if (nextRange.start < segmentEnd) {
+                const nextRangeHooks = rangeHooksMap[nextRange.type];
+                const isBreakRange =
+                    // Break flag closes all opened ranges at nextRange.start
+                    nextRangeHooks.break ||
+                    // Replace flag closes ranges that end at or before nextRange.end
+                    (nextRangeHooks.replace && currentRange.end <= nextRange.end) ||
+                    // Check if this range will cause an interruption to the current range
+                    // It causes interruption if its end is greater than the current range's end
+                    currentRange.end < nextRange.end;
+
+                if (isBreakRange) {
+                    segmentEnd = nextRange.start;
+                    break;
                 }
             }
         }
@@ -230,7 +233,7 @@ export function render<T, R = T, HC = unknown>(
         return segmentEnd;
     }
 
-    function openRangeSegment(range: GeneratedRange) {
+    function openRangeSegment(range: GeneratedRange, rangeSegmentEnd: number) {
         const rangeHooks = rangeHooksMap[range.type];
 
         // Set current range for context
@@ -238,7 +241,7 @@ export function render<T, R = T, HC = unknown>(
 
         // For open hook: start is the current offset, end is computed lazily
         segmentStart = renderedOffset;
-        segmentEnd = -1;
+        segmentEnd = rangeSegmentEnd;
 
         // Call open hook (goes to current buffer)
         appendToBuffer(rangeHooks.open?.(rangeHookContext));
@@ -327,9 +330,11 @@ export function render<T, R = T, HC = unknown>(
     }
 
     function handleReplaceRange(replaceRange: GeneratedRange) {
-        openRangeSegment(replaceRange);
+        const segmentStartOffset = renderedOffset;
+
+        openRangeSegment(replaceRange, replaceRange.end);
         renderedOffset = replaceRange.end;
-        closeRangeSegment(replaceRange, renderedOffset);
+        closeRangeSegment(replaceRange, segmentStartOffset);
 
         // Process ranges that start within the replaced range
         for (; currentRangeIndex < ranges.length - 1; currentRangeIndex++) {

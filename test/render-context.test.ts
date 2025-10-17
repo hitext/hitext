@@ -1,6 +1,6 @@
 import { strictEqual, deepStrictEqual } from 'assert';
 import { render } from '../src/index.js';
-import type { GeneratedRange, RangeHookContext, RangeHooks } from '../src/types.js';
+import type { GeneratedRange, RangeHookContext } from '../src/types.js';
 
 describe('render / context', () => {
     const source = 'Hello, World!';
@@ -58,7 +58,9 @@ describe('render / context', () => {
     });
 
     it('location', () => {
-        const source = '1\n2\r3\r\n4';
+        const source = '1\n' +
+        '2\r3\r\n' +
+        '4';
         const ranges = source.split('').map((c, idx) => ({
             type: 'test' as const,
             start: idx,
@@ -123,25 +125,17 @@ describe('render / context', () => {
     });
 
     describe('segment start/end', () => {
-        const captureSegmentHooks = () => {
-            const segments: Array<{ hook: string; id: string; start: number; end: number; offset: number }> = [];
-            return {
-                segments,
-                hooks: {
-                    test: {
-                        open({ start, end, offset, data }: RangeHookContext<any>) {
-                            segments.push({ hook: 'open ', id: data.id, start, end, offset });
-                        },
-                        close({ start, end, offset, data }: RangeHookContext<any>) {
-                            segments.push({ hook: 'close', id: data.id, start, end, offset });
-                        },
-                        wrap(content: any, { start, end, offset, data }: RangeHookContext<any>) {
-                            segments.push({ hook: 'wrap ', id: data.id, start, end, offset });
-                            return content;
-                        }
-                    } satisfies Partial<RangeHooks<any, any, any>>
+        const renderWithBoundaries = (source: string, ranges: GeneratedRange[]) => {
+            return render(source, ranges, {
+                test: {
+                    open: ({ start, end, data }: RangeHookContext<any>) => `<${data.id}:${start}:${end}>\n`,
+                    close: ({ start, end, data }: RangeHookContext<any>) => `</${data.id}:${start}:${end}>\n`,
+                    text: (text) => `${text}\n`,
+                    wrap: (content: any, { start, end, data }: RangeHookContext<any>) => {
+                        return `${content}<${data.id}:wrap:${start}:${end}/>\n`;
+                    }
                 }
-            };
+            });
         };
 
         it('should provide correct segment boundaries for simple range', () => {
@@ -150,14 +144,15 @@ describe('render / context', () => {
                 { type: 'test' as const, start: 1, end: 8, data: { id: 'a' } }
             ];
 
-            const { segments, hooks } = captureSegmentHooks();
-            render(source, ranges, hooks);
+            const result = renderWithBoundaries(source, ranges);
 
-            deepStrictEqual(segments, [
-                { hook: 'open ', id: 'a', start: 1, end: 8, offset: 1 },
-                { hook: 'wrap ', id: 'a', start: 1, end: 8, offset: 8 },
-                { hook: 'close', id: 'a', start: 1, end: 8, offset: 8 }
-            ]);
+            strictEqual(result,
+                'H<a:1:8>\n' +
+                'ello, W\n' +
+                '<a:wrap:1:8/>\n' +
+                '</a:1:8>\n' +
+                'orld!'
+            );
         });
 
         it('should provide correct segment boundaries for nested ranges', () => {
@@ -167,17 +162,20 @@ describe('render / context', () => {
                 { type: 'test' as const, start: 3, end: 4, data: { id: 'b' } }
             ];
 
-            const { segments, hooks } = captureSegmentHooks();
-            render(source, ranges, hooks);
+            const result = renderWithBoundaries(source, ranges);
 
-            deepStrictEqual(segments, [
-                { hook: 'open ', id: 'a', start: 1, end: 8, offset: 1 },
-                { hook: 'open ', id: 'b', start: 3, end: 4, offset: 3 },
-                { hook: 'wrap ', id: 'b', start: 3, end: 4, offset: 4 },
-                { hook: 'close', id: 'b', start: 3, end: 4, offset: 4 },
-                { hook: 'wrap ', id: 'a', start: 1, end: 8, offset: 8 },
-                { hook: 'close', id: 'a', start: 1, end: 8, offset: 8 }
-            ]);
+            strictEqual(result,
+                'H<a:1:8>\n' +
+                'el\n' +
+                '<b:3:4>\n' +
+                'l\n' +
+                '<b:wrap:3:4/>\n' +
+                '</b:3:4>\n' +
+                'o, W\n' +
+                '<a:wrap:1:8/>\n' +
+                '</a:1:8>\n' +
+                'orld!'
+            );
         });
 
         it('should provide correct segment boundaries for interrupted range', () => {
@@ -187,23 +185,23 @@ describe('render / context', () => {
                 { type: 'test' as const, start: 5, end: 10, data: { id: 'b' } }
             ];
 
-            const { segments, hooks } = captureSegmentHooks();
-            render(source, ranges, hooks);
+            const result = renderWithBoundaries(source, ranges);
 
-            deepStrictEqual(segments, [
-                // First segment of 'a': [1, 5]
-                { hook: 'open ', id: 'a', start: 1, end: 5, offset: 1 },
-                { hook: 'wrap ', id: 'a', start: 1, end: 5, offset: 5 },
-                { hook: 'close', id: 'a', start: 1, end: 5, offset: 5 },
-                // Full segment of 'b': [5, 10]
-                { hook: 'open ', id: 'b', start: 5, end: 10, offset: 5 },
-                // Second segment of 'a': [5, 8]
-                { hook: 'open ', id: 'a', start: 5, end: 8, offset: 5 },
-                { hook: 'wrap ', id: 'a', start: 5, end: 8, offset: 8 },
-                { hook: 'close', id: 'a', start: 5, end: 8, offset: 8 },
-                { hook: 'wrap ', id: 'b', start: 5, end: 10, offset: 10 },
-                { hook: 'close', id: 'b', start: 5, end: 10, offset: 10 }
-            ]);
+            strictEqual(result,
+                'H<a:1:5>\n' +
+                'ello\n' +
+                '<a:wrap:1:5/>\n' +
+                '</a:1:5>\n' +
+                '<b:5:10>\n' +
+                '<a:5:8>\n' +
+                ', W\n' +
+                '<a:wrap:5:8/>\n' +
+                '</a:5:8>\n' +
+                'or\n' +
+                '<b:wrap:5:10/>\n' +
+                '</b:5:10>\n' +
+                'ld!'
+            );
         });
 
         it('should provide correct segment boundaries for complex nested and interrupted ranges', () => {
@@ -214,27 +212,28 @@ describe('render / context', () => {
                 { type: 'test' as const, start: 3, end: 4, data: { id: 'c' } }
             ];
 
-            const { segments, hooks } = captureSegmentHooks();
-            render(source, ranges, hooks);
+            const result = renderWithBoundaries(source, ranges);
 
-            deepStrictEqual(segments, [
-                // First segment of 'a': [1, 5] (interrupted at 5 by 'b')
-                { hook: 'open ', id: 'a', start: 1, end: 5, offset: 1 },
-                // Nested 'c': [3, 4] (doesn't interrupt 'a')
-                { hook: 'open ', id: 'c', start: 3, end: 4, offset: 3 },
-                { hook: 'wrap ', id: 'c', start: 3, end: 4, offset: 4 },
-                { hook: 'close', id: 'c', start: 3, end: 4, offset: 4 },
-                { hook: 'wrap ', id: 'a', start: 1, end: 5, offset: 5 },
-                { hook: 'close', id: 'a', start: 1, end: 5, offset: 5 },
-                // Full segment of 'b': [5, 10]
-                { hook: 'open ', id: 'b', start: 5, end: 10, offset: 5 },
-                // Second segment of 'a': [5, 8]
-                { hook: 'open ', id: 'a', start: 5, end: 8, offset: 5 },
-                { hook: 'wrap ', id: 'a', start: 5, end: 8, offset: 8 },
-                { hook: 'close', id: 'a', start: 5, end: 8, offset: 8 },
-                { hook: 'wrap ', id: 'b', start: 5, end: 10, offset: 10 },
-                { hook: 'close', id: 'b', start: 5, end: 10, offset: 10 }
-            ]);
+            strictEqual(result,
+                'H<a:1:5>\n' +
+                'el\n' +
+                '<c:3:4>\n' +
+                'l\n' +
+                '<c:wrap:3:4/>\n' +
+                '</c:3:4>\n' +
+                'o\n' +
+                '<a:wrap:1:5/>\n' +
+                '</a:1:5>\n' +
+                '<b:5:10>\n' +
+                '<a:5:8>\n' +
+                ', W\n' +
+                '<a:wrap:5:8/>\n' +
+                '</a:5:8>\n' +
+                'or\n' +
+                '<b:wrap:5:10/>\n' +
+                '</b:5:10>\n' +
+                'ld!'
+            );
         });
 
         it('should handle multiple nested ranges', () => {
@@ -245,22 +244,24 @@ describe('render / context', () => {
                 { type: 'test' as const, start: 6, end: 8, data: { id: 'c' } }
             ];
 
-            const { segments, hooks } = captureSegmentHooks();
-            render(source, ranges, hooks);
+            const result = renderWithBoundaries(source, ranges);
 
-            // Note: Nested ranges don't split the content hook of the outer range.
-            // The content hook for 'a' is called once at the end with the full range boundaries.
-            deepStrictEqual(segments, [
-                { hook: 'open ', id: 'a', start: 0, end: 10, offset: 0 },
-                { hook: 'open ', id: 'b', start: 2, end: 4, offset: 2 },
-                { hook: 'wrap ', id: 'b', start: 2, end: 4, offset: 4 },
-                { hook: 'close', id: 'b', start: 2, end: 4, offset: 4 },
-                { hook: 'open ', id: 'c', start: 6, end: 8, offset: 6 },
-                { hook: 'wrap ', id: 'c', start: 6, end: 8, offset: 8 },
-                { hook: 'close', id: 'c', start: 6, end: 8, offset: 8 },
-                { hook: 'wrap ', id: 'a', start: 0, end: 10, offset: 10 },
-                { hook: 'close', id: 'a', start: 0, end: 10, offset: 10 }
-            ]);
+            strictEqual(result,
+                '<a:0:10>\n' +
+                '01\n' +
+                '<b:2:4>\n' +
+                '23\n' +
+                '<b:wrap:2:4/>\n' +
+                '</b:2:4>\n' +
+                '45\n' +
+                '<c:6:8>\n' +
+                '67\n' +
+                '<c:wrap:6:8/>\n' +
+                '</c:6:8>\n' +
+                '89\n' +
+                '<a:wrap:0:10/>\n' +
+                '</a:0:10>\n'
+            );
         });
 
         it('should handle ranges without content hook', () => {
@@ -269,22 +270,58 @@ describe('render / context', () => {
                 { type: 'test' as const, start: 1, end: 4, data: { id: 'a' } }
             ];
 
-            const segments: Array<{ hook: string; start: number; end: number; offset: number }> = [];
-            render(source, ranges, {
+            const result = render(source, ranges, {
                 test: {
-                    open({ start, end, offset }) {
-                        segments.push({ hook: 'open ', start, end, offset });
-                    },
-                    close({ start, end, offset }) {
-                        segments.push({ hook: 'close', start, end, offset });
-                    }
+                    open: ({ start, end, data }: RangeHookContext<any>) => `<${data.id}:${start}:${end}>\n`,
+                    close: ({ start, end, data }: RangeHookContext<any>) => `</${data.id}:${start}:${end}>\n`,
+                    text: (text) => `${text}\n`
                 }
             });
 
-            deepStrictEqual(segments, [
-                { hook: 'open ', start: 1, end: 4, offset: 1 },
-                { hook: 'close', start: 1, end: 4, offset: 4 }
-            ]);
+            strictEqual(result,
+                'H<a:1:4>\n' +
+                'ell\n' +
+                '</a:1:4>\n' +
+                'o'
+            );
+        });
+
+        it('should compute correct segment end for inner range when outer range is interrupted', () => {
+            const source = '0123456789ABCDEF';
+            const ranges = [
+                { type: 'test' as const, start: 0, end: 10, data: { id: 'outer' } },     // Outer: 0-10
+                { type: 'test' as const, start: 2, end: 8, data: { id: 'inner' } },      // Inner: 2-8 (nested)
+                { type: 'test' as const, start: 5, end: 16, data: { id: 'interrupt' } }  // Interrupts outer at 5
+            ];
+
+            const result = renderWithBoundaries(source, ranges);
+
+            // The inner range [2,8] is nested inside outer[0,10].
+            // When interrupt[5,16] starts, it interrupts outer, which causes inner to also be interrupted.
+            // Note: inner's first segment shows end=5 in open because that's where it will actually close,
+            // not end=8 (its natural end). This is correct - segment boundaries show actual rendering positions.
+            strictEqual(result,
+                '<outer:0:5>\n' +
+                '01\n' +
+                '<inner:2:5>\n' +
+                '234\n' +
+                '<inner:wrap:2:5/>\n' +
+                '</inner:2:5>\n' +
+                '<outer:wrap:0:5/>\n' +
+                '</outer:0:5>\n' +
+                '<interrupt:5:16>\n' +
+                '<outer:5:10>\n' +
+                '<inner:5:8>\n' +
+                '567\n' +
+                '<inner:wrap:5:8/>\n' +
+                '</inner:5:8>\n' +
+                '89\n' +
+                '<outer:wrap:5:10/>\n' +
+                '</outer:5:10>\n' +
+                'ABCDEF\n' +
+                '<interrupt:wrap:5:16/>\n' +
+                '</interrupt:5:16>\n'
+            );
         });
     });
 });
