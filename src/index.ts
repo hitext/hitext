@@ -8,6 +8,7 @@ export {
     rangeMatch,
     rangeNewlines,
     rangeMerge,
+    rangeCombine,
     rangeInvert,
     rangeExpandToLines
 } from './generators/index.js';

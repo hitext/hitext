@@ -3,5 +3,6 @@ export { rangeLineContents } from './line-content.js';
 export { rangeMatch } from './match.js';
 export { rangeNewlines } from './new-line.js';
 export { rangeMerge } from './merge.js';
+export { rangeCombine } from './combine.js';
 export { rangeInvert } from './invert.js';
 export { rangeExpandToLines } from './expand-to-lines.js';
