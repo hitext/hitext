@@ -4,56 +4,15 @@ import {
     generateRanges,
     rangeLines,
     rangeLineContents,
-    rangeMatch,
     rangeNewlines
 } from '../src/index.js';
+import { startEndData } from './utils.js';
 
 function gen(source: string, ranges: GenerateRanges): RangeRecord[] {
     return generateRanges(source, Symbol('test'), ranges);
 }
 
-const startEndData = (ranges: RangeRecord[]) => ranges.map(r => [r.start, r.end, r.data]);
-const regexpMatch = (input: string, match: string[] | null, index: number) => {
-    return match ? Object.assign(match, { input, index, groups: undefined }) : null;
-};
-
 describe('built-in generators', () => {
-    describe('rangeMatch', () => {
-        it('using string', () => {
-            const ranges = gen('Hello world! Hello world!', rangeMatch('world'));
-            deepStrictEqual(startEndData(ranges), [
-                [6, 11, 'world'],
-                [19, 24, 'world']
-            ]);
-        });
-
-        it('using regexp', () => {
-            const input = 'Hello world!';
-            const ranges = gen(input, rangeMatch(/\w+/));
-            deepStrictEqual(startEndData(ranges), [
-                [0, 5, regexpMatch(input, ['Hello'], 0)],
-                [6, 11, regexpMatch(input, ['world'], 6)]
-            ]);
-        });
-
-        it('using regexp with flags', () => {
-            const input = 'Hello world!';
-            const ranges = gen(input, rangeMatch(/hello|world/ig));
-            deepStrictEqual(startEndData(ranges), [
-                [0, 5, regexpMatch(input, ['Hello'], 0)],
-                [6, 11, regexpMatch(input, ['world'], 6)]
-            ]);
-        });
-
-        it('using non-string and non-regexp value', () => {
-            const input = '1234567890';
-            const ranges = gen(input, rangeMatch(234 as any));
-            deepStrictEqual(startEndData(ranges), [
-                [1, 4, '234']
-            ]);
-        });
-    });
-
     describe('line', () => {
         it('new-line ending input', () => {
             const ranges = gen('\na\rbb\r\nccc\n\r', rangeLines);
