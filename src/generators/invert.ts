@@ -6,7 +6,7 @@ export function rangeInvert<Data, RenderOptions>(
     input: Ranges<Data, RenderOptions>
 ): GenerateRanges<Data, RenderOptions> {
     return (source, createRange, renderOptions) => {
-        const ranges = generateRanges(source, Symbol('temp'), rangeMerge(input), renderOptions);
+        const ranges = generateRanges(source, rangeMerge(input), Symbol('temp'), renderOptions);
         let offset = 0;
 
         for (const range of ranges) {

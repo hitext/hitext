@@ -5,7 +5,7 @@ export function rangeMerge<Data, RenderOptions>(
     input: Ranges<Data, RenderOptions>
 ): GenerateRanges<Data, RenderOptions> {
     return (source, createRange, renderOptions) => {
-        const sortedRanges = generateRanges(source, Symbol('temp'), input, renderOptions)
+        const sortedRanges = generateRanges(source, input, Symbol('temp'), renderOptions)
             .sort((a, b) => a.start - b.start || a.end - b.end);
 
         if (sortedRanges.length > 0) {

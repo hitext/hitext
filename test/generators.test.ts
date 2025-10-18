@@ -9,7 +9,7 @@ import {
 import { startEndData } from './utils.js';
 
 function gen(source: string, ranges: GenerateRanges): RangeRecord[] {
-    return generateRanges(source, Symbol('test'), ranges);
+    return generateRanges(source, ranges, Symbol('test'));
 }
 
 describe('built-in generators', () => {

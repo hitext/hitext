@@ -31,29 +31,21 @@ export function getMatchRanges(source: string, regex: RegExp): Array<[number, nu
 /**
  * Helper function to render ranges as an array of substrings from the source.
  * This allows us to test range generators directly without using the full pipeline.
+ * Preserves the order of ranges as provided.
  */
 export function renderRanges(source: string, ranges: Ranges): string[] {
     const result: string[] = [];
-    const processedRanges: Array<[number, number]> = [];
 
     // Generate ranges using a simple collector
     if (typeof ranges === 'function') {
         ranges(source, (start, end) => {
-            processedRanges.push([start, end]);
+            result.push(source.slice(start, end));
         });
     } else {
         for (const range of ranges) {
             const [start, end] = Array.isArray(range) ? range : [range.start, range.end];
-            processedRanges.push([start, end]);
+            result.push(source.slice(start, end));
         }
-    }
-
-    // Sort ranges by start position
-    processedRanges.sort((a, b) => a[0] - b[0]);
-
-    // Extract substrings
-    for (const [start, end] of processedRanges) {
-        result.push(source.slice(start, end));
     }
 
     return result;

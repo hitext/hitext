@@ -7,7 +7,7 @@ import { startEndData, regexpMatch } from './utils.js';
 function gen(source: string, pattern: RegExp): Array<GeneratedRange<RegExpExecArray>>;
 function gen(source: string, pattern: string): Array<GeneratedRange<string>>;
 function gen(source: string, pattern: RegExp | string): Array<GeneratedRange<any>> {
-    return generateRanges(source, Symbol('test'), rangeMatch(pattern as any));
+    return generateRanges(source, rangeMatch(pattern as any), Symbol('test'));
 }
 
 describe('rangeMatch', () => {

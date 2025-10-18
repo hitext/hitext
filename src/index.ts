@@ -23,7 +23,8 @@ export {
 } from './pipeline.js';
 export {
     generateRangesFromLayers,
-    generateRanges
+    generateRanges,
+    processRanges
 } from './ranges.js';
 export {
     createRangeHooksMapFromLayers,

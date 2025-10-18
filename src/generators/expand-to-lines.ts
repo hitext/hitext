@@ -6,7 +6,7 @@ export function rangeExpandToLines<Data, RenderOptions>(
     lines = 0
 ): GenerateRanges<Data, RenderOptions> {
     return (source, createRange, renderOptions) => {
-        const ranges = generateRanges(source, Symbol('temp'), input, renderOptions);
+        const ranges = generateRanges(source, input, Symbol('temp'), renderOptions);
 
         if (ranges.length === 0) {
             return;
