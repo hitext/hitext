@@ -1,15 +1,11 @@
 import { CreateRange } from '../index.js';
-import { newLineLength } from './utils.js';
 
 export function rangeNewlines(source: string, createRange: CreateRange) {
+    const newlineRegex = /\r\n|\r|\n/g;
     let line = 1;
+    let match;
 
-    for (let i = 0; i < source.length; i++) {
-        const nl = newLineLength(source, i);
-
-        if (nl !== 0) {
-            createRange(i, i + nl, line++);
-            i += nl - 1;
-        }
+    while ((match = newlineRegex.exec(source))) {
+        createRange(match.index, match.index + match[0].length, line++);
     }
 };
