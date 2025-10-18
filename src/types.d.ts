@@ -27,10 +27,11 @@ export interface PipelineNode<RenderOptions, T, R = T, HC = unknown> {
 
 // input
 export type Ranges<Data = unknown, RenderOptions = unknown> =
-    | Array<RangeTuple<Data> | Range<Data>>
+    | RangeList<Data>
     | GenerateRanges<Data, RenderOptions>;
+export type RangeList<Data> = Array<RangeTuple<Data> | RangeRecord<Data>>;
 export type RangeTuple<Data = unknown> = [start: number, end: number, data?: Data];
-export type Range<Data = unknown> = { start: number, end: number, data?: Data };
+export type RangeRecord<Data = unknown> = { start: number, end: number, data?: Data };
 export type CreateRange<Data = unknown> = (start: number, end: number, data?: Data) => void;
 export type GenerateRanges<Data = unknown, RenderOptions = unknown> = (
     source: string,

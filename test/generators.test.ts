@@ -1,5 +1,5 @@
 import { deepStrictEqual } from 'assert';
-import type { GenerateRanges, Range } from '../src/types.js';
+import type { GenerateRanges, RangeRecord } from '../src/types.js';
 import {
     generateRanges,
     rangeLines,
@@ -8,11 +8,11 @@ import {
     rangeNewlines
 } from '../src/index.js';
 
-function gen(source: string, ranges: GenerateRanges): Range[] {
+function gen(source: string, ranges: GenerateRanges): RangeRecord[] {
     return generateRanges(source, Symbol('test'), ranges);
 }
 
-const startEndData = (ranges: Range[]) => ranges.map(r => [r.start, r.end, r.data]);
+const startEndData = (ranges: RangeRecord[]) => ranges.map(r => [r.start, r.end, r.data]);
 const regexpMatch = (input: string, match: string[] | null, index: number) => {
     return match ? Object.assign(match, { input, index, groups: undefined }) : null;
 };

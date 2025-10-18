@@ -1,5 +1,5 @@
 import assert from 'assert';
-import { render } from '../src/render.js';
+import { render } from '../src/index.js';
 
 /**
  * Visual test helper for rendering with ranges.

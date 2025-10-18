@@ -6,7 +6,10 @@ export {
     rangeLines,
     rangeLineContents,
     rangeMatch,
-    rangeNewlines
+    rangeNewlines,
+    rangeMerge,
+    rangeInvert,
+    rangeExpandToLines
 } from './generators/index.js';
 
 // Re-export renderers
