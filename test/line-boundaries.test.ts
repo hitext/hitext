@@ -88,8 +88,8 @@ describe('LineBoundaries', () => {
             const lb = createLineBoundaries('line1\nline2\r\nline3\rline4');
             strictEqual(lb.getLineEndForOffset(0, true), 5);  // "line1" without \n
             strictEqual(lb.getLineEndForOffset(6, true), 11); // "line2" without \r\n
-            strictEqual(lb.getLineEndForOffset(14, true), 19); // "line3" without \r
-            strictEqual(lb.getLineEndForOffset(21, true), 24); // "line4" (no newline) - string ends at 24
+            strictEqual(lb.getLineEndForOffset(14, true), 18); // "line3" without \r (content ends at 17, \r is at 18)
+            strictEqual(lb.getLineEndForOffset(20, true), 24); // "line4" (no newline) - string ends at 24
         });
 
         it('should move forward N lines with positive lines parameter', () => {

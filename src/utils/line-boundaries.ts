@@ -254,11 +254,13 @@ export function createLineBoundaries(source: string): LineBoundaries {
         // Exclude newline characters if requested
         if (excludeNewline) {
             const lineStart = lineStarts[lineIndex];
+
             if (lineEnd > lineStart && source[lineEnd - 1] === '\n') {
                 lineEnd--;
-                if (lineEnd > lineStart && source[lineEnd - 1] === '\r') {
-                    lineEnd--;
-                }
+            }
+
+            if (lineEnd > lineStart && source[lineEnd - 1] === '\r') {
+                lineEnd--;
             }
         }
 
