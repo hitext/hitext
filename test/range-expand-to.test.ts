@@ -1,5 +1,5 @@
-import { deepStrictEqual } from 'assert';
-import { rangeExpandTo } from '../src/index.js';
+import { deepStrictEqual, strictEqual } from 'assert';
+import { rangeExpandTo, generateRanges } from '../src/index.js';
 import { renderRanges } from './utils.js';
 
 describe('rangeExpandTo', () => {
@@ -296,6 +296,35 @@ describe('rangeExpandTo', () => {
 
             // Empty remains empty
             deepStrictEqual(expanded, ['']);
+        });
+    });
+
+    describe('Origin tracking', () => {
+        it('should create origin when input has no origin', () => {
+            const source = 'line1\nline2\nline3';
+            const ranges = generateRanges(
+                source,
+                rangeExpandTo([[7, 9]], 'line') // "in" from "line2"
+            );
+
+            strictEqual(ranges.length, 1);
+            deepStrictEqual(ranges[0].origin, { start: 7, end: 9, data: undefined });
+            strictEqual(ranges[0].start, 6);
+            strictEqual(ranges[0].end, 12);
+        });
+
+        it('should preserve origin when input already has origin', () => {
+            const source = 'line1\nline2\nline3';
+            const inputWithOrigin = [{ start: 7, end: 9, data: 'test', origin: { start: 0, end: 5, data: 'original' } }];
+            const ranges = generateRanges(
+                source,
+                rangeExpandTo(inputWithOrigin, 'lineContent')
+            );
+
+            strictEqual(ranges.length, 1);
+            deepStrictEqual(ranges[0].origin, { start: 0, end: 5, data: 'original' });
+            strictEqual(ranges[0].start, 6);
+            strictEqual(ranges[0].end, 11);
         });
     });
 });

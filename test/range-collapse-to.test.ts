@@ -40,7 +40,7 @@ describe('rangeCollapseTo', () => {
             const ranges = generateRanges(source, rangeCollapseTo(input, 'start'));
 
             deepStrictEqual(startEndData(ranges), [
-                [6, 6, { type: 'word', __rangeStart: 6, __rangeEnd: 11 }]
+                [6, 6, { type: 'word' }]
             ]);
         });
     });
@@ -231,22 +231,22 @@ describe('rangeCollapseTo', () => {
     });
 
     describe('Metadata preservation', () => {
-        it('should include __rangeStart and __rangeEnd metadata', () => {
+        it('should preserve existing data when collapsing', () => {
             const source = 'hello world';
             const ranges = generateRanges(source, rangeCollapseTo([[6, 11]], 'start'));
 
             deepStrictEqual(startEndData(ranges), [
-                [6, 6, { __rangeStart: 6, __rangeEnd: 11 }]
+                [6, 6, undefined]
             ]);
         });
 
-        it('should preserve existing data along with metadata', () => {
+        it('should preserve existing data along with origin', () => {
             const source = 'hello world';
             const input = [{ start: 6, end: 11, data: { word: 'world', length: 5 } }];
             const ranges = generateRanges(source, rangeCollapseTo(input, 'end'));
 
             deepStrictEqual(startEndData(ranges), [
-                [11, 11, { word: 'world', length: 5, __rangeStart: 6, __rangeEnd: 11 }]
+                [11, 11, { word: 'world', length: 5 }]
             ]);
         });
 
@@ -255,7 +255,7 @@ describe('rangeCollapseTo', () => {
             const ranges = generateRanges(source, rangeCollapseTo([[0, 5]], 'lineStart'));
 
             deepStrictEqual(startEndData(ranges), [
-                [0, 0, { __rangeStart: 0, __rangeEnd: 5 }]
+                [0, 0, undefined]
             ]);
         });
     });
@@ -338,6 +338,35 @@ describe('rangeCollapseTo', () => {
                 [10, 10],  // End of "error here" line
                 [24, 24]   // End of "warning there" line
             ]);
+        });
+    });
+
+    describe('Origin tracking', () => {
+        it('should create origin when input has no origin', () => {
+            const source = 'hello world';
+            const ranges = generateRanges(
+                source,
+                rangeCollapseTo([[6, 11]], 'start')
+            );
+
+            strictEqual(ranges.length, 1);
+            deepStrictEqual(ranges[0].origin, { start: 6, end: 11, data: undefined });
+            strictEqual(ranges[0].start, 6);
+            strictEqual(ranges[0].end, 6);
+        });
+
+        it('should preserve origin when input already has origin', () => {
+            const source = 'hello world';
+            const inputWithOrigin = [{ start: 6, end: 11, data: 'test', origin: { start: 0, end: 5, data: 'original' } }];
+            const ranges = generateRanges(
+                source,
+                rangeCollapseTo(inputWithOrigin, 'end')
+            );
+
+            strictEqual(ranges.length, 1);
+            deepStrictEqual(ranges[0].origin, { start: 0, end: 5, data: 'original' });
+            strictEqual(ranges[0].start, 11);
+            strictEqual(ranges[0].end, 11);
         });
     });
 });

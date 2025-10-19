@@ -1,5 +1,5 @@
-import { deepStrictEqual } from 'assert';
-import { rangeCombine, rangeMatch, rangeInvert } from '../src/index.js';
+import { deepStrictEqual, strictEqual } from 'assert';
+import { rangeCombine, rangeMatch, rangeInvert, generateRanges } from '../src/index.js';
 import { renderRanges } from './utils.js';
 
 describe('rangeCombine', () => {
@@ -255,6 +255,39 @@ describe('rangeCombine', () => {
 
             // Should get all text except ERROR and WARNING
             deepStrictEqual(inverted, [': code 123, ', ': check logs']);
+        });
+    });
+
+    describe('Origin tracking', () => {
+        it('should pass through origin when input has no origin', () => {
+            const source = 'Hello world';
+            const ranges = generateRanges(
+                source,
+                rangeCombine([
+                    [[0, 5]],
+                    [[6, 11]]
+                ])
+            );
+
+            strictEqual(ranges.length, 2);
+            strictEqual(ranges[0].origin, undefined);
+            strictEqual(ranges[1].origin, undefined);
+        });
+
+        it('should preserve origins when inputs have origins', () => {
+            const source = 'Hello world';
+            const inputsWithOrigins = [
+                [{ start: 0, end: 5, data: 'a', origin: { start: 100, end: 105, data: 'orig1' } }],
+                [{ start: 6, end: 11, data: 'b', origin: { start: 200, end: 205, data: 'orig2' } }]
+            ];
+            const ranges = generateRanges(
+                source,
+                rangeCombine(inputsWithOrigins)
+            );
+
+            strictEqual(ranges.length, 2);
+            deepStrictEqual(ranges[0].origin, { start: 100, end: 105, data: 'orig1' });
+            deepStrictEqual(ranges[1].origin, { start: 200, end: 205, data: 'orig2' });
         });
     });
 });

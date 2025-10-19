@@ -30,16 +30,14 @@ export type Ranges<Data = unknown, RenderOptions = unknown> =
     | RangeIterable<Data>
     | GenerateRanges<Data, RenderOptions>;
 export type RangeIterable<Data> = Iterable<RangeTuple<Data> | RangeRecord<Data>>;
-export type RangeTuple<Data = unknown> = [start: number, end: number, data?: Data];
-export type RangeRecord<Data = unknown> = { start: number, end: number, data?: Data };
-export type CreateRange<Data = unknown> = (start: number, end: number, data?: Data) => void;
-export type GenerateRanges<Data = unknown, RenderOptions = unknown> = (
-    source: string,
-    createRange: CreateRange<Data>,
-    renderOptions?: RenderOptions
-) => void;
-export type RangesGenerator<Data, RenderOptions> = (source: string, renderOptions?: RenderOptions) =>
-    Ranges<Data, RenderOptions>;
+export type RangeOrigin<Data> = RangeRecord<Data> | RangeRecord<Data>[];
+export type RangeTuple<Data = unknown> = [start: number, end: number, data?: Data, origin?: RangeOrigin<Data>];
+export type RangeRecord<Data = unknown> = { start: number, end: number, data?: Data, origin?: RangeOrigin<Data> };
+export type CreateRange<Data = unknown> = (start: number, end: number, data?: Data, origin?: RangeOrigin<Data>) => void;
+export type GenerateRanges<Data = unknown, RenderOptions = unknown> =
+    (source: string, createRange: CreateRange<Data>, renderOptions?: RenderOptions) => void;
+export type RangesGenerator<Data, RenderOptions> =
+    (source: string, renderOptions?: RenderOptions) => Ranges<Data, RenderOptions>;
 
 // generated
 export type RangeMarker = symbol | string | number;
@@ -48,6 +46,7 @@ export interface GeneratedRange<Data = unknown> {
     start: number;
     end: number;
     data?: Data;
+    origin?: RangeRecord<Data> | RangeRecord<Data>[];
 }
 
 //

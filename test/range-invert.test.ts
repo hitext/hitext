@@ -1,4 +1,4 @@
-import { deepStrictEqual } from 'assert';
+import { deepStrictEqual, strictEqual } from 'assert';
 import { rangeInvert, rangeMatch, generateRanges } from '../src/index.js';
 import { renderRanges } from './utils.js';
 
@@ -477,6 +477,33 @@ describe('rangeInvert', () => {
                 [3, 4],   // ' ' between b and c
                 [5, 8]    // ' d' with extended end
             ]);
+        });
+    });
+
+    describe('Origin tracking', () => {
+        it('should not create origin for inverted ranges (they are synthetic)', () => {
+            const source = 'Hello world';
+            const ranges = generateRanges(
+                source,
+                rangeInvert([[0, 5]])
+            );
+
+            strictEqual(ranges.length, 1);
+            strictEqual(ranges[0].origin, undefined);
+            strictEqual(ranges[0].start, 5);
+            strictEqual(ranges[0].end, 12);
+        });
+
+        it('should not preserve origin even when input has origins', () => {
+            const source = 'Hello world';
+            const inputWithOrigin = [{ start: 0, end: 5, data: 'test', origin: { start: 100, end: 105, data: 'original' } }];
+            const ranges = generateRanges(
+                source,
+                rangeInvert(inputWithOrigin)
+            );
+
+            strictEqual(ranges.length, 1);
+            strictEqual(ranges[0].origin, undefined);
         });
     });
 });

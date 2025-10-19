@@ -41,7 +41,10 @@ export function rangeFitToWindow<Data, RenderOptions>(
         processRanges(
             source,
             input,
-            (start, end, data) => {
+            (start, end, data, origin) => {
+                let windowStart = start;
+                let windowEnd = end;
+
                 // Check if range spans multiple lines
                 const rangeStartLine = lineBoundaries.getLine(start);
                 const rangeEndLine = lineBoundaries.getLine(end > start ? end - 1 : end);
@@ -82,14 +85,16 @@ export function rangeFitToWindow<Data, RenderOptions>(
                         actualLeft = Math.min(actualLeft + excess, availableLeft);
                     }
 
-                    createRange(start - actualLeft, end + actualRight, data);
+                    windowStart = start - actualLeft;
+                    windowEnd = end + actualRight;
                 } else if (allowTrimming) {
                     // Case 2: Range is larger than window - trim from right if allowed
-                    createRange(start, start + size, data);
+                    windowEnd = start + size;
                 } else {
                     // Case 3: Range is larger but trimming disabled - keep as is
-                    createRange(start, end, data);
                 }
+
+                createRange(windowStart, windowEnd, data, origin || { start, end, data });
             },
             renderOptions
         );

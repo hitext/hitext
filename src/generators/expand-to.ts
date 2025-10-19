@@ -41,7 +41,7 @@ export function rangeExpandTo<Data, RenderOptions>(
             ? lines
             : [lines, lines];
 
-        processRanges(source, input, (start, end, data) => {
+        processRanges(source, input, (start, end, data, origin) => {
             let expandedStart: number = start;
             let expandedEnd: number = end;
 
@@ -59,7 +59,8 @@ export function rangeExpandTo<Data, RenderOptions>(
                 );
             }
 
-            createRange(expandedStart, expandedEnd, data);
+            // Use existing origin if present, otherwise create new origin from input range
+            createRange(expandedStart, expandedEnd, data, origin || { start, end, data });
         }, renderOptions);
     };
 }

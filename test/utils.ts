@@ -1,10 +1,15 @@
-import type { Ranges } from '../src/types.js';
+import type { GeneratedRange, Ranges, RangeTuple } from '../src/types.js';
+
+
+export function rangeWithoutMarker<Data>(ranges: GeneratedRange<Data>[]): RangeTuple[] {
+    return ranges.map(r => [r.start, r.end, r.data, r.origin]);
+}
 
 /**
  * Helper function to extract [start, end, data] tuples from ranges.
  * Useful for asserting range positions and data in tests.
  */
-export function startEndData<T>(ranges: Array<{ start: number; end: number; data?: T }>): Array<[number, number, T?]> {
+export function startEndData<Data>(ranges: GeneratedRange<Data>[]): Array<[number, number, Data?]> {
     return ranges.map(r => [r.start, r.end, r.data]);
 }
 

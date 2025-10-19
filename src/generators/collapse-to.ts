@@ -6,9 +6,7 @@ import { getSharedLineBoundaries } from '../utils/line-boundaries.js';
  * Collapses ranges to a single position.
  * Useful for creating zero-width markers at specific positions.
  *
- * The collapsed range includes metadata about the original range position:
- * - __rangeStart: Original start offset
- * - __rangeEnd: Original end offset
+ * The original range information is preserved in the `origin` field of the collapsed range.
  *
  * @param input - Ranges to collapse
  * @param position - Where to collapse the range to:
@@ -43,7 +41,7 @@ export function rangeCollapseTo<Data, RenderOptions>(
         processRanges(
             source,
             input,
-            (start, end, data) => {
+            (start, end, data, origin) => {
                 let targetPos: number;
                 const lineStartPos = lineBoundaries.getLineStartForOffset(start);
 
@@ -74,14 +72,8 @@ export function rangeCollapseTo<Data, RenderOptions>(
                         break;
                 }
 
-                // Include metadata about original range position
-                const collapsedData = {
-                    ...data,
-                    __rangeStart: start,
-                    __rangeEnd: end
-                };
-
-                createRange(targetPos, targetPos, collapsedData as Data);
+                // Use existing origin if present, otherwise create new origin from input range
+                createRange(targetPos, targetPos, data, origin || { start, end, data });
             },
             renderOptions
         );

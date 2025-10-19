@@ -1,6 +1,6 @@
 import { deepStrictEqual } from 'assert';
-import { rangeCombine, rangeMatch, rangeMerge } from '../src/index.js';
-import { getMatchRanges, renderRanges } from './utils.js';
+import { rangeCombine, rangeMatch, rangeMerge, generateRanges } from '../src/index.js';
+import { getMatchRanges, renderRanges, rangeWithoutMarker } from './utils.js';
 
 describe('rangeMerge', () => {
     describe('Basic merging', () => {
@@ -298,6 +298,79 @@ describe('rangeMerge', () => {
 
             // Should preserve separate ERROR and WARNING matches
             deepStrictEqual(merged, ['ERROR', 'WARNING', 'ERROR']);
+        });
+    });
+
+    describe('Origin tracking', () => {
+        it('should not include origins by default', () => {
+            const source = 'Hello world';
+            const ranges = generateRanges(
+                source,
+                rangeMerge([[0, 5], [3, 8], [6, 11]]) // Three overlapping ranges
+            );
+
+            deepStrictEqual(rangeWithoutMarker(ranges), [
+                [0, 11, undefined, undefined]
+            ]);
+        });
+
+        it('should include origins when origins=true', () => {
+            const source = 'Hello world';
+            const ranges = generateRanges(
+                source,
+                rangeMerge([[0, 5], [3, 8], [6, 11]], true) // Three overlapping ranges with origins
+            );
+
+            deepStrictEqual(rangeWithoutMarker(ranges), [
+                [0, 11, undefined, [
+                    { start: 0, end: 5, data: undefined },
+                    { start: 3, end: 8, data: undefined },
+                    { start: 6, end: 11, data: undefined }
+                ]]
+            ]);
+        });
+
+        it('should include origins for non-overlapping ranges when origins=true', () => {
+            const source = 'Hello world';
+            const ranges = generateRanges(
+                source,
+                rangeMerge([[0, 5], [6, 11]], true) // Two non-overlapping ranges
+            );
+
+            deepStrictEqual(rangeWithoutMarker(ranges), [
+                [0, 5, undefined, [
+                    { start: 0, end: 5, data: undefined }
+                ]],
+                [6, 11, undefined, [
+                    { start: 6, end: 11, data: undefined }
+                ]]
+            ]);
+        });
+
+        it('should handle single range with origins=true', () => {
+            const source = 'Hello world';
+            const ranges = generateRanges(
+                source,
+                rangeMerge([[0, 5]], true) // Single range
+            );
+
+            deepStrictEqual(rangeWithoutMarker(ranges), [
+                [0, 5, undefined, [
+                    { start: 0, end: 5, data: undefined }
+                ]]
+            ]);
+        });
+
+        it('should explicitly not include origins when origins=false', () => {
+            const source = 'Hello world';
+            const ranges = generateRanges(
+                source,
+                rangeMerge([[0, 5], [3, 8]], false)
+            );
+
+            deepStrictEqual(rangeWithoutMarker(ranges), [
+                [0, 8, undefined, undefined]
+            ]);
         });
     });
 });

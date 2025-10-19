@@ -287,8 +287,8 @@ describe('Range Generation Helpers', () => {
             );
 
             deepStrictEqual(ranges, [
-                { type: marker, start: 0, end: 5, data: undefined },
-                { type: marker, start: 6, end: 11, data: 'extra' }
+                { type: marker, start: 0, end: 5, data: undefined, origin: undefined },
+                { type: marker, start: 6, end: 11, data: 'extra', origin: undefined }
             ]);
         });
 
@@ -304,8 +304,8 @@ describe('Range Generation Helpers', () => {
             );
 
             deepStrictEqual(ranges, [
-                { type: marker, start: 0, end: 5, data: undefined },
-                { type: marker, start: 6, end: 11, data: { type: 'word' } }
+                { type: marker, start: 0, end: 5, data: undefined, origin: undefined },
+                { type: marker, start: 6, end: 11, data: { type: 'word' }, origin: undefined }
             ]);
         });
 
@@ -327,8 +327,8 @@ describe('Range Generation Helpers', () => {
             const ranges = generateRanges('Hello world', generator, marker);
 
             deepStrictEqual(ranges, [
-                { type: marker, start: 0, end: 5, data: 'Hello' },
-                { type: marker, start: 6, end: 11, data: 'world' }
+                { type: marker, start: 0, end: 5, data: 'Hello', origin: undefined },
+                { type: marker, start: 6, end: 11, data: 'world', origin: undefined }
             ]);
         });
 
@@ -341,8 +341,8 @@ describe('Range Generation Helpers', () => {
 
             strictEqual(allRanges, existingRanges); // Same array reference
             deepStrictEqual(allRanges, [
-                { type: marker1, start: 0, end: 5, data: undefined },
-                { type: marker2, start: 6, end: 11, data: undefined }
+                { type: marker1, start: 0, end: 5, data: undefined, origin: undefined },
+                { type: marker2, start: 6, end: 11, data: undefined, origin: undefined }
             ]);
         });
 
@@ -366,8 +366,8 @@ describe('Range Generation Helpers', () => {
             );
 
             deepStrictEqual(ranges, [
-                { type: marker, start: 0, end: 5, data: undefined },
-                { type: marker, start: 6, end: 11, data: undefined }
+                { type: marker, start: 0, end: 5, data: undefined, origin: undefined },
+                { type: marker, start: 6, end: 11, data: undefined, origin: undefined }
             ]);
         });
     });
@@ -388,8 +388,8 @@ describe('Range Generation Helpers', () => {
             ]);
 
             deepStrictEqual(ranges, [
-                { type: marker1, start: 0, end: 5, data: undefined },
-                { type: marker2, start: 6, end: 11, data: undefined }
+                { type: marker1, start: 0, end: 5, data: undefined, origin: undefined },
+                { type: marker2, start: 6, end: 11, data: undefined, origin: undefined }
             ]);
         });
 
@@ -404,8 +404,8 @@ describe('Range Generation Helpers', () => {
             ]);
 
             deepStrictEqual(ranges, [
-                { type: marker, start: 0, end: 5, data: regexpMatch(input, ['Hello'], 0) },
-                { type: marker, start: 6, end: 11, data: regexpMatch(input, ['world'], 6) }
+                { type: marker, start: 0, end: 5, data: regexpMatch(input, ['Hello'], 0), origin: undefined },
+                { type: marker, start: 6, end: 11, data: regexpMatch(input, ['world'], 6), origin: undefined }
             ]);
         });
 
@@ -422,8 +422,8 @@ describe('Range Generation Helpers', () => {
             ], { setting: 'test' });
 
             deepStrictEqual(ranges, [
-                { type: marker1, start: 0, end: 1, data: { setting: 'test' } },
-                { type: marker2, start: 1, end: 2, data: { setting: 'test' } }
+                { type: marker1, start: 0, end: 1, data: { setting: 'test' }, origin: undefined },
+                { type: marker2, start: 1, end: 2, data: { setting: 'test' }, origin: undefined }
             ]);
         });
 
@@ -440,10 +440,10 @@ describe('Range Generation Helpers', () => {
             ]);
 
             deepStrictEqual(ranges, [
-                { type: marker1, start: 0, end: 11, data: undefined },
-                { type: marker2, start: 0, end: 5, data: regexpMatch(input, ['Hello'], 0) },
-                { type: marker2, start: 6, end: 11, data: regexpMatch(input, ['world'], 6) },
-                { type: marker3, start: 0, end: 5, data: undefined }
+                { type: marker1, start: 0, end: 11, data: undefined, origin: undefined },
+                { type: marker2, start: 0, end: 5, data: regexpMatch(input, ['Hello'], 0), origin: undefined },
+                { type: marker2, start: 6, end: 11, data: regexpMatch(input, ['world'], 6), origin: undefined },
+                { type: marker3, start: 0, end: 5, data: undefined, origin: undefined }
             ]);
         });
 
@@ -476,8 +476,8 @@ describe('Range Generation Helpers', () => {
             ]);
 
             deepStrictEqual(ranges, [
-                { type: marker1, start: 0, end: 5, data: { type: 'greeting' } },
-                { type: marker2, start: 6, end: 11, data: undefined }
+                { type: marker1, start: 0, end: 5, data: { type: 'greeting' }, origin: undefined },
+                { type: marker2, start: 6, end: 11, data: undefined, origin: undefined }
             ]);
         });
     });
@@ -523,8 +523,8 @@ describe('Range Generation Helpers', () => {
 
             // Only "the" and "world"
             deepStrictEqual(ranges, [
-                { type: marker, start: 5, end: 8, data: 'the' },
-                { type: marker, start: 9, end: 14, data: 'world' }
+                { type: marker, start: 5, end: 8, data: 'the', origin: undefined },
+                { type: marker, start: 9, end: 14, data: 'world', origin: undefined }
             ]);
         });
     });

@@ -38,7 +38,8 @@ export function generateRanges<Data, RenderOptions>(
     processRanges(
         source,
         input,
-        (start, end, data) => ranges.push({ type: marker, start, end, data }),
+        (start, end, data, origin) =>
+            ranges.push({ type: marker, start, end, data, origin }),
         renderOptions
     );
 
@@ -68,10 +69,10 @@ export function processRanges<Data, RenderOptions>(
         for (const range of input) {
             if (Array.isArray(range)) {
                 // Tuple form, i.e. [start, end, data?]
-                createRange(range[0], range[1], range[2]);
+                createRange(range[0], range[1], range[2], range[3]);
             } else {
                 // Object form, i.e. { start, end, data? }
-                createRange(range.start, range.end, range.data);
+                createRange(range.start, range.end, range.data, range.origin);
             }
         }
     }

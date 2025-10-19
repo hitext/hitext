@@ -1,5 +1,5 @@
-import { deepStrictEqual } from 'assert';
-import { rangeMatch, rangeFitToWindow } from '../src/index.js';
+import { deepStrictEqual, strictEqual } from 'assert';
+import { rangeMatch, rangeFitToWindow, generateRanges } from '../src/index.js';
 import { renderRanges } from './utils.js';
 
 describe('rangeFitToWindow', () => {
@@ -346,6 +346,31 @@ describe('rangeFitToWindow', () => {
             // So: 7 left + 6 match + 7 right, but only 0 available right
             // Give excess to left: 14 left + 6 match = 20 chars
             deepStrictEqual(windows, ['ong line with ERROR1']);
+        });
+    });
+
+    describe('Origin tracking', () => {
+        it('should create origin when input has no origin', () => {
+            const source = 'Lorem ipsum dolor sit amet ERROR consectetur';
+            const ranges = generateRanges(
+                source,
+                rangeFitToWindow([[27, 32]], 35)
+            );
+
+            strictEqual(ranges.length, 1);
+            deepStrictEqual(ranges[0].origin, { start: 27, end: 32, data: undefined });
+        });
+
+        it('should preserve origin when input already has origin', () => {
+            const source = 'Lorem ipsum dolor sit amet ERROR consectetur';
+            const inputWithOrigin = [{ start: 27, end: 32, data: 'test', origin: { start: 100, end: 105, data: 'original' } }];
+            const ranges = generateRanges(
+                source,
+                rangeFitToWindow(inputWithOrigin, 35)
+            );
+
+            strictEqual(ranges.length, 1);
+            deepStrictEqual(ranges[0].origin, { start: 100, end: 105, data: 'original' });
         });
     });
 });
