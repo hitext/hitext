@@ -146,24 +146,6 @@ describe('rangeCollapseTo', () => {
             // Collapse to end of line2 content (offset 11)
             deepStrictEqual(startEnd(ranges), [[11, 11]]);
         });
-
-        it('should work with CRLF line endings', () => {
-            const source = 'line1\r\nline2\r\nline3';
-            const ranges = generateRanges(source, rangeCollapseTo([[9, 11]], 'lineContentEnd'));
-
-            // "ne" from "line2" -> collapse to end of line2 content (offset 12, before \r\n)
-            deepStrictEqual(startEnd(ranges), [[12, 12]]);
-            strictEqual(source.slice(12, 14), '\r\n');
-        });
-
-        it('should work with CR line endings', () => {
-            const source = 'line1\rline2\rline3';
-            const ranges = generateRanges(source, rangeCollapseTo([[8, 10]], 'lineContentEnd'));
-
-            // "ne" from "line2" -> collapse to end of line2 content (offset 11, before \r)
-            deepStrictEqual(startEnd(ranges), [[11, 11]]);
-            strictEqual(source[11], '\r');
-        });
     });
 
     describe('Collapse to lineEnd', () => {
@@ -192,8 +174,44 @@ describe('rangeCollapseTo', () => {
             // Collapse to after line2's \n (offset 12)
             deepStrictEqual(startEnd(ranges), [[12, 12]]);
         });
+    });
 
-        it('should work with CRLF line endings', () => {
+    describe('Different line endings', () => {
+        it('should work with \\n line endings', () => {
+            const source = 'line1\nline2\nline3';
+            const ranges = generateRanges(source, rangeCollapseTo([[7, 9]], 'lineContentEnd'));
+
+            deepStrictEqual(startEnd(ranges), [[11, 11]]);
+        });
+
+        it('should work with \\r line endings', () => {
+            const source = 'line1\rline2\rline3';
+            const ranges = generateRanges(source, rangeCollapseTo([[7, 9]], 'lineContentEnd'));
+
+            // "in" from "line2" -> collapse to end of line2 content (offset 11, before \r)
+            deepStrictEqual(startEnd(ranges), [[11, 11]]);
+            strictEqual(source[11], '\r');
+        });
+
+        it('should work with \\r\\n line endings', () => {
+            const source = 'line1\r\nline2\r\nline3';
+            const ranges = generateRanges(source, rangeCollapseTo([[8, 10]], 'lineContentEnd'));
+
+            // "in" from "line2" -> collapse to end of line2 content (offset 12, before \r\n)
+            deepStrictEqual(startEnd(ranges), [[12, 12]]);
+            strictEqual(source.slice(12, 14), '\r\n');
+        });
+
+        it('should work with mixed line endings', () => {
+            const source = 'line1\nline2\r\nline3\rline4';
+            const ranges = generateRanges(source, rangeCollapseTo([[8, 10]], 'lineEnd'));
+
+            // Position 8-10 is in line2 (CRLF ending)
+            // Collapse to after \r\n (offset 13, start of line3)
+            deepStrictEqual(startEnd(ranges), [[13, 13]]);
+        });
+
+        it('should handle CRLF with lineEnd', () => {
             const source = 'line1\r\nline2\r\nline3';
             const ranges = generateRanges(source, rangeCollapseTo([[9, 11]], 'lineEnd'));
 
@@ -202,7 +220,7 @@ describe('rangeCollapseTo', () => {
             strictEqual(source[14], 'l'); // Start of "line3"
         });
 
-        it('should work with CR line endings', () => {
+        it('should handle CR with lineEnd', () => {
             const source = 'line1\rline2\rline3';
             const ranges = generateRanges(source, rangeCollapseTo([[8, 10]], 'lineEnd'));
 

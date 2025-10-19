@@ -5,6 +5,6 @@ export { rangeNewlines } from './new-line.js';
 export { rangeMerge } from './merge.js';
 export { rangeCombine } from './combine.js';
 export { rangeInvert } from './invert.js';
-export { rangeExpandToLines } from './expand-to-lines.js';
+export { rangeExpandTo } from './expand-to.js';
 export { rangeFitToWindow } from './fit-to-window.js';
 export { rangeCollapseTo } from './collapse-to.js';
