@@ -1,5 +1,4 @@
 import { deepStrictEqual } from 'assert';
-import type { GenerateRanges, RangeRecord } from '../src/types.js';
 import {
     generateRanges,
     rangeLines,
@@ -8,14 +7,10 @@ import {
 } from '../src/index.js';
 import { startEndData } from './utils.js';
 
-function gen(source: string, ranges: GenerateRanges): RangeRecord[] {
-    return generateRanges(source, ranges, Symbol('test'));
-}
-
 describe('built-in generators', () => {
     describe('line', () => {
         it('new-line ending input', () => {
-            const ranges = gen('\na\rbb\r\nccc\n\r', rangeLines);
+            const ranges = generateRanges('\na\rbb\r\nccc\n\r', rangeLines);
             deepStrictEqual(startEndData(ranges), [
                 [0, 1, 1],
                 [1, 3, 2],
@@ -27,7 +22,7 @@ describe('built-in generators', () => {
         });
 
         it('non-new-line ending input', () => {
-            const ranges = gen('\na\rbb\r\nccc\n\rdddd', rangeLines);
+            const ranges = generateRanges('\na\rbb\r\nccc\n\rdddd', rangeLines);
             deepStrictEqual(startEndData(ranges), [
                 [0, 1, 1],
                 [1, 3, 2],
@@ -41,7 +36,7 @@ describe('built-in generators', () => {
 
     describe('lineContent', () => {
         it('new-line ending input', () => {
-            const ranges = gen('\na\rbb\r\nccc\n\r', rangeLineContents);
+            const ranges = generateRanges('\na\rbb\r\nccc\n\r', rangeLineContents);
             deepStrictEqual(startEndData(ranges), [
                 [0, 0, 1],
                 [1, 2, 2],
@@ -53,7 +48,7 @@ describe('built-in generators', () => {
         });
 
         it('non-new-line ending input', () => {
-            const ranges = gen('\na\rbb\r\nccc\n\rdddd', rangeLineContents);
+            const ranges = generateRanges('\na\rbb\r\nccc\n\rdddd', rangeLineContents);
             deepStrictEqual(startEndData(ranges), [
                 [0, 0, 1],
                 [1, 2, 2],
@@ -67,7 +62,7 @@ describe('built-in generators', () => {
 
     describe('newLine', () => {
         it('new-line ending input', () => {
-            const ranges = gen('\na\rbb\r\nccc\n\r', rangeNewlines);
+            const ranges = generateRanges('\na\rbb\r\nccc\n\r', rangeNewlines);
             deepStrictEqual(startEndData(ranges), [
                 [0, 1, 1],
                 [2, 3, 2],
@@ -78,7 +73,7 @@ describe('built-in generators', () => {
         });
 
         it('non-new-line ending input', () => {
-            const ranges = gen('\na\rbb\r\nccc\n\rdddd', rangeNewlines);
+            const ranges = generateRanges('\na\rbb\r\nccc\n\rdddd', rangeNewlines);
             deepStrictEqual(startEndData(ranges), [
                 [0, 1, 1],
                 [2, 3, 2],
