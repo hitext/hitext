@@ -7,3 +7,4 @@ export { rangeCombine } from './combine.js';
 export { rangeInvert } from './invert.js';
 export { rangeExpandToLines } from './expand-to-lines.js';
 export { rangeFitToWindow } from './fit-to-window.js';
+export { rangeCollapseTo } from './collapse-to.js';

@@ -11,7 +11,8 @@ export {
     rangeCombine,
     rangeInvert,
     rangeExpandToLines,
-    rangeFitToWindow
+    rangeFitToWindow,
+    rangeCollapseTo
 } from './generators/index.js';
 
 // Re-export renderers
