@@ -10,7 +10,8 @@ export {
     rangeMerge,
     rangeCombine,
     rangeInvert,
-    rangeExpandToLines
+    rangeExpandToLines,
+    rangeFitToWindow
 } from './generators/index.js';
 
 // Re-export renderers
