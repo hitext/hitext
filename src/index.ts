@@ -12,7 +12,8 @@ export {
     rangeInvert,
     rangeExpandTo,
     rangeCollapseTo,
-    rangeFitToWindow
+    rangeFitToWindow,
+    rangeFrom
 } from './generators/index.js';
 
 // Re-export renderers

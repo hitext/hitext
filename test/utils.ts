@@ -33,14 +33,18 @@ export function getMatchRanges(source: string, regex: RegExp): Array<[number, nu
  * This allows us to test range generators directly without using the full pipeline.
  * Preserves the order of ranges as provided.
  */
-export function renderRanges(source: string, ranges: Ranges): string[] {
+export function renderRanges<Data, RenderOptions>(
+    source: string,
+    ranges: Ranges<Data, RenderOptions>,
+    renderOptions?: RenderOptions
+): string[] {
     const result: string[] = [];
 
     // Generate ranges using a simple collector
     if (typeof ranges === 'function') {
         ranges(source, (start, end) => {
             result.push(source.slice(start, end));
-        });
+        }, renderOptions);
     } else {
         for (const range of ranges) {
             const [start, end] = Array.isArray(range) ? range : [range.start, range.end];

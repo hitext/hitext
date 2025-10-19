@@ -38,6 +38,8 @@ export type GenerateRanges<Data = unknown, RenderOptions = unknown> = (
     createRange: CreateRange<Data>,
     renderOptions?: RenderOptions
 ) => void;
+export type RangesGenerator<Data, RenderOptions> = (source: string, renderOptions?: RenderOptions) =>
+    Ranges<Data, RenderOptions>;
 
 // generated
 export type RangeMarker = symbol | string | number;

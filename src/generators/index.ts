@@ -8,3 +8,4 @@ export { rangeInvert } from './invert.js';
 export { rangeExpandTo } from './expand-to.js';
 export { rangeFitToWindow } from './fit-to-window.js';
 export { rangeCollapseTo } from './collapse-to.js';
+export { rangeFrom } from './from.js';
