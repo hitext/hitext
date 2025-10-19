@@ -1,4 +1,5 @@
 import type {
+    CreateRange,
     GeneratedRange,
     PipelineLayer,
     RangeMarker,
@@ -56,7 +57,7 @@ export function generateRanges<Data, RenderOptions>(
 export function processRanges<Data, RenderOptions>(
     source: string,
     input: Ranges<Data, RenderOptions>,
-    createRange: (start: number, end: number, data?: Data) => void,
+    createRange: CreateRange<Data>,
     renderOptions?: RenderOptions
 ): void {
     if (typeof input === 'function') {

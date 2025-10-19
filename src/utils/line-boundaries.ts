@@ -251,7 +251,7 @@ export function createLineBoundaries(source: string): LineBoundaries {
             ? lineStarts[lineIndex + 1]
             : source.length;
 
-        // Exclude newline characters if requested
+        // Exclude newline characters if requested (\n, \r, or \r\n)
         if (excludeNewline) {
             const lineStart = lineStarts[lineIndex];
 
