@@ -1,5 +1,5 @@
 import assert from 'assert';
-import { render } from '../src/index.js';
+import { RangeCallableHook, RangeHookContext, render } from '../src/index.js';
 
 /**
  * Visual test helper for rendering with ranges.
@@ -801,78 +801,78 @@ describe('Replace Hook', () => {
 
             const ranges = [{ type: 'r', start: 7, end: 18, data: undefined }];
 
-            const capturedContexts: Record<string, any> = {};
+            const capturedContexts: Partial<Record<RangeCallableHook, any>> = {};
+            const captureContextHook = (...args: any[]) => {
+                const context = args[args.length - 1] as RangeHookContext;
+                capturedContexts[context.hook] = context.dump();
+            };
 
             render(source, ranges, {
                 r: {
-                    open: (context) => {
-                        capturedContexts.open = context.dump();
-                    },
-                    replace: (context) => {
-                        capturedContexts.replace = context.dump();
-                    },
-                    wrap: (_content, context) => {
-                        capturedContexts.wrap = context.dump();
-                    },
-                    close: (context) => {
-                        capturedContexts.close = context.dump();
-                    }
+                    open: captureContextHook,
+                    replace: captureContextHook,
+                    wrap: captureContextHook,
+                    close: captureContextHook
                 }
             });
 
             // Verify open hook context: should use range.start (7)
             assert.deepStrictEqual(capturedContexts.open, {
+                hook: 'open',
+                source,
                 offset: 7,
                 line: 2,
                 column: 1,
                 start: 7,
                 end: 18,
-                source,
-                range: ranges[0],
                 rangeIndex: 0,
                 rangeText: '[REPLACE]\nL',
+                range: ranges[0],
                 data: undefined
             });
 
             // Verify replace hook context: should use range.start (7)
             assert.deepStrictEqual(capturedContexts.replace, {
+                hook: 'replace',
+                source,
                 offset: 7,
                 line: 2,
                 column: 1,
                 start: 7,
                 end: 18,
-                source,
-                range: ranges[0],
                 rangeIndex: 0,
                 rangeText: '[REPLACE]\nL',
+                range: ranges[0],
                 data: undefined
             });
 
             // Verify wrap hook context: should use range.end (16)
             assert.deepStrictEqual(capturedContexts.wrap, {
+                hook: 'wrap',
+                source,
                 offset: 18,
                 line: 3,
                 column: 2,
                 start: 7,
                 end: 18,
-                source,
-                range: ranges[0],
                 rangeIndex: 0,
                 rangeText: '[REPLACE]\nL',
+                range: ranges[0],
                 data: undefined
             });
 
             // Verify close hook context: should use range.end (16)
             assert.deepStrictEqual(capturedContexts.close, {
+                hook: 'close',
+                source,
                 offset: 18,
                 line: 3,
                 column: 2,
                 start: 7,
                 end: 18,
-                source,
-                range: ranges[0],
                 rangeIndex: 0,
                 rangeText: '[REPLACE]\nL',
+                range: ranges[0],
                 data: undefined
             });
         });
@@ -884,76 +884,76 @@ describe('Replace Hook', () => {
 
             const ranges = [{ type: 'r', start: 6, end: 13, data: undefined }];
 
-            const capturedContexts: Record<string, any> = {};
+            const capturedContexts: Partial<Record<RangeCallableHook, any>> = {};
+            const captureContextHook = (...args: any[]) => {
+                const context = args[args.length - 1] as RangeHookContext;
+                capturedContexts[context.hook] = context.dump();
+            };
 
             render(source, ranges, {
                 r: {
-                    open: (context) => {
-                        capturedContexts.open = context.dump();
-                    },
-                    replace: (context) => {
-                        capturedContexts.replace = context.dump();
-                    },
-                    wrap: (_content, context) => {
-                        capturedContexts.wrap = context.dump();
-                    },
-                    close: (context) => {
-                        capturedContexts.close = context.dump();
-                    }
+                    open: captureContextHook,
+                    replace: captureContextHook,
+                    wrap: captureContextHook,
+                    close: captureContextHook
                 }
             });
 
             // open and replace: offset at start (6), line 1, column 7
             assert.deepStrictEqual(capturedContexts.open, {
+                hook: 'open',
+                source,
                 offset: 6,
                 line: 1,
                 column: 7,
                 start: 6,
                 end: 13,
-                source,
-                range: ranges[0],
                 rangeIndex: 0,
                 rangeText: '[RANGE]',
+                range: ranges[0],
                 data: undefined
             });
 
             assert.deepStrictEqual(capturedContexts.replace, {
+                hook: 'replace',
+                source,
                 offset: 6,
                 line: 1,
                 column: 7,
                 start: 6,
                 end: 13,
-                source,
-                range: ranges[0],
                 rangeIndex: 0,
                 rangeText: '[RANGE]',
+                range: ranges[0],
                 data: undefined
             });
 
             // wrap and close: offset at end (13), line 1, column 14
             assert.deepStrictEqual(capturedContexts.wrap, {
+                hook: 'wrap',
+                source,
                 offset: 13,
                 line: 1,
                 column: 14,
                 start: 6,
                 end: 13,
-                source,
-                range: ranges[0],
                 rangeIndex: 0,
                 rangeText: '[RANGE]',
+                range: ranges[0],
                 data: undefined
             });
 
             assert.deepStrictEqual(capturedContexts.close, {
+                hook: 'close',
+                source,
                 offset: 13,
                 line: 1,
                 column: 14,
                 start: 6,
                 end: 13,
-                source,
-                range: ranges[0],
                 rangeIndex: 0,
                 rangeText: '[RANGE]',
+                range: ranges[0],
                 data: undefined
             });
         });

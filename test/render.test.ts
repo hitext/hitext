@@ -366,6 +366,7 @@ describe('render', () => {
             });
 
             deepStrictEqual(capturedContext, {
+                hook: 'wrap',
                 source: 'Hello\nworld!',
                 offset: 11,
                 line: 2,

@@ -75,6 +75,7 @@ export type RangeHooksFactory<Data = unknown, T, R = T, HC = unknown> = {
         | undefined;
 };
 
+export type RangeCallableHook = 'open' | 'close' | 'wrap' | 'text' | 'replace';
 export interface RangeHooks<Data = unknown, T, R = T> {
     open: RangeHookOpen<Data, T> | null;
     close: RangeHookClose<Data, T> | null;
@@ -104,6 +105,7 @@ export type RangeHookReplace<Data, T> = (
 
 export type RangeHookContextDump<T> = Omit<RangeHookContext<T>, 'dump'>;
 export type RangeHookContext<T = unknown> = {
+    hook: RangeCallableHook;
     source: string;
     offset: number;
     line: number;

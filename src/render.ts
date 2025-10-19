@@ -7,7 +7,8 @@ import type {
     RangeMarker,
     RangeHooksDefinitionMap,
     RangeHookText,
-    RenderBuffer
+    RenderBuffer,
+    RangeCallableHook
 } from './types.js';
 
 function functionOrValue<K, T>(value: K, fallback: T): (K extends Function ? K : T) {
@@ -42,10 +43,11 @@ export function render<T, R = T, HC = unknown>(
             (rangeHooksMap[marker].replace ? 1 : 0)
         ])
     );
-    const rangeIndexMap = new Map<GeneratedRange, number>();
 
     // Create renderer context with options
+    const rangeIndexMap = new Map<GeneratedRange, number>();
     const rangeHookContext: RangeHookContext<any> = Object.defineProperties(Object.create(null), {
+        hook: { get: () => currentRangeHook },
         source: { value: source },
         offset: { get: () => renderedOffset },
         line: { get: () => line },
@@ -77,6 +79,7 @@ export function render<T, R = T, HC = unknown>(
     const rangeStack: Array<GeneratedRange> = [];
     const rangeStackSegmentStarts: number[] = []; // Parallel array to activeRanges
     let rangeStackOpenIndex = 0;
+    let currentRangeHook: RangeCallableHook = 'open';
     let currentRange: GeneratedRange = {
         type: Symbol('root'),
         start: 0,
@@ -244,7 +247,10 @@ export function render<T, R = T, HC = unknown>(
         segmentEnd = rangeSegmentEnd;
 
         // Call open hook (goes to current buffer)
-        appendToBuffer(rangeHooks.open?.(rangeHookContext));
+        if (rangeHooks.open) {
+            currentRangeHook = 'open';
+            appendToBuffer(rangeHooks.open(rangeHookContext));
+        }
 
         // Create new buffer for accumulating content
         if (rangeHooks.wrap) {
@@ -254,6 +260,7 @@ export function render<T, R = T, HC = unknown>(
 
         // Inject replace content if applicable
         if (rangeHooks.replace) {
+            currentRangeHook = 'replace';
             appendToBuffer(rangeHooks.replace(rangeHookContext));
         }
     }
@@ -274,11 +281,15 @@ export function render<T, R = T, HC = unknown>(
             currentBuffer = bufferStack.pop()!;
 
             // Emit wrapped accumulated content
+            currentRangeHook = 'wrap';
             appendToBuffer(rangeHooks.wrap(content, rangeHookContext));
         }
 
         // Call close hook (goes to current buffer)
-        appendToBuffer(rangeHooks.close?.(rangeHookContext));
+        if (rangeHooks.close) {
+            currentRangeHook = 'close';
+            appendToBuffer(rangeHooks.close(rangeHookContext));
+        }
     };
 
     function renderText(offset: number) {
@@ -302,7 +313,9 @@ export function render<T, R = T, HC = unknown>(
 
         // Append to current buffer
         const substring = source.slice(renderedOffset, offset);
+        currentRangeHook = 'text';
         appendToBuffer(textHook(substring, rangeHookContext));
+
         renderedOffset = offset;
     }
 
