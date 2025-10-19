@@ -1,52 +1,4 @@
-/**
- * Interface for working with line boundaries in a source string.
- */
-export interface LineBoundaries {
-    /**
-     * Get the line number (1-based) for a given offset in the source.
-     * If lines parameter is provided:
-     *   - Positive value: move forward N lines
-     *   - Negative value: move backward N lines
-     * Returns the 1-based line number containing the offset.
-     */
-    getLine(offset: number, lines?: number): number;
-
-    /**
-     * Get the column number (1-based) for a given offset in the source.
-     * If lines parameter is provided:
-     *   - Positive value: move forward N lines
-     *   - Negative value: move backward N lines
-     * Returns the 1-based column position within the line.
-     */
-    getColumn(offset: number, lines?: number): number;
-
-    /**
-     * Get the offset for a given line and column (both 1-based).
-     * Returns the offset in the source string.
-     * If line is out of bounds, clamps to valid range.
-     * If column is out of bounds for the line, clamps to line length.
-     */
-    getOffset(line: number, column?: number): number;
-
-    /**
-     * Get the line start offset for a given offset in the source.
-     * If lines parameter is provided:
-     *   - Positive value: move forward N lines
-     *   - Negative value: move backward N lines
-     * Returns the offset where the target line starts.
-     */
-    getLineStartForOffset(offset: number, lines?: number): number;
-
-    /**
-     * Get the line end offset for a given offset in the source.
-     * If excludeNewline is true, returns offset before the newline character(s).
-     * If lines parameter is provided:
-     *   - Positive value: move forward N lines
-     *   - Negative value: move backward N lines
-     * Returns the offset where the target line ends.
-     */
-    getLineEndForOffset(offset: number, excludeNewline?: boolean, lines?: number): number;
-}
+import { LineBoundaries } from '../types.js';
 
 /**
  * Factory function for creating a line boundaries utility.
@@ -90,7 +42,7 @@ export function createLineBoundaries(source: string): LineBoundaries {
      */
     function binarySearchLineIndex(left: number, right: number, offset: number): number {
         while (left < right) {
-            const mid = Math.floor((left + right + 1) / 2);
+            const mid = (left + right + 1) >> 1;
             if (lineStarts[mid] <= offset) {
                 left = mid;
             } else {

@@ -27,7 +27,6 @@ export {
     getSharedLineBoundaries,
     setSharedLineBoundaries
 } from './utils/line-boundaries.js';
-export type { LineBoundaries } from './utils/line-boundaries.js';
 export {
     createRenderPipeline,
     createPipelineNode

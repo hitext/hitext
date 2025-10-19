@@ -1,6 +1,8 @@
 import { resolveRangeHooksMap } from './range-hooks-map.js';
 import { StringBuffer } from './utils/string-buffer.js';
+import { getSharedLineBoundaries } from './utils/line-boundaries.js';
 import type {
+    LineBoundaries,
     GeneratedRange,
     RangeHookContext,
     RenderHooks,
@@ -48,10 +50,11 @@ export function render<T, R = T, HC = unknown>(
     const rangeIndexMap = new Map<GeneratedRange, number>();
     const rangeHookContext: RangeHookContext<any> = Object.defineProperties(Object.create(null), {
         hook: { get: () => currentRangeHook },
+        lines: { get: getLineBoundaries },
         source: { value: source },
         offset: { get: () => renderedOffset },
-        line: { get: () => line },
-        column: { get: () => column },
+        line: { get: () => getLineBoundaries().getLine(renderedOffset) },
+        column: { get: () => getLineBoundaries().getColumn(renderedOffset) },
         start: { get: () => segmentStart },
         end: { get: computeSegmentEnd },
         rangeIndex: { get: getRangeIndex },
@@ -60,15 +63,13 @@ export function render<T, R = T, HC = unknown>(
         data: { get: () => currentRange.data },
         dump: { value: () => (Object.fromEntries(Reflect.ownKeys(rangeHookContext)
             .map((key) => [key, (rangeHookContext as any)[key]])
-            .filter(key => key[0] !== 'dump')
+            .filter(key => key[0] !== 'dump' && key[0] !== 'lines')
         )) }
-    });
+    } satisfies Record<keyof RangeHookContext<any>, PropertyDescriptor>);
+    let lineBoundaries: LineBoundaries | null = null;
     let renderedOffset = 0;
     let segmentStart = 0;
     let segmentEnd = -1;
-    let lineColumnOffset = 0;
-    let line = 1;
-    let column = 1;
 
     // Track buffers stack for nested ranges with content hook
     const bufferStack: ReturnType<typeof createBuffer>[] = [];
@@ -173,19 +174,8 @@ export function render<T, R = T, HC = unknown>(
     // Handlers
     //
 
-    function updateLineAndColumn(upToOffset: number) {
-        for (; lineColumnOffset < upToOffset; lineColumnOffset++) {
-            const ch = source.charCodeAt(lineColumnOffset);
-
-            if (ch === 0x0a /* \n */ || (ch === 0x0d /* \r */ && (
-                lineColumnOffset >= source.length || source.charCodeAt(lineColumnOffset + 1) !== 0x0a
-            ))) {
-                line++;
-                column = 1;
-            } else {
-                column++;
-            }
-        }
+    function getLineBoundaries() {
+        return lineBoundaries || (lineBoundaries = getSharedLineBoundaries(source));
     }
 
     function getRangeIndex(): number {
@@ -297,9 +287,6 @@ export function render<T, R = T, HC = unknown>(
             return;
         }
 
-        // Update line and column tracking
-        updateLineAndColumn(offset);
-
         // Find the text hook by walking up the stack of opened ranges
         // to inherit text transformation from parent ranges
         let textHook: RangeHookText<any, T> = renderTextHook;
@@ -346,7 +333,7 @@ export function render<T, R = T, HC = unknown>(
         const segmentStartOffset = renderedOffset;
 
         openRangeSegment(replaceRange, replaceRange.end);
-        updateLineAndColumn(renderedOffset = replaceRange.end);
+        renderedOffset = replaceRange.end;
         closeRangeSegment(replaceRange, segmentStartOffset);
 
         // Process ranges that start within the replaced range
