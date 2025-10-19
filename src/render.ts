@@ -333,7 +333,7 @@ export function render<T, R = T, HC = unknown>(
         const segmentStartOffset = renderedOffset;
 
         openRangeSegment(replaceRange, replaceRange.end);
-        renderedOffset = replaceRange.end;
+        updateLineAndColumn(renderedOffset = replaceRange.end);
         closeRangeSegment(replaceRange, segmentStartOffset);
 
         // Process ranges that start within the replaced range

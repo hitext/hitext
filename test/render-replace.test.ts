@@ -790,6 +790,175 @@ describe('Replace Hook', () => {
         });
     });
 
+    describe('Hook context (offset, line, column) correctness', () => {
+        it('should provide correct context for each hook type', () => {
+            // Source with multiple lines to verify line/column calculations
+            const source = 'Line 1\n[REPLACE]\nLine 3';
+            //             0123456 789012345 6789012
+            //             Line 1: 0-6 (line 1)
+            //             [REPLACE]: 7-16 (line 2)
+            //             Line 3: 17-23 (line 3)
+
+            const ranges = [{ type: 'r', start: 7, end: 18, data: undefined }];
+
+            const capturedContexts: Record<string, any> = {};
+
+            render(source, ranges, {
+                r: {
+                    open: (context) => {
+                        capturedContexts.open = context.dump();
+                    },
+                    replace: (context) => {
+                        capturedContexts.replace = context.dump();
+                    },
+                    wrap: (_content, context) => {
+                        capturedContexts.wrap = context.dump();
+                    },
+                    close: (context) => {
+                        capturedContexts.close = context.dump();
+                    }
+                }
+            });
+
+            // Verify open hook context: should use range.start (7)
+            assert.deepStrictEqual(capturedContexts.open, {
+                offset: 7,
+                line: 2,
+                column: 1,
+                start: 7,
+                end: 18,
+                source,
+                range: ranges[0],
+                rangeIndex: 0,
+                rangeText: '[REPLACE]\nL',
+                data: undefined
+            });
+
+            // Verify replace hook context: should use range.start (7)
+            assert.deepStrictEqual(capturedContexts.replace, {
+                offset: 7,
+                line: 2,
+                column: 1,
+                start: 7,
+                end: 18,
+                source,
+                range: ranges[0],
+                rangeIndex: 0,
+                rangeText: '[REPLACE]\nL',
+                data: undefined
+            });
+
+            // Verify wrap hook context: should use range.end (16)
+            assert.deepStrictEqual(capturedContexts.wrap, {
+                offset: 18,
+                line: 3,
+                column: 2,
+                start: 7,
+                end: 18,
+                source,
+                range: ranges[0],
+                rangeIndex: 0,
+                rangeText: '[REPLACE]\nL',
+                data: undefined
+            });
+
+            // Verify close hook context: should use range.end (16)
+            assert.deepStrictEqual(capturedContexts.close, {
+                offset: 18,
+                line: 3,
+                column: 2,
+                start: 7,
+                end: 18,
+                source,
+                range: ranges[0],
+                rangeIndex: 0,
+                rangeText: '[REPLACE]\nL',
+                data: undefined
+            });
+        });
+
+        it('should provide correct context for hooks on same line', () => {
+            const source = 'Start [RANGE] End';
+            //             012345 6789012 3456
+            //             [RANGE]: 6-13
+
+            const ranges = [{ type: 'r', start: 6, end: 13, data: undefined }];
+
+            const capturedContexts: Record<string, any> = {};
+
+            render(source, ranges, {
+                r: {
+                    open: (context) => {
+                        capturedContexts.open = context.dump();
+                    },
+                    replace: (context) => {
+                        capturedContexts.replace = context.dump();
+                    },
+                    wrap: (_content, context) => {
+                        capturedContexts.wrap = context.dump();
+                    },
+                    close: (context) => {
+                        capturedContexts.close = context.dump();
+                    }
+                }
+            });
+
+            // open and replace: offset at start (6), line 1, column 7
+            assert.deepStrictEqual(capturedContexts.open, {
+                offset: 6,
+                line: 1,
+                column: 7,
+                start: 6,
+                end: 13,
+                source,
+                range: ranges[0],
+                rangeIndex: 0,
+                rangeText: '[RANGE]',
+                data: undefined
+            });
+
+            assert.deepStrictEqual(capturedContexts.replace, {
+                offset: 6,
+                line: 1,
+                column: 7,
+                start: 6,
+                end: 13,
+                source,
+                range: ranges[0],
+                rangeIndex: 0,
+                rangeText: '[RANGE]',
+                data: undefined
+            });
+
+            // wrap and close: offset at end (13), line 1, column 14
+            assert.deepStrictEqual(capturedContexts.wrap, {
+                offset: 13,
+                line: 1,
+                column: 14,
+                start: 6,
+                end: 13,
+                source,
+                range: ranges[0],
+                rangeIndex: 0,
+                rangeText: '[RANGE]',
+                data: undefined
+            });
+
+            assert.deepStrictEqual(capturedContexts.close, {
+                offset: 13,
+                line: 1,
+                column: 14,
+                start: 6,
+                end: 13,
+                source,
+                range: ranges[0],
+                rangeIndex: 0,
+                rangeText: '[RANGE]',
+                data: undefined
+            });
+        });
+    });
+
     describe('Segment boundaries (start/end) in replace hook context', () => {
         it('should show correct boundaries for simple replace', () => {
             const result = renderTest(
