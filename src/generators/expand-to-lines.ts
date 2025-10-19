@@ -16,8 +16,10 @@ export function rangeExpandToLines<Data, RenderOptions>(
 
             // Get the line end for the range end, going forward N lines
             // Use end-1 for non-empty ranges (last included character), end for empty ranges
+            // Don't exclude newline - we want to include the full line including newline
             const expandedEnd = lineBoundaries.getLineEndForOffset(
                 end > start ? end - 1 : end,
+                false,
                 linesAfter
             );
 

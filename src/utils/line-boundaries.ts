@@ -39,12 +39,13 @@ export interface LineBoundaries {
 
     /**
      * Get the line end offset for a given offset in the source.
+     * If excludeNewline is true, returns offset before the newline character(s).
      * If lines parameter is provided:
      *   - Positive value: move forward N lines
      *   - Negative value: move backward N lines
-     * Returns the offset where the target line ends (including newline).
+     * Returns the offset where the target line ends.
      */
-    getLineEndForOffset(offset: number, lines?: number): number;
+    getLineEndForOffset(offset: number, excludeNewline?: boolean, lines?: number): number;
 }
 
 /**
@@ -233,21 +234,35 @@ export function createLineBoundaries(source: string): LineBoundaries {
 
     /**
      * Get the line end offset for a given offset in the source.
+     * If excludeNewline is true, returns offset before the newline character(s).
      * If lines parameter is provided:
      *   - Positive value: move forward N lines
      *   - Negative value: move backward N lines
-     * Returns the offset where the target line ends (including newline).
+     * Returns the offset where the target line ends.
      */
-    function getLineEndForOffset(offset: number, lines = 0): number {
+    function getLineEndForOffset(offset: number, excludeNewline = false, lines = 0): number {
         const lineIndex = getLineIndex(offset, lines);
 
         // Ensure we have the next line to get the end
         ensureLines(lineIndex + 2);
 
         // The line end is the start of the next line, or source.length
-        return lineIndex + 1 < lineStarts.length
+        let lineEnd = lineIndex + 1 < lineStarts.length
             ? lineStarts[lineIndex + 1]
             : source.length;
+
+        // Exclude newline characters if requested
+        if (excludeNewline) {
+            const lineStart = lineStarts[lineIndex];
+            if (lineEnd > lineStart && source[lineEnd - 1] === '\n') {
+                lineEnd--;
+                if (lineEnd > lineStart && source[lineEnd - 1] === '\r') {
+                    lineEnd--;
+                }
+            }
+        }
+
+        return lineEnd;
     }
 
     return {
