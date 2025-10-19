@@ -7,12 +7,12 @@ export {
     rangeLineContents,
     rangeMatch,
     rangeNewlines,
-    rangeMerge,
     rangeCombine,
+    rangeMerge,
     rangeInvert,
-    rangeExpandToLines,
-    rangeFitToWindow,
-    rangeCollapseTo
+    rangeExpandTo,
+    rangeCollapseTo,
+    rangeFitToWindow
 } from './generators/index.js';
 
 // Re-export renderers
