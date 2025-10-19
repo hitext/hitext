@@ -40,9 +40,9 @@ describe('rangeExpandToLines', () => {
                 rangeExpandToLines([[1, 2], [7, 8]]) // chars in line1 and line2
             );
 
-            // Adjacent lines merge
+            // Each range expands to its line (1-to-1, no merging)
             deepStrictEqual(lines, [
-                'line1\n' +
+                'line1\n',
                 'line2\n'
             ]);
         });
@@ -151,12 +151,27 @@ describe('rangeExpandToLines', () => {
                 rangeExpandToLines([[1, 2], [13, 14]], 1) // line1 and line3, each with 1 line context
             );
 
-            // line1±1 = lines 1-2, line3±1 = lines 2-4, they overlap so merge
+            // line1±1 = lines 1-2, line3±1 = lines 2-4 (overlap but no merge in 1-to-1)
             deepStrictEqual(lines, [
+                'line1\nline2\n',
+                'line2\nline3\nline4\n'
+            ]);
+        });
+
+        it('should support different lines before and after', () => {
+            const lines = renderRanges(
                 'line1\n' +
                 'line2\n' +
                 'line3\n' +
-                'line4\n'
+                'line4\n' +
+                'line5\n' +
+                'line6',
+                rangeExpandToLines([[13, 14]], 1, 2) // line3 with 1 line before, 2 lines after
+            );
+
+            // line3 with 1 before (line2) and 2 after (line4, line5)
+            deepStrictEqual(lines, [
+                'line2\nline3\nline4\nline5\n'
             ]);
         });
 
@@ -307,14 +322,10 @@ describe('rangeExpandToLines', () => {
             );
 
             // line2 and line4, each with 1 line context
-            // line2±1 = lines 1-3, line4±1 = lines 3-5
-            // They overlap at line3, so merge to lines 1-5
+            // line2±1 = lines 1-3, line4±1 = lines 3-5 (overlap but no merge)
             deepStrictEqual(lines, [
-                'line1\n' +
-                'line2\n' +
-                'line3\n' +
-                'line4\n' +
-                'line5'
+                'line1\nline2\nline3\n',
+                'line3\nline4\nline5'
             ]);
         });
 
@@ -367,15 +378,10 @@ describe('rangeExpandToLines', () => {
             );
 
             // 'c' is line3, with context = lines 2-4 (b, c, d)
-            // 'f' is line6, with context = lines 5-7 (e, f, g)
-            // Adjacent at 'd' and 'e', should merge
+            // 'f' is line6, with context = lines 5-7 (e, f, g) - overlap but no merge
             deepStrictEqual(lines, [
-                'b\n' +
-                'c\n' +
-                'd\n' +
-                'e\n' +
-                'f\n' +
-                'g\n'
+                'b\nc\nd\n',
+                'e\nf\ng\n'
             ]);
         });
 
@@ -411,8 +417,11 @@ describe('rangeExpandToLines', () => {
                 rangeExpandToLines(rangeMatch(/ERROR|WARNING/g), 0)
             );
 
-            // Both matches on same line, should merge to single range
-            deepStrictEqual(lines, ['ERROR and WARNING on same line\n']);
+            // Both matches on same line, each creates a range to the same line (duplicates)
+            deepStrictEqual(lines, [
+                'ERROR and WARNING on same line\n',
+                'ERROR and WARNING on same line\n'
+            ]);
         });
 
         it('should handle ranges in source with no trailing newline', () => {
@@ -423,10 +432,10 @@ describe('rangeExpandToLines', () => {
                 rangeExpandToLines(rangeMatch(/line[123]/g), 0)
             );
 
-            // All three lines, last one has no newline
+            // Three separate line ranges (1-to-1, no merging)
             deepStrictEqual(lines, [
-                'line1\n' +
-                'line2\n' +
+                'line1\n',
+                'line2\n',
                 'line3'
             ]);
         });
@@ -469,9 +478,9 @@ describe('rangeExpandToLines', () => {
                 rangeExpandToLines([[0, 1], [6, 7]], 0) // chars in line1 and line2
             );
 
-            // line1 and line2 are adjacent, should merge
+            // line1 and line2 are adjacent, but output separately (1-to-1)
             deepStrictEqual(lines, [
-                'line1\n' +
+                'line1\n',
                 'line2\n'
             ]);
         });
