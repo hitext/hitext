@@ -13,7 +13,8 @@ export {
     rangeExpandTo,
     rangeCollapseTo,
     rangeFitToWindow,
-    rangeFrom
+    rangeFrom,
+    rangeResetOrigin
 } from './generators/index.js';
 
 // Re-export renderers
