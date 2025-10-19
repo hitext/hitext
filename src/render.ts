@@ -1,5 +1,5 @@
 import { resolveRangeHooksMap } from './range-hooks-map.js';
-import { StringBuffer } from './string-buffer.js';
+import { StringBuffer } from './utils/string-buffer.js';
 import type {
     GeneratedRange,
     RangeHookContext,

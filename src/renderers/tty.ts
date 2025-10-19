@@ -1,6 +1,6 @@
 import type { RangeHookContext, RangeHooks, RangeHooksFactory } from '../types.js';
 import { createRenderPipeline } from '../pipeline.js';
-import { StringBuffer } from '../string-buffer.js';
+import { StringBuffer } from '../utils/string-buffer.js';
 
 type ForegroundColorName = keyof typeof styles.color;
 type BackgroundColorName = keyof typeof styles.bgColor;
