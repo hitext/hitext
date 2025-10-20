@@ -37,7 +37,10 @@ export {
     rangeFromLayer,
     rangeFromOptions,
     rangeResetOrigin
-} from './generators/index.js';
+} from './ranges/index.js';
+export {
+    rangeHooksHide
+} from './range-hooks/index.js';
 
 // Utils
 export {
