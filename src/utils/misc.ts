@@ -6,3 +6,11 @@ export const { ownKeys } = Reflect;
 export function functionOrValue<K, T>(value: K, fallback: T): (K extends Function ? K : T) {
     return typeof value === 'function' ? value as any : fallback as any;
 }
+
+export function isIterable(value: any): value is Iterable<unknown> {
+    return (
+        value != null &&
+        typeof value !== 'string' &&
+        typeof value[Symbol.iterator] === 'function'
+    );
+}

@@ -370,6 +370,30 @@ describe('Range Generation Helpers', () => {
                 { type: marker, start: 6, end: 11, data: undefined, origin: undefined }
             ]);
         });
+
+        it('should safely handle non-iterable values', () => {
+            const marker = Symbol('test');
+            
+            // Should not crash with null
+            const ranges1 = generateRanges('Hello', null as any, { marker });
+            deepStrictEqual(ranges1, []);
+
+            // Should not crash with undefined
+            const ranges2 = generateRanges('Hello', undefined as any, { marker });
+            deepStrictEqual(ranges2, []);
+
+            // Should not crash with plain object (no Symbol.iterator)
+            const ranges3 = generateRanges('Hello', { start: 0, end: 5 } as any, { marker });
+            deepStrictEqual(ranges3, []);
+
+            // Should not crash with number
+            const ranges4 = generateRanges('Hello', 123 as any, { marker });
+            deepStrictEqual(ranges4, []);
+
+            // Should not crash with string (though strings are iterable, they don't match the expected format)
+            const ranges5 = generateRanges('Hello', 'test' as any, { marker });
+            deepStrictEqual(ranges5, []);
+        });
     });
 
     describe('generateRangesFromLayers', () => {

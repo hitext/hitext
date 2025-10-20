@@ -1,4 +1,4 @@
-import { createNoProtoObject, createLineBoundaries } from './utils/index.js';
+import { createNoProtoObject, createLineBoundaries, isIterable } from './utils/index.js';
 import type {
     CreateRange,
     GeneratedRange,
@@ -133,8 +133,8 @@ export function processRanges<Data, RenderOptions>(
     if (typeof input === 'function') {
         // GenerateRanges function
         input(source, createRange, context);
-    } else {
-        // Iterable (arrays, Sets, Maps, custom iterables, etc.)
+    } else if (isIterable(input)) {
+        // Iterable (arrays, Sets, Maps, custom iterables, etc.) - but not strings
         for (const range of input) {
             if (Array.isArray(range)) {
                 // Tuple form, i.e. [start, end, data?]
@@ -145,4 +145,6 @@ export function processRanges<Data, RenderOptions>(
             }
         }
     }
+
+    // If input is neither a function nor a valid iterable, safely do nothing
 }
