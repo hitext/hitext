@@ -1,4 +1,4 @@
-import { LineBoundaries } from '../types.js';
+import type { LineBoundaries } from '../types.js';
 
 /**
  * Factory function for creating a line boundaries utility.

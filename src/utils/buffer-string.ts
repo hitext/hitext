@@ -9,3 +9,5 @@ export class StringBuffer implements RenderBuffer<string, string> {
         return this.#buffer;
     }
 }
+
+export const createStringBuffer = () => new StringBuffer();

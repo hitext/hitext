@@ -1,6 +1,5 @@
 import { resolveRangeHooksMap } from './range-hooks-map.js';
-import { StringBuffer } from './utils/string-buffer.js';
-import { createLineBoundaries } from './utils/line-boundaries.js';
+import { StringBuffer, createLineBoundaries } from './utils/index.js';
 import type {
     LineBoundaries,
     GeneratedRange,

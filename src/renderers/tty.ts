@@ -1,6 +1,6 @@
 import type { RangeHookContext, RangeHooks, RangeHooksFactory } from '../types.js';
 import { createRenderPipeline } from '../pipeline.js';
-import { StringBuffer } from '../utils/string-buffer.js';
+import { createStringBuffer } from '../utils/buffer-string.js';
 
 type ForegroundColorName = keyof typeof styles.color;
 type BackgroundColorName = keyof typeof styles.bgColor;
@@ -104,7 +104,7 @@ export const createTTYRenderer = /* @__PURE__ */ Object.assign(
             let renderedStyle: Style = {};
 
             return {
-                createBuffer: () => new StringBuffer(),
+                createBuffer: createStringBuffer,
                 open: styleToRender,
                 close: styleToRender,
                 text: (sourceChunk) => styleToRender() + sourceChunk,

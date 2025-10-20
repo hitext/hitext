@@ -1,7 +1,27 @@
-// Re-export types
+// TypeScript types
 export type * from './types.d.js';
 
-// Re-export generators (both namespace and direct)
+// Renderers
+export { string, html, dom, tty, jsx } from './renderers/index.js';
+
+// Low-level core helpers
+export { render } from './render.js';
+export {
+    createRenderPipeline,
+    createPipelineNode
+} from './pipeline.js';
+export {
+    generateRangesFromLayers,
+    generateRanges,
+    processRanges
+} from './ranges.js';
+export {
+    createRangeHooksMapFromLayers,
+    resolveRangeHooksMap,
+    resolveRangeHooksDefinition
+} from './range-hooks-map.js';
+
+// Range generators, range transformers and range hooks factories
 export {
     rangeLines,
     rangeLineContents,
@@ -18,26 +38,18 @@ export {
     rangeFromOptions,
     rangeResetOrigin
 } from './generators/index.js';
-
-// Re-export renderers
-export { string, html, dom, tty, jsx } from './renderers/index.js';
-
-// Re-export helpers
-export { render } from './render.js';
 export {
+    rangeHooksHide
+} from './range-hooks/index.js';
+
+// Utils
+export {
+    StringBuffer,
+    createStringBuffer,
+    ArrayBuffer,
+    createArrayBuffer,
+    DOMBuffer,
+    createDOMBuffer,
+    // LineBoundaries re-exported from types.d.ts
     createLineBoundaries
-} from './utils/line-boundaries.js';
-export {
-    createRenderPipeline,
-    createPipelineNode
-} from './pipeline.js';
-export {
-    generateRangesFromLayers,
-    generateRanges,
-    processRanges
-} from './ranges.js';
-export {
-    createRangeHooksMapFromLayers,
-    resolveRangeHooksMap,
-    resolveRangeHooksDefinition
-} from './range-hooks-map.js';
+} from './utils/index.js';
