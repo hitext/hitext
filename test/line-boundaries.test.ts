@@ -1,7 +1,7 @@
 import { deepStrictEqual, strictEqual } from 'assert';
 import {
     createLineBoundaries
-} from '../src/utils/line-boundaries.js';
+} from '../src/index.js';
 
 describe('LineBoundaries', () => {
     describe('getLineStartForOffset', () => {
