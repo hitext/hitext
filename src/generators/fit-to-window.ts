@@ -1,6 +1,6 @@
 import type { GenerateRanges, Ranges } from '../types.js';
 import { processRanges } from '../ranges.js';
-import { getSharedLineBoundaries } from '../utils/line-boundaries.js';
+import { createLineBoundaries } from '../utils/line-boundaries.js';
 
 /**
  * Fits ranges horizontally into a maximum window width.
@@ -36,7 +36,7 @@ export function rangeFitToWindow<Data, RenderOptions>(
     allowTrimming: boolean = true
 ): GenerateRanges<Data, RenderOptions> {
     return (source, createRange, context) => {
-        const lineBoundaries = context?.lines || getSharedLineBoundaries(source);
+        const lineBoundaries = context?.lines || createLineBoundaries(source);
 
         processRanges(
             source,

@@ -226,37 +226,3 @@ export function createLineBoundaries(source: string): LineBoundaries {
         getLineNewline
     };
 }
-
-// Shared instance cache
-let sharedSource: string | null = null;
-let sharedLineBoundaries: LineBoundaries | null = null;
-
-/**
- * Get a LineBoundaries instance for the given source.
- * Returns the cached instance if one exists for this source, otherwise creates a new instance.
- * Note: This does NOT cache the newly created instance - use setSharedLineBoundaries() for that.
- */
-export function getSharedLineBoundaries(source: string): LineBoundaries {
-    return sharedSource === source && sharedLineBoundaries !== null
-        ? sharedLineBoundaries
-        : createLineBoundaries(source);
-}
-
-/**
- * Set a LineBoundaries instance as the shared cache.
- * This instance will be returned by getSharedLineBoundaries() for the matching source.
- * Pass a source string to create and cache a new instance.
- * Pass null to clear the cache.
- * Returns the cached instance (or null if cleared).
- */
-export function setSharedLineBoundaries(source: string | null): LineBoundaries | null {
-    if (typeof source === 'string') {
-        sharedSource = source;
-        sharedLineBoundaries = createLineBoundaries(source);
-    } else {
-        sharedSource = null;
-        sharedLineBoundaries = null;
-    }
-
-    return sharedLineBoundaries;
-}

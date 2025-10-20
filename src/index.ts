@@ -23,9 +23,7 @@ export { string, html, dom, tty, jsx } from './renderers/index.js';
 // Re-export helpers
 export { render } from './render.js';
 export {
-    createLineBoundaries,
-    getSharedLineBoundaries,
-    setSharedLineBoundaries
+    createLineBoundaries
 } from './utils/line-boundaries.js';
 export {
     createRenderPipeline,

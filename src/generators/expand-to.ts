@@ -1,6 +1,6 @@
 import type { GenerateRanges, Ranges } from '../types.js';
 import { processRanges } from '../ranges.js';
-import { getSharedLineBoundaries } from '../utils/line-boundaries.js';
+import { createLineBoundaries } from '../utils/line-boundaries.js';
 
 /**
  * Expands ranges to specific boundaries.
@@ -34,7 +34,7 @@ export function rangeExpandTo<Data, RenderOptions>(
     lines: number | [before: number, after: number] = 0
 ): GenerateRanges<Data, RenderOptions> {
     return (source, createRange, context) => {
-        const lineBoundaries = context?.lines || getSharedLineBoundaries(source);
+        const lineBoundaries = context?.lines || createLineBoundaries(source);
 
         // Parse lines parameter
         const [linesBefore, linesAfter] = Array.isArray(lines)

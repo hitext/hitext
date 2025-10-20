@@ -1,6 +1,6 @@
 import type { GenerateRanges, Ranges } from '../types.js';
 import { processRanges } from '../ranges.js';
-import { getSharedLineBoundaries } from '../utils/line-boundaries.js';
+import { createLineBoundaries } from '../utils/line-boundaries.js';
 
 /**
  * Collapses ranges to a single position.
@@ -36,7 +36,7 @@ export function rangeCollapseTo<Data, RenderOptions>(
     position: 'start' | 'end' | 'lineStart' | 'lineEnd' | 'lineContentEnd'
 ): GenerateRanges<Data, RenderOptions> {
     return (source, createRange, context) => {
-        const lineBoundaries = context?.lines || getSharedLineBoundaries(source);
+        const lineBoundaries = context?.lines || createLineBoundaries(source);
 
         processRanges(
             source,

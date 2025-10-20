@@ -1,8 +1,6 @@
 import { deepStrictEqual, strictEqual } from 'assert';
 import {
-    createLineBoundaries,
-    getSharedLineBoundaries,
-    setSharedLineBoundaries
+    createLineBoundaries
 } from '../src/utils/line-boundaries.js';
 
 describe('LineBoundaries', () => {
@@ -218,49 +216,6 @@ describe('LineBoundaries', () => {
             const lb = createLineBoundaries('test\nmore');
             strictEqual(lb.getLineStart(-1), 0);
             strictEqual(lb.getLineEnd(-1), 5); // End of first line "test\n"
-        });
-    });
-
-    describe('getSharedLineBoundaries', () => {
-        afterEach(() => {
-            setSharedLineBoundaries(null);
-        });
-
-        it('should return cached instance when set for matching source', () => {
-            const source = 'line1\nline2\nline3';
-            const lb1 = setSharedLineBoundaries(source);
-            const lb2 = getSharedLineBoundaries(source);
-
-            strictEqual(lb1, lb2, 'Should return the cached instance');
-        });
-
-        it('should return new instance when no cache exists', () => {
-            const source1 = 'line1\nline2\nline3';
-            const source2 = 'other\ntext';
-
-            const lb1 = getSharedLineBoundaries(source1);
-            const lb2 = getSharedLineBoundaries(source2);
-
-            strictEqual(lb1 === lb2, false, 'Should return different instances');
-        });
-
-        it('should work correctly with cached instance', () => {
-            const source = 'line1\nline2\nline3';
-            setSharedLineBoundaries(source);
-            const lb = getSharedLineBoundaries(source);
-
-            strictEqual(lb.getLineStart(8), 6);
-            strictEqual(lb.getLineEnd(8), 12);
-        });
-
-        it('should clear cache when set to null', () => {
-            const source = 'line1\nline2\nline3';
-            const lb1 = setSharedLineBoundaries(source);
-
-            setSharedLineBoundaries(null);
-
-            const lb2 = getSharedLineBoundaries(source);
-            strictEqual(lb1 === lb2, false, 'Should return new instance after clearing cache');
         });
     });
 

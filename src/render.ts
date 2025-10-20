@@ -1,6 +1,6 @@
 import { resolveRangeHooksMap } from './range-hooks-map.js';
 import { StringBuffer } from './utils/string-buffer.js';
-import { getSharedLineBoundaries } from './utils/line-boundaries.js';
+import { createLineBoundaries } from './utils/line-boundaries.js';
 import type {
     LineBoundaries,
     GeneratedRange,
@@ -175,7 +175,7 @@ export function render<T, R = T, HC = unknown>(
     //
 
     function getLineBoundaries() {
-        return lineBoundaries || (lineBoundaries = getSharedLineBoundaries(source));
+        return lineBoundaries || (lineBoundaries = createLineBoundaries(source));
     }
 
     function getRangeIndex(): number {
