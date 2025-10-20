@@ -34,7 +34,7 @@ jobs:
                 node-version: ${{ env.PRIMARY_NODEJS_VERSION }}
                 cache: "npm"
             - run: npm ci
-            - run: npm run transpile
+            - run: npm run build
             - run: npm run coverage
             - name: Coveralls Parallel
               uses: coverallsapp/github-action@v2
@@ -93,6 +93,6 @@ jobs:
               if: ${{ matrix.node_version >= '16' }}
             - run: npm i
               if: ${{ matrix.node_version < '16' }}
-            - run: npm run transpile
+            - run: npm run build
             - run: npm run test:esm
             - run: npm run test:cjs
