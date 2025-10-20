@@ -49,7 +49,7 @@ export function render<T, R = T, HC = unknown>(
 
     // Create renderer context with options
     const rangeIndexMap = new Map<GeneratedRange, number>();
-    const rangeHookContext: RangeHookContext<any> = Object.defineProperties(Object.create(null), {
+    const rangeHookContext: RangeHookContext<any, T, R> = Object.defineProperties(Object.create(null), {
         hook: { get: () => currentRangeHook },
         lines: { get: getLineBoundaries },
         source: { value: source },
@@ -62,9 +62,10 @@ export function render<T, R = T, HC = unknown>(
         rangeText: { get: () => source.slice(currentRange.start, currentRange.end) },
         range: { get: () => currentRange },
         data: { get: () => currentRange.data },
+        createBuffer: { value: createBuffer },
         dump: { value: () => (Object.fromEntries(Reflect.ownKeys(rangeHookContext)
             .map((key) => [key, (rangeHookContext as any)[key]])
-            .filter(key => key[0] !== 'dump' && key[0] !== 'lines')
+            .filter(key => key[0] !== 'dump' && key[0] !== 'lines' && key[0] !== 'createBuffer')
         )) }
     } satisfies Record<keyof RangeHookContext<any>, PropertyDescriptor>);
     let renderedOffset = 0;
@@ -289,7 +290,7 @@ export function render<T, R = T, HC = unknown>(
 
         // Find the text hook by walking up the stack of opened ranges
         // to inherit text transformation from parent ranges
-        let textHook: RangeHookText<any, T> = renderTextHook;
+        let textHook: RangeHookText<any, T, R> = renderTextHook;
         for (let i = rangeStack.length - 1; i >= 0; i--) {
             const rangeTextHook = rangeHooksMap[rangeStack[i].type].text;
             if (rangeTextHook !== null) {

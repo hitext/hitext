@@ -2,7 +2,7 @@ import { strictEqual, deepStrictEqual } from 'assert';
 import { render } from '../src/index.js';
 import type { GeneratedRange, RangeHookContext } from '../src/types.js';
 
-describe('render / context', () => {
+describe('render range hooks context', () => {
     const source = 'Hello, World!';
     interface TestData {
         idx: number;
@@ -322,6 +322,238 @@ describe('render / context', () => {
                 '<interrupt:wrap:5:16/>\n' +
                 '</interrupt:5:16>\n'
             );
+        });
+    });
+
+    describe('createBuffer', () => {
+        it('should provide createBuffer method in context', () => {
+            const source = 'Hello';
+            const ranges = [
+                { type: 'test' as const, start: 1, end: 4, data: null }
+            ];
+
+            let createBufferExists = false;
+            let bufferType = 'unknown';
+
+            render(source, ranges, {
+                test: {
+                    open({ createBuffer }: RangeHookContext<null>) {
+                        createBufferExists = typeof createBuffer === 'function';
+                        if (createBufferExists) {
+                            const buffer = createBuffer();
+                            bufferType = typeof buffer.append === 'function' && typeof buffer.emit === 'function'
+                                ? 'buffer'
+                                : 'invalid';
+                        }
+                    }
+                }
+            });
+
+            strictEqual(createBufferExists, true, 'createBuffer should be a function');
+            strictEqual(bufferType, 'buffer', 'createBuffer should return a buffer with append and emit methods');
+        });
+
+        it('should allow building complex content with buffer in open hook', () => {
+            const source = 'Hello, World!';
+            const ranges = [
+                { type: 'test' as const, start: 0, end: 5, data: { prefix: '[', suffix: ']' } },
+                { type: 'test' as const, start: 7, end: 12, data: { prefix: '(', suffix: ')' } }
+            ];
+
+            const result = render(source, ranges, {
+                test: {
+                    open({ createBuffer, data }: RangeHookContext<{ prefix: string; suffix: string }>) {
+                        const buffer = createBuffer();
+                        buffer.append(data.prefix);
+                        buffer.append('open');
+                        buffer.append(data.suffix);
+                        return buffer.emit();
+                    },
+                    close({ createBuffer, data }: RangeHookContext<{ prefix: string; suffix: string }>) {
+                        const buffer = createBuffer();
+                        buffer.append(data.prefix);
+                        buffer.append('close');
+                        buffer.append(data.suffix);
+                        return buffer.emit();
+                    }
+                }
+            });
+
+            strictEqual(result, '[open]Hello[close], (open)World(close)!');
+        });
+
+        it('should allow building content with buffer in wrap hook', () => {
+            const source = 'Hello';
+            const ranges = [
+                { type: 'test' as const, start: 0, end: 5, data: null }
+            ];
+
+            const result = render(source, ranges, {
+                test: {
+                    wrap(content, { createBuffer }: RangeHookContext<null>) {
+                        const buffer = createBuffer();
+                        buffer.append('<div>');
+                        buffer.append(content);
+                        buffer.append('</div>');
+                        return buffer.emit();
+                    }
+                }
+            });
+
+            strictEqual(result, '<div>Hello</div>');
+        });
+
+        it('should allow building content with buffer in replace hook', () => {
+            const source = 'Hello, World!';
+            const ranges = [
+                { type: 'test' as const, start: 5, end: 7, data: null }
+            ];
+
+            const result = render(source, ranges, {
+                test: {
+                    replace({ createBuffer, rangeText }: RangeHookContext<null>) {
+                        const buffer = createBuffer();
+                        buffer.append(' [replaced: "');
+                        buffer.append(rangeText);
+                        buffer.append('"] ');
+                        return buffer.emit();
+                    }
+                }
+            });
+
+            strictEqual(result, 'Hello [replaced: ", "] World!');
+        });
+
+        it('should work with custom renderer buffer types', () => {
+            const source = 'test';
+            const ranges = [
+                { type: 'test' as const, start: 0, end: 4, data: null }
+            ];
+
+            // Custom buffer that tracks operations
+            class TrackingBuffer {
+                private parts: string[] = [];
+
+                append(part: string) {
+                    this.parts.push(part);
+                }
+
+                emit() {
+                    return this.parts.join('|');
+                }
+            }
+
+            const result = render(source, ranges, {
+                test: {
+                    open({ createBuffer }: RangeHookContext<null, string, string>) {
+                        const buffer = createBuffer();
+                        buffer.append('a');
+                        buffer.append('b');
+                        return buffer.emit();
+                    }
+                }
+            }, {
+                createBuffer: () => new TrackingBuffer() as any
+            });
+
+            strictEqual(result, 'a|b|test');
+        });
+
+        it('should handle nested buffer creation in different hooks', () => {
+            const source = 'ABC';
+            const ranges = [
+                { type: 'test' as const, start: 0, end: 3, data: { id: 'outer' } },
+                { type: 'test' as const, start: 1, end: 2, data: { id: 'inner' } }
+            ];
+
+            const result = render(source, ranges, {
+                test: {
+                    open({ createBuffer, data }: RangeHookContext<{ id: string }>) {
+                        const buffer = createBuffer();
+                        buffer.append('<');
+                        buffer.append(data.id);
+                        buffer.append('>');
+                        return buffer.emit();
+                    },
+                    close({ createBuffer, data }: RangeHookContext<{ id: string }>) {
+                        const buffer = createBuffer();
+                        buffer.append('</');
+                        buffer.append(data.id);
+                        buffer.append('>');
+                        return buffer.emit();
+                    }
+                }
+            });
+
+            strictEqual(result, '<outer>A<inner>B</inner>C</outer>');
+        });
+
+        it('should support building multi-part content conditionally', () => {
+            const source = 'one two three';
+            const ranges = [
+                { type: 'test' as const, start: 0, end: 3, data: { highlight: true } },
+                { type: 'test' as const, start: 4, end: 7, data: { highlight: false } },
+                { type: 'test' as const, start: 8, end: 13, data: { highlight: true } }
+            ];
+
+            const result = render(source, ranges, {
+                test: {
+                    wrap(content, { createBuffer, data }: RangeHookContext<{ highlight: boolean }>) {
+                        if (!data.highlight) {
+                            return content;
+                        }
+
+                        const buffer = createBuffer();
+                        buffer.append('**');
+                        buffer.append(content);
+                        buffer.append('**');
+                        return buffer.emit();
+                    }
+                }
+            });
+
+            strictEqual(result, '**one** two **three**');
+        });
+
+        it('should allow empty buffer usage', () => {
+            const source = 'test';
+            const ranges = [
+                { type: 'test' as const, start: 0, end: 4, data: null }
+            ];
+
+            const result = render(source, ranges, {
+                test: {
+                    open({ createBuffer }: RangeHookContext<null>) {
+                        const buffer = createBuffer();
+                        // Don't append anything
+                        return buffer.emit();
+                    }
+                }
+            });
+
+            strictEqual(result, 'test');
+        });
+
+        it('should handle buffer operations with special characters', () => {
+            const source = 'test';
+            const ranges = [
+                { type: 'test' as const, start: 0, end: 4, data: null }
+            ];
+
+            const result = render(source, ranges, {
+                test: {
+                    wrap(content, { createBuffer }: RangeHookContext<null>) {
+                        const buffer = createBuffer();
+                        buffer.append('"');
+                        buffer.append(content);
+                        buffer.append('"');
+                        buffer.append(' & more');
+                        return buffer.emit();
+                    }
+                }
+            });
+
+            strictEqual(result, '"test" & more');
         });
     });
 });

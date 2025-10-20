@@ -90,34 +90,37 @@ export type RangeHooksFactory<Data = unknown, T, R = T, HC = unknown> = {
 
 export type RangeCallableHook = 'open' | 'close' | 'wrap' | 'text' | 'replace';
 export interface RangeHooks<Data = unknown, T, R = T> {
-    open: RangeHookOpen<Data, T> | null;
-    close: RangeHookClose<Data, T> | null;
+    open: RangeHookOpen<Data, T, R> | null;
+    close: RangeHookClose<Data, T, R> | null;
     wrap: RangeHookWrap<Data, T, R> | null;
-    text: RangeHookText<Data, T> | null;
-    replace: RangeHookReplace<Data, T> | null;
+    text: RangeHookText<Data, T, R> | null;
+    replace: RangeHookReplace<Data, T, R> | null;
     break: boolean;
 }
 
-export type RangeHookOpen<Data, T> = (
-    context: RangeHookContext<Data>
-) => T | string | null | undefined;
-export type RangeHookClose<Data, T> = (
-    context: RangeHookContext<Data>
-) => T | string | null | undefined;
+export type RangeHookOpen<Data, T, R = T> = (
+    context: RangeHookContext<Data, T, R>
+) => T | R | string | null | undefined;
+export type RangeHookClose<Data, T, R = T> = (
+    context: RangeHookContext<Data, T, R>
+) => T | R | string | null | undefined;
+export type RangeHookClose<Data, T, R = T> = (
+    context: RangeHookContext<Data, T, R>
+) => T | R | string | null | undefined;
 export type RangeHookWrap<Data, T, R = T> = (
     content: T | R,
-    context: RangeHookContext<Data>
+    context: RangeHookContext<Data, T, R>
 ) => T | R | string | null | undefined;
-export type RangeHookText<Data, T> = (
+export type RangeHookText<Data, T, R = T> = (
     sourceChunk: string,
-    context: RangeHookContext<Data>
-) => T | string | null | undefined;
-export type RangeHookReplace<Data, T> = (
-    context: RangeHookContext<Data>
-) => T | string | null | undefined;
+    context: RangeHookContext<Data, T, R>
+) => T | R | string | null | undefined;
+export type RangeHookReplace<Data, T, R = T> = (
+    context: RangeHookContext<Data, T, R>
+) => T | R | string | null | undefined;
 
-export type RangeHookContextDump<T> = Omit<RangeHookContext<T>, 'dump' | 'lines'>;
-export type RangeHookContext<T = unknown> = {
+export type RangeHookContextDump<T> = Omit<RangeHookContext<T>, 'lines' | 'dump' | 'createBuffer'>;
+export type RangeHookContext<Data = unknown, T = unknown, R = T> = {
     hook: RangeCallableHook;
     source: string;
     lines: LineBoundaries;
@@ -128,9 +131,10 @@ export type RangeHookContext<T = unknown> = {
     end: number;
     rangeIndex: number;
     rangeText: string;
-    range: GeneratedRange<T>;
-    data: T;
-    dump(): RangeHookContextDump<T>;
+    range: GeneratedRange<Data>;
+    data: Data;
+    createBuffer(): RenderBuffer<T, R>;
+    dump(): RangeHookContextDump<Data>;
 }
 
 //
@@ -140,9 +144,9 @@ export type RangeHookContext<T = unknown> = {
 export interface RenderHooks<T, R = T, HC = unknown> {
     createBuffer(): RenderBuffer<T, R>;
 
-    open(context: RangeHookContext): T | null;
-    close(context: RangeHookContext): T | null;
-    text: RangeHookText<any, T> | null;
+    open(context: RangeHookContext<any, T, R>): T | null;
+    close(context: RangeHookContext<any, T, R>): T | null;
+    text: RangeHookText<any, T, R> | null;
 
     rangeHooksContext?: HC;
 }
