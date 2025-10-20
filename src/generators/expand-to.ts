@@ -48,15 +48,22 @@ export function rangeExpandTo<Data, RenderOptions>(
             if (position === 'line' ||
                 position === 'lineStart' ||
                 position === 'lineContent') {
-                expandedStart = lineBoundaries.getLineStartForOffset(start, -linesBefore);
+                expandedStart = lineBoundaries.getLineStart(start, -linesBefore);
             }
 
             if (position !== 'lineStart') {
-                expandedEnd = lineBoundaries.getLineEndForOffset(
-                    end > start ? end - 1 : end,
-                    !(position === 'line' || position === 'lineEnd'), // Include or exclude newline
-                    linesAfter
-                );
+                // Use getLineContentEnd for lineContent/lineContentEnd, getLineEnd for line/lineEnd
+                if (position === 'lineContent' || position === 'lineContentEnd') {
+                    expandedEnd = lineBoundaries.getLineContentEnd(
+                        end > start ? end - 1 : end,
+                        linesAfter
+                    );
+                } else {
+                    expandedEnd = lineBoundaries.getLineEnd(
+                        end > start ? end - 1 : end,
+                        linesAfter
+                    );
+                }
             }
 
             // Use existing origin if present, otherwise create new origin from input range

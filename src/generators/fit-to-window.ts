@@ -52,12 +52,12 @@ export function rangeFitToWindow<Data, RenderOptions>(
 
                 // Trim multiline ranges to first line only
                 if (isMultiline) {
-                    end = lineBoundaries.getLineEndForOffset(start, true);
+                    end = lineBoundaries.getLineContentEnd(start);
                 }
 
                 // Find the line containing this range (now guaranteed to be single-line)
-                const lineStart = lineBoundaries.getLineStartForOffset(start);
-                const lineEnd = lineBoundaries.getLineEndForOffset(end > start ? end - 1 : end, true);
+                const lineStart = lineBoundaries.getLineStart(start);
+                const lineEnd = lineBoundaries.getLineContentEnd(end > start ? end - 1 : end);
 
                 // Calculate range length
                 const rangeLength = end - start;

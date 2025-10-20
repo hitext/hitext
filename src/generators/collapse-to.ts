@@ -43,7 +43,6 @@ export function rangeCollapseTo<Data, RenderOptions>(
             input,
             (start, end, data, origin) => {
                 let targetPos: number;
-                const lineStartPos = lineBoundaries.getLineStartForOffset(start);
 
                 switch (position) {
                     case 'start':
@@ -56,19 +55,19 @@ export function rangeCollapseTo<Data, RenderOptions>(
 
                     case 'lineStart':
                         // Use start offset to find the line
-                        targetPos = lineStartPos;
+                        targetPos = lineBoundaries.getLineStart(start);
                         break;
 
                     case 'lineContentEnd':
                         // Use end offset (or end-1 for non-empty ranges) to handle multiline ranges correctly
-                        // Exclude newline from line end
-                        targetPos = lineBoundaries.getLineEndForOffset(end > start ? end - 1 : end, true);
+                        // Get line content end (excludes newline)
+                        targetPos = lineBoundaries.getLineContentEnd(end > start ? end - 1 : end);
                         break;
 
                     case 'lineEnd':
                         // Use end offset (or end-1 for non-empty ranges) to handle multiline ranges correctly
-                        // Include newline in line end
-                        targetPos = lineBoundaries.getLineEndForOffset(end > start ? end - 1 : end, false);
+                        // Get line end (includes newline)
+                        targetPos = lineBoundaries.getLineEnd(end > start ? end - 1 : end);
                         break;
                 }
 

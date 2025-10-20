@@ -175,15 +175,52 @@ export interface LineBoundaries {
      *   - Negative value: move backward N lines
      * Returns the offset where the target line starts.
      */
-    getLineStartForOffset(offset: number, lines?: number): number;
+    getLineStart(offset: number, lines?: number): number;
 
     /**
      * Get the line end offset for a given offset in the source.
-     * If excludeNewline is true, returns offset before the newline character(s).
+     * Returns offset after the newline character(s) (includes newline).
      * If lines parameter is provided:
      *   - Positive value: move forward N lines
      *   - Negative value: move backward N lines
      * Returns the offset where the target line ends.
      */
-    getLineEndForOffset(offset: number, excludeNewline?: boolean, lines?: number): number;
+    getLineEnd(offset: number, lines?: number): number;
+
+    /**
+     * Get the line content end offset for a given offset in the source.
+     * Returns offset before the newline character(s) (content only).
+     * If lines parameter is provided:
+     *   - Positive value: move forward N lines
+     *   - Negative value: move backward N lines
+     * Returns the offset where the target line content ends.
+     */
+    getLineContentEnd(offset: number, lines?: number): number;
+
+    /**
+     * Check if the given offset is at the start of a line.
+     * Returns true if offset equals the line start position.
+     */
+    isLineStart(offset: number): boolean;
+
+    /**
+     * Check if the given offset is at the end of a line (after newline).
+     * Returns true if offset equals the line end position (includes newline).
+     */
+    isLineEnd(offset: number): boolean;
+
+    /**
+     * Check if the given offset is at the content end of a line (before newline).
+     * Returns true if offset equals the line content end position (excludes newline).
+     */
+    isLineContentEnd(offset: number): boolean;
+
+    /**
+     * Get the newline character(s) for a line at the given offset.
+     * If lines parameter is provided:
+     *   - Positive value: move forward N lines
+     *   - Negative value: move backward N lines
+     * Returns the newline sequence (\n, \r\n, \r) or empty string if no newline.
+     */
+    getLineNewline(offset: number, lines?: number): string;
 }

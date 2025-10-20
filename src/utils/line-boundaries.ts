@@ -108,24 +108,14 @@ export function createLineBoundaries(source: string): LineBoundaries {
         return lineIndex;
     }
 
-    /**
-     * Get the line number (1-based) for a given offset in the source.
-     * If lines parameter is provided:
-     *   - Positive value: move forward N lines
-     *   - Negative value: move backward N lines
-     * Returns the 1-based line number containing the offset.
-     */
+    //
+    // Public API
+    //
+
     function getLine(offset: number, lines = 0): number {
         return getLineIndex(offset, lines) + 1;
     }
 
-    /**
-     * Get the column number (1-based) for a given offset in the source.
-     * If lines parameter is provided:
-     *   - Positive value: move forward N lines
-     *   - Negative value: move backward N lines
-     * Returns the 1-based column position within the line.
-     */
     function getColumn(offset: number, lines = 0): number {
         if (offset < 0) {
             return 1;
@@ -134,16 +124,10 @@ export function createLineBoundaries(source: string): LineBoundaries {
             offset = source.length;
         }
 
-        const lineStart = getLineStartForOffset(offset, lines);
+        const lineStart = getLineStart(offset, lines);
         return offset - lineStart + 1;
     }
 
-    /**
-     * Get the offset for a given line and column (both 1-based).
-     * Returns the offset in the source string.
-     * If line is out of bounds, clamps to valid range.
-     * If column is out of bounds for the line, clamps to line length.
-     */
     function getOffset(line: number, column = 1): number {
         if (line < 1) {
             line = 1;
@@ -172,59 +156,74 @@ export function createLineBoundaries(source: string): LineBoundaries {
             : Math.min(offset, source.length);
     }
 
-    /**
-     * Get the line start offset for a given offset in the source.
-     * If lines parameter is provided:
-     *   - Positive value: move forward N lines
-     *   - Negative value: move backward N lines
-     * Returns the offset where the target line starts.
-     */
-    function getLineStartForOffset(offset: number, lines = 0): number {
+    function getLineStart(offset: number, lines = 0): number {
         const lineIndex = getLineIndex(offset, lines);
         return lineStarts[lineIndex];
     }
 
-    /**
-     * Get the line end offset for a given offset in the source.
-     * If excludeNewline is true, returns offset before the newline character(s).
-     * If lines parameter is provided:
-     *   - Positive value: move forward N lines
-     *   - Negative value: move backward N lines
-     * Returns the offset where the target line ends.
-     */
-    function getLineEndForOffset(offset: number, excludeNewline = false, lines = 0): number {
+    function getLineEnd(offset: number, lines = 0): number {
         const lineIndex = getLineIndex(offset, lines);
 
         // Ensure we have the next line to get the end
         ensureLines(lineIndex + 2);
 
         // The line end is the start of the next line, or source.length
-        let lineEnd = lineIndex + 1 < lineStarts.length
+        return lineIndex + 1 < lineStarts.length
             ? lineStarts[lineIndex + 1]
             : source.length;
+    }
 
-        // Exclude newline characters if requested (\n, \r, or \r\n)
-        if (excludeNewline) {
-            const lineStart = lineStarts[lineIndex];
+    function getLineContentEnd(offset: number, lines = 0): number {
+        const lineIndex = getLineIndex(offset, lines);
+        let lineEnd = getLineEnd(offset, lines);
 
-            if (lineEnd > lineStart && source[lineEnd - 1] === '\n') {
-                lineEnd--;
-            }
+        // Exclude newline characters (\n, \r, or \r\n)
+        const lineStart = lineStarts[lineIndex];
 
-            if (lineEnd > lineStart && source[lineEnd - 1] === '\r') {
-                lineEnd--;
-            }
+        if (lineEnd > lineStart && source[lineEnd - 1] === '\n') {
+            lineEnd--;
+        }
+
+        if (lineEnd > lineStart && source[lineEnd - 1] === '\r') {
+            lineEnd--;
         }
 
         return lineEnd;
+    }
+
+    function isLineStart(offset: number): boolean {
+        return offset === getLineStart(offset);
+    }
+
+    function isLineEnd(offset: number): boolean {
+        // An offset is at a line end if:
+        // - It's at the end of the source (including empty source where offset 0 === source.length)
+        // - It's at the start of a line (which is the end of the previous line), but not offset 0
+        return offset === source.length || (offset !== 0 && offset === getLineStart(offset));
+    }
+
+    function isLineContentEnd(offset: number): boolean {
+        return offset === getLineContentEnd(offset);
+    }
+
+    function getLineNewline(offset: number, lines = 0): string {
+        const lineContentEnd = getLineContentEnd(offset, lines);
+        const lineEnd = getLineEnd(offset, lines);
+
+        return source.slice(lineContentEnd, lineEnd);
     }
 
     return {
         getLine,
         getColumn,
         getOffset,
-        getLineStartForOffset,
-        getLineEndForOffset
+        getLineStart,
+        getLineEnd,
+        getLineContentEnd,
+        isLineStart,
+        isLineEnd,
+        isLineContentEnd,
+        getLineNewline
     };
 }
 
