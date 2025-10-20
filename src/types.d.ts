@@ -239,5 +239,63 @@ export interface LineBoundaries {
      *   - Negative value: move backward N lines
      * Returns the newline sequence (\n, \r\n, \r) or empty string if no newline.
      */
-    getLineNewline(offset: number, lines?: number): string;
+    getNewlineText(offset: number, lines?: number): string;
+
+    /**
+     * Get the full text of a line at the given offset (includes newline).
+     * If lines parameter is provided:
+     *   - Positive value: move forward N lines
+     *   - Negative value: move backward N lines
+     * Returns the line text including trailing newline characters.
+     */
+    getLineText(offset: number, lines?: number): string;
+
+    /**
+     * Get the content text of a line at the given offset (excludes newline).
+     * If lines parameter is provided:
+     *   - Positive value: move forward N lines
+     *   - Negative value: move backward N lines
+     * Returns the line content text without trailing newline characters.
+     */
+    getLineContentText(offset: number, lines?: number): string;
+
+    /**
+     * Get the number of the last line in the source (1-based).
+     * Returns the total line count.
+     */
+    getLastLine(): number;
+
+    /**
+     * Get the total number of lines in the source.
+     * Same as getLastLine() but more semantically named.
+     */
+    getLinesNumber(): number;
+
+    /**
+     * Get the maximum line end offset in the range from fromLine to toLine (inclusive).
+     * If fromLine is omitted, starts from line 1.
+     * If toLine is omitted, ends at the last line.
+     * Returns the offset where the last line in range ends.
+     */
+    getMaxLineEnd(fromLine?: number, toLine?: number): number;
+
+    /**
+     * Get the maximum line content end offset in the range from fromLine to toLine (inclusive).
+     * If fromLine is omitted, starts from line 1.
+     * If toLine is omitted, ends at the last line.
+     * Returns the offset where the last line content in range ends (excludes newline).
+     */
+    getMaxLineContentEnd(fromLine?: number, toLine?: number): number;
+
+    /**
+     * Get the line difference between two offsets.
+     * Returns positive if offset2 is on a later line, negative if earlier, 0 if same line.
+     */
+    getLineDiff(offset1: number, offset2: number): number;
+
+    /**
+     * Check if two offsets are on the same line.
+     * Returns true if both offsets are on the same line number.
+     */
+    isSameLine(offset1: number, offset2: number): boolean;
 }

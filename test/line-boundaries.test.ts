@@ -433,55 +433,330 @@ describe('LineBoundaries', () => {
         });
     });
 
-    describe('getLineNewline', () => {
+    describe('getNewlineText', () => {
         it('should return newline characters for lines with LF', () => {
             const lb = createLineBoundaries('line1\nline2\nline3');
-            strictEqual(lb.getLineNewline(0), '\n');   // line1 newline
-            strictEqual(lb.getLineNewline(6), '\n');   // line2 newline
-            strictEqual(lb.getLineNewline(12), '');    // line3 no newline
+            strictEqual(lb.getNewlineText(0), '\n');   // line1 newline
+            strictEqual(lb.getNewlineText(6), '\n');   // line2 newline
+            strictEqual(lb.getNewlineText(12), '');    // line3 no newline
         });
 
         it('should return newline characters for lines with CRLF', () => {
             const lb = createLineBoundaries('line1\r\nline2\r\nline3');
-            strictEqual(lb.getLineNewline(0), '\r\n'); // line1 newline
-            strictEqual(lb.getLineNewline(7), '\r\n'); // line2 newline
-            strictEqual(lb.getLineNewline(14), '');    // line3 no newline
+            strictEqual(lb.getNewlineText(0), '\r\n'); // line1 newline
+            strictEqual(lb.getNewlineText(7), '\r\n'); // line2 newline
+            strictEqual(lb.getNewlineText(14), '');    // line3 no newline
         });
 
         it('should return newline characters for lines with CR', () => {
             const lb = createLineBoundaries('line1\rline2\rline3');
-            strictEqual(lb.getLineNewline(0), '\r');   // line1 newline
-            strictEqual(lb.getLineNewline(6), '\r');   // line2 newline
-            strictEqual(lb.getLineNewline(12), '');    // line3 no newline
+            strictEqual(lb.getNewlineText(0), '\r');   // line1 newline
+            strictEqual(lb.getNewlineText(6), '\r');   // line2 newline
+            strictEqual(lb.getNewlineText(12), '');    // line3 no newline
         });
 
         it('should handle mixed line endings', () => {
             const lb = createLineBoundaries('line1\rline2\nline3\r\nline4');
-            strictEqual(lb.getLineNewline(0), '\r');   // line1 CR
-            strictEqual(lb.getLineNewline(6), '\n');   // line2 LF
-            strictEqual(lb.getLineNewline(12), '\r\n'); // line3 CRLF
-            strictEqual(lb.getLineNewline(19), '');    // line4 no newline
+            strictEqual(lb.getNewlineText(0), '\r');   // line1 CR
+            strictEqual(lb.getNewlineText(6), '\n');   // line2 LF
+            strictEqual(lb.getNewlineText(12), '\r\n'); // line3 CRLF
+            strictEqual(lb.getNewlineText(19), '');    // line4 no newline
         });
 
         it('should move forward N lines with positive lines parameter', () => {
             const lb = createLineBoundaries('line1\nline2\r\nline3');
-            strictEqual(lb.getLineNewline(0, 0), '\n');   // line1 newline
-            strictEqual(lb.getLineNewline(0, 1), '\r\n'); // line2 newline (forward 1)
-            strictEqual(lb.getLineNewline(0, 2), '');     // line3 no newline (forward 2)
+            strictEqual(lb.getNewlineText(0, 0), '\n');   // line1 newline
+            strictEqual(lb.getNewlineText(0, 1), '\r\n'); // line2 newline (forward 1)
+            strictEqual(lb.getNewlineText(0, 2), '');     // line3 no newline (forward 2)
         });
 
         it('should move backward N lines with negative lines parameter', () => {
             const lb = createLineBoundaries('line1\nline2\r\nline3');
-            strictEqual(lb.getLineNewline(14, 0), '');    // line3 no newline
-            strictEqual(lb.getLineNewline(14, -1), '\r\n'); // line2 newline (back 1)
-            strictEqual(lb.getLineNewline(14, -2), '\n'); // line1 newline (back 2)
+            strictEqual(lb.getNewlineText(14, 0), '');    // line3 no newline
+            strictEqual(lb.getNewlineText(14, -1), '\r\n'); // line2 newline (back 1)
+            strictEqual(lb.getNewlineText(14, -2), '\n'); // line1 newline (back 2)
         });
 
         it('should work from any offset in the line', () => {
             const lb = createLineBoundaries('line1\nline2\nline3');
-            strictEqual(lb.getLineNewline(0), '\n');  // start of line1
-            strictEqual(lb.getLineNewline(3), '\n');  // middle of line1
-            strictEqual(lb.getLineNewline(5), '\n');  // end of line1 (before newline)
+            strictEqual(lb.getNewlineText(0), '\n');  // start of line1
+            strictEqual(lb.getNewlineText(3), '\n');  // middle of line1
+            strictEqual(lb.getNewlineText(5), '\n');  // end of line1 (before newline)
+        });
+    });
+
+    describe('getLineText', () => {
+        it('should return full line text including newline', () => {
+            const lb = createLineBoundaries('line1\nline2\nline3');
+            strictEqual(lb.getLineText(0), 'line1\n');   // line1
+            strictEqual(lb.getLineText(6), 'line2\n');   // line2
+            strictEqual(lb.getLineText(12), 'line3');    // line3 (no newline)
+        });
+
+        it('should handle CRLF line endings', () => {
+            const lb = createLineBoundaries('line1\r\nline2\r\nline3');
+            strictEqual(lb.getLineText(0), 'line1\r\n');
+            strictEqual(lb.getLineText(7), 'line2\r\n');
+            strictEqual(lb.getLineText(14), 'line3');
+        });
+
+        it('should handle mixed line endings', () => {
+            const lb = createLineBoundaries('line1\rline2\nline3\r\nline4');
+            strictEqual(lb.getLineText(0), 'line1\r');
+            strictEqual(lb.getLineText(6), 'line2\n');
+            strictEqual(lb.getLineText(12), 'line3\r\n');
+            strictEqual(lb.getLineText(19), 'line4');
+        });
+
+        it('should work from any offset in the line', () => {
+            const lb = createLineBoundaries('line1\nline2\nline3');
+            strictEqual(lb.getLineText(2), 'line1\n');  // middle of line1
+            strictEqual(lb.getLineText(5), 'line1\n');  // end of line1
+            strictEqual(lb.getLineText(8), 'line2\n');  // middle of line2
+        });
+
+        it('should move forward N lines with positive lines parameter', () => {
+            const lb = createLineBoundaries('line1\nline2\nline3');
+            strictEqual(lb.getLineText(0, 1), 'line2\n');  // forward 1 line
+            strictEqual(lb.getLineText(0, 2), 'line3');    // forward 2 lines
+        });
+
+        it('should move backward N lines with negative lines parameter', () => {
+            const lb = createLineBoundaries('line1\nline2\nline3');
+            strictEqual(lb.getLineText(12, -1), 'line2\n'); // back 1 line
+            strictEqual(lb.getLineText(12, -2), 'line1\n'); // back 2 lines
+        });
+    });
+
+    describe('getLineContentText', () => {
+        it('should return line content text excluding newline', () => {
+            const lb = createLineBoundaries('line1\nline2\nline3');
+            strictEqual(lb.getLineContentText(0), 'line1');
+            strictEqual(lb.getLineContentText(6), 'line2');
+            strictEqual(lb.getLineContentText(12), 'line3');
+        });
+
+        it('should handle CRLF line endings', () => {
+            const lb = createLineBoundaries('line1\r\nline2\r\nline3');
+            strictEqual(lb.getLineContentText(0), 'line1');
+            strictEqual(lb.getLineContentText(7), 'line2');
+            strictEqual(lb.getLineContentText(14), 'line3');
+        });
+
+        it('should handle empty lines', () => {
+            const lb = createLineBoundaries('\nline2\n');
+            strictEqual(lb.getLineContentText(0), '');      // empty line1
+            strictEqual(lb.getLineContentText(1), 'line2'); // line2
+            strictEqual(lb.getLineContentText(6), 'line2'); // at newline of line2
+        });
+
+        it('should work from any offset in the line', () => {
+            const lb = createLineBoundaries('line1\nline2\nline3');
+            strictEqual(lb.getLineContentText(2), 'line1'); // middle of line1
+            strictEqual(lb.getLineContentText(5), 'line1'); // end of line1
+        });
+
+        it('should move forward N lines with positive lines parameter', () => {
+            const lb = createLineBoundaries('line1\nline2\nline3');
+            strictEqual(lb.getLineContentText(0, 1), 'line2');
+            strictEqual(lb.getLineContentText(0, 2), 'line3');
+        });
+
+        it('should move backward N lines with negative lines parameter', () => {
+            const lb = createLineBoundaries('line1\nline2\nline3');
+            strictEqual(lb.getLineContentText(12, -1), 'line2');
+            strictEqual(lb.getLineContentText(12, -2), 'line1');
+        });
+    });
+
+    describe('getLastLine', () => {
+        it('should return the number of the last line', () => {
+            const lb = createLineBoundaries('line1\nline2\nline3');
+            strictEqual(lb.getLastLine(), 3);
+        });
+
+        it('should handle single line without newline', () => {
+            const lb = createLineBoundaries('single line');
+            strictEqual(lb.getLastLine(), 1);
+        });
+
+        it('should handle empty string', () => {
+            const lb = createLineBoundaries('');
+            strictEqual(lb.getLastLine(), 1);
+        });
+
+        it('should handle trailing newline', () => {
+            const lb = createLineBoundaries('line1\nline2\n');
+            strictEqual(lb.getLastLine(), 3); // empty line 3
+        });
+
+        it('should handle only newlines', () => {
+            const lb = createLineBoundaries('\n\n\n');
+            strictEqual(lb.getLastLine(), 4);
+        });
+    });
+
+    describe('getLinesNumber', () => {
+        it('should return total number of lines', () => {
+            const lb = createLineBoundaries('line1\nline2\nline3');
+            strictEqual(lb.getLinesNumber(), 3);
+        });
+
+        it('should be same as getLastLine', () => {
+            const lb = createLineBoundaries('line1\nline2\nline3\nline4');
+            strictEqual(lb.getLinesNumber(), lb.getLastLine());
+        });
+    });
+
+    describe('getMaxLineEnd', () => {
+        it('should return max line end for entire source by default', () => {
+            const lb = createLineBoundaries('line1\nline2\nline3');
+            strictEqual(lb.getMaxLineEnd(), 17); // end of line3
+        });
+
+        it('should return max line end for specified range', () => {
+            const lb = createLineBoundaries('line1\nline2\nline3\nline4');
+            strictEqual(lb.getMaxLineEnd(1, 2), 12); // end of line2
+            strictEqual(lb.getMaxLineEnd(2, 3), 18); // end of line3
+        });
+
+        it('should handle fromLine only', () => {
+            const lb = createLineBoundaries('line1\nline2\nline3');
+            strictEqual(lb.getMaxLineEnd(2), 17); // from line2 to end
+        });
+
+        it('should handle toLine only', () => {
+            const lb = createLineBoundaries('line1\nline2\nline3');
+            strictEqual(lb.getMaxLineEnd(undefined, 2), 12); // from start to line2
+        });
+
+        it('should handle single line range', () => {
+            const lb = createLineBoundaries('line1\nline2\nline3');
+            strictEqual(lb.getMaxLineEnd(2, 2), 12); // just line2
+        });
+
+        it('should return 0 for invalid range', () => {
+            const lb = createLineBoundaries('line1\nline2\nline3');
+            strictEqual(lb.getMaxLineEnd(3, 2), 0); // from > to
+        });
+
+        it('should clamp out-of-bounds values', () => {
+            const lb = createLineBoundaries('line1\nline2\nline3');
+            strictEqual(lb.getMaxLineEnd(1, 100), 17); // clamps to last line
+            strictEqual(lb.getMaxLineEnd(0, 2), 12);   // clamps from to 1
+        });
+    });
+
+    describe('getMaxLineContentEnd', () => {
+        it('should return max line content end for entire source by default', () => {
+            const lb = createLineBoundaries('line1\nline2\nline3');
+            strictEqual(lb.getMaxLineContentEnd(), 17); // end of line3 (no newline)
+        });
+
+        it('should exclude trailing newline', () => {
+            const lb = createLineBoundaries('line1\nline2\n');
+            strictEqual(lb.getMaxLineContentEnd(), 11); // end of line2 content (before \n)
+        });
+
+        it('should return max line content end for specified range', () => {
+            const lb = createLineBoundaries('line1\nline2\nline3\nline4');
+            strictEqual(lb.getMaxLineContentEnd(1, 2), 11); // end of line2 content
+            strictEqual(lb.getMaxLineContentEnd(2, 3), 17); // end of line3 content
+        });
+
+        it('should handle fromLine only', () => {
+            const lb = createLineBoundaries('line1\nline2\nline3');
+            strictEqual(lb.getMaxLineContentEnd(2), 17); // from line2 to end
+        });
+
+        it('should handle toLine only', () => {
+            const lb = createLineBoundaries('line1\nline2\nline3');
+            strictEqual(lb.getMaxLineContentEnd(undefined, 2), 11); // from start to line2
+        });
+
+        it('should handle CRLF endings', () => {
+            const lb = createLineBoundaries('line1\r\nline2\r\nline3');
+            strictEqual(lb.getMaxLineContentEnd(1, 2), 12); // before \r\n of line2
+        });
+
+        it('should return 0 for invalid range', () => {
+            const lb = createLineBoundaries('line1\nline2\nline3');
+            strictEqual(lb.getMaxLineContentEnd(3, 2), 0); // from > to
+        });
+    });
+
+    describe('getLineDiff', () => {
+        it('should return 0 for same line', () => {
+            const lb = createLineBoundaries('line1\nline2\nline3');
+            strictEqual(lb.getLineDiff(0, 3), 0);   // both in line1
+            strictEqual(lb.getLineDiff(6, 10), 0);  // both in line2
+        });
+
+        it('should return positive for later line', () => {
+            const lb = createLineBoundaries('line1\nline2\nline3');
+            strictEqual(lb.getLineDiff(0, 6), 1);   // line1 to line2
+            strictEqual(lb.getLineDiff(0, 12), 2);  // line1 to line3
+            strictEqual(lb.getLineDiff(6, 12), 1);  // line2 to line3
+        });
+
+        it('should return negative for earlier line', () => {
+            const lb = createLineBoundaries('line1\nline2\nline3');
+            strictEqual(lb.getLineDiff(6, 0), -1);   // line2 to line1
+            strictEqual(lb.getLineDiff(12, 0), -2);  // line3 to line1
+            strictEqual(lb.getLineDiff(12, 6), -1);  // line3 to line2
+        });
+
+        it('should handle offsets at line boundaries', () => {
+            const lb = createLineBoundaries('line1\nline2\nline3');
+            strictEqual(lb.getLineDiff(5, 6), 1);   // end of line1 to start of line2
+            strictEqual(lb.getLineDiff(11, 12), 1); // end of line2 to start of line3
+        });
+
+        it('should handle negative offsets', () => {
+            const lb = createLineBoundaries('line1\nline2\nline3');
+            strictEqual(lb.getLineDiff(-1, 0), 0);   // both clamp to line1
+            strictEqual(lb.getLineDiff(-1, 6), 1);   // clamped line1 to line2
+        });
+
+        it('should handle offsets beyond source', () => {
+            const lb = createLineBoundaries('line1\nline2\nline3');
+            strictEqual(lb.getLineDiff(100, 200), 0); // both clamp to last line
+            strictEqual(lb.getLineDiff(6, 100), 1);   // line2 to last line
+        });
+    });
+
+    describe('isSameLine', () => {
+        it('should return true for offsets on same line', () => {
+            const lb = createLineBoundaries('line1\nline2\nline3');
+            strictEqual(lb.isSameLine(0, 3), true);   // both in line1
+            strictEqual(lb.isSameLine(6, 10), true);  // both in line2
+            strictEqual(lb.isSameLine(12, 16), true); // both in line3
+        });
+
+        it('should return false for offsets on different lines', () => {
+            const lb = createLineBoundaries('line1\nline2\nline3');
+            strictEqual(lb.isSameLine(0, 6), false);   // line1 vs line2
+            strictEqual(lb.isSameLine(0, 12), false);  // line1 vs line3
+            strictEqual(lb.isSameLine(6, 12), false);  // line2 vs line3
+        });
+
+        it('should handle offsets at line boundaries', () => {
+            const lb = createLineBoundaries('line1\nline2\nline3');
+            strictEqual(lb.isSameLine(5, 6), false);  // end of line1 vs start of line2
+            strictEqual(lb.isSameLine(0, 5), true);   // line1 start vs before newline
+        });
+
+        it('should handle same offset', () => {
+            const lb = createLineBoundaries('line1\nline2\nline3');
+            strictEqual(lb.isSameLine(5, 5), true);
+            strictEqual(lb.isSameLine(0, 0), true);
+        });
+
+        it('should handle edge cases', () => {
+            const lb = createLineBoundaries('line1\nline2\nline3');
+            strictEqual(lb.isSameLine(-1, 0), true);    // both clamp to line1
+            strictEqual(lb.isSameLine(100, 200), true); // both beyond end
+            strictEqual(lb.isSameLine(-1, 100), false); // line1 vs last line
         });
     });
 });

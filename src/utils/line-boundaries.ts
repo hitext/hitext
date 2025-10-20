@@ -206,11 +206,68 @@ export function createLineBoundaries(source: string): LineBoundaries {
         return offset === getLineContentEnd(offset);
     }
 
-    function getLineNewline(offset: number, lines = 0): string {
+    function getNewlineText(offset: number, lines = 0): string {
         const lineContentEnd = getLineContentEnd(offset, lines);
         const lineEnd = getLineEnd(offset, lines);
 
         return source.slice(lineContentEnd, lineEnd);
+    }
+
+    function getLineText(offset: number, lines = 0): string {
+        const lineStart = getLineStart(offset, lines);
+        const lineEnd = getLineEnd(offset, lines);
+
+        return source.slice(lineStart, lineEnd);
+    }
+
+    function getLineContentText(offset: number, lines = 0): string {
+        const lineStart = getLineStart(offset, lines);
+        const lineContentEnd = getLineContentEnd(offset, lines);
+
+        return source.slice(lineStart, lineContentEnd);
+    }
+
+    function getLastLine(): number {
+        // Ensure we've scanned the entire source
+        ensureLines(Infinity);
+        return lineStarts.length;
+    }
+
+    function getLinesNumber(): number {
+        return getLastLine();
+    }
+
+    function getMaxLineEnd(fromLine?: number, toLine?: number): number {
+        const lastLine = getLastLine();
+        const from = fromLine === undefined ? 1 : Math.max(1, fromLine);
+        const to = toLine === undefined ? lastLine : Math.min(lastLine, toLine);
+
+        if (from > to) {
+            return 0;
+        }
+
+        return getOffset(to, Infinity);
+    }
+
+    function getMaxLineContentEnd(fromLine?: number, toLine?: number): number {
+        const lastLine = getLastLine();
+        const from = fromLine === undefined ? 1 : Math.max(1, fromLine);
+        const to = toLine === undefined ? lastLine : Math.min(lastLine, toLine);
+
+        if (from > to) {
+            return 0;
+        }
+
+        const lineStart = getOffset(to, 1);
+        return getLineContentEnd(lineStart);
+    }
+
+    function getLineDiff(offset1: number, offset2: number): number {
+        return getLine(offset2) - getLine(offset1);
+    }
+
+    function isSameLine(offset1: number, offset2: number): boolean {
+        return getLineDiff(offset1, offset2) === 0;
     }
 
     return {
@@ -220,9 +277,17 @@ export function createLineBoundaries(source: string): LineBoundaries {
         getLineStart,
         getLineEnd,
         getLineContentEnd,
+        getNewlineText,
+        getLineText,
+        getLineContentText,
+        getLastLine,
+        getLinesNumber,
+        getMaxLineEnd,
+        getMaxLineContentEnd,
+        getLineDiff,
+        isSameLine,
         isLineStart,
         isLineEnd,
-        isLineContentEnd,
-        getLineNewline
+        isLineContentEnd
     };
 }
