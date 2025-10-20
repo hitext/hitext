@@ -22,8 +22,8 @@ export function rangeInvert<Data, RenderOptions>(
     input: Ranges<Data, RenderOptions>,
     exact = false
 ): GenerateRanges<Data, RenderOptions> {
-    return (source, createRange, renderOptions) => {
-        const ranges = generateRanges(source, rangeMerge(input), Symbol('temp'), renderOptions);
+    return (source, createRange, context) => {
+        const ranges = generateRanges(source, rangeMerge(input), context);
         let offset = 0;
 
         for (const range of ranges) {

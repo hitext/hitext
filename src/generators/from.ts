@@ -32,11 +32,11 @@ import type { GenerateRanges, Ranges, RangeIterable, RangesGenerator } from '../
 export function rangeFrom<Data = unknown, RenderOptions = unknown>(
     input: RangeIterable<Data> | RangesGenerator<Data, RenderOptions>
 ): GenerateRanges<Data, RenderOptions> {
-    return (source, createRange, renderOptions) => {
+    return (source, createRange, context) => {
         const ranges: Ranges<Data, RenderOptions> = typeof input === 'function'
-            ? input(source, renderOptions)
+            ? input(source, context?.renderOptions)
             : input;
 
-        processRanges(source, ranges, createRange, renderOptions);
+        processRanges(source, ranges, createRange, context);
     };
 }

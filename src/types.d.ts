@@ -4,6 +4,7 @@
 
 export type CreateRenderHooks<T, R, HC> = () => Partial<RenderHooks<T, R, HC>>;
 export type PipelineLayer<RenderOptions, Data = unknown, T = unknown, R = T, HC = unknown> = {
+    name?: string;
     marker: RangeMarker;
     ranges: Ranges<Data, RenderOptions>;
     rangeHooks?: RangeHooksDefinition<Data, T, R, HC> | null;
@@ -34,8 +35,17 @@ export type RangeOrigin<Data> = RangeRecord<Data> | RangeRecord<Data>[];
 export type RangeTuple<Data = unknown> = [start: number, end: number, data?: Data, origin?: RangeOrigin<Data>];
 export type RangeRecord<Data = unknown> = { start: number, end: number, data?: Data, origin?: RangeOrigin<Data> };
 export type CreateRange<Data = unknown> = (start: number, end: number, data?: Data, origin?: RangeOrigin<Data>) => void;
-export type GenerateRanges<Data = unknown, RenderOptions = unknown> =
-    (source: string, createRange: CreateRange<Data>, renderOptions?: RenderOptions) => void;
+export type GenerateRanges<Data = unknown, RenderOptions = unknown> = (
+    source: string,
+    createRange: CreateRange<Data>,
+    context?: GenerateRangesContext<Data, RenderOptions>
+) => void;
+export type GenerateRangesContext<Data, RenderOptions> = {
+    renderOptions?: RenderOptions,
+    marker?: RangeMarker,
+    ranges?: GeneratedRange<Data>[];
+    lines?: LineBoundaries;
+}
 export type RangesGenerator<Data, RenderOptions> =
     (source: string, renderOptions?: RenderOptions) => Ranges<Data, RenderOptions>;
 

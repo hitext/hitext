@@ -29,8 +29,7 @@ describe('rangeFrom', () => {
                 rangeFrom(function*(source, options) {
                     yield[0, 4, { source, options }];
                 }),
-                Symbol(),
-                { render: 'options' }
+                { renderOptions: { render: 'options' } }
             );
 
             deepStrictEqual(startEndData(result), [
@@ -59,14 +58,15 @@ describe('rangeFrom', () => {
                     [2, 4, { source }],
                     { start: 3, end: 5 },
                     { start: 4, end: 11, data: { renderOptions } }
-                ])
+                ]),
+                { renderOptions: 'options' }
             );
 
             deepStrictEqual(startEndData(result), [
                 [0, 1, undefined],
                 [2, 4, { source: 'Hello world' }],
                 [3, 5, undefined],
-                [4, 11, { renderOptions: undefined }]
+                [4, 11, { renderOptions: 'options' }]
             ]);
         });
 
@@ -84,12 +84,11 @@ describe('rangeFrom', () => {
         it('should work with function returning GenerateRanges', () => {
             const result = generateRanges(
                 'Hello world',
-                rangeFrom(() => (source, createRange, renderOptions) => {
+                rangeFrom(() => (source, createRange, context) => {
                     createRange(0, 5);
-                    createRange(6, 11, { test: source, renderOptions });
+                    createRange(6, 11, { test: source, renderOptions: context?.renderOptions });
                 }),
-                Symbol(),
-                { someOption: true }
+                { renderOptions: { someOption: true } }
             );
 
             deepStrictEqual(startEndData(result), [
@@ -142,9 +141,9 @@ describe('rangeFrom', () => {
         it('should work with generator using source content and options', () => {
             const result = renderRanges(
                 'Hello world',
-                rangeFrom(function*(source, options) {
+                rangeFrom(function*(source, renderOptions) {
                     // Find all words
-                    const words = source.match(options?.pattern || /fail/) || [];
+                    const words = source.match(renderOptions?.pattern || /fail/) || [];
                     let offset = 0;
                     for (const word of words) {
                         const index = source.indexOf(word, offset);

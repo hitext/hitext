@@ -49,7 +49,7 @@ export function renderRanges<Data, RenderOptions>(
     if (typeof ranges === 'function') {
         ranges(source, (start, end) => {
             result.push(source.slice(start, end));
-        }, renderOptions);
+        }, { renderOptions });
     } else {
         for (const range of ranges) {
             const [start, end] = Array.isArray(range) ? range : [range.start, range.end];

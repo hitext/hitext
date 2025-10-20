@@ -21,7 +21,8 @@ export function render<T, R = T, HC = unknown>(
     source: string,
     ranges: GeneratedRange[],
     rangeHooksDefinitionMap: RangeHooksDefinitionMap<any, T, R, HC> | null = null,
-    renderHooks: Partial<RenderHooks<T, R, HC>> = {}
+    renderHooks: Partial<RenderHooks<T, R, HC>> = {},
+    lineBoundaries: LineBoundaries | null = null
 ) {
     // Renderer output assembly methods
     const createBuffer = functionOrValue(renderHooks.createBuffer, () => new StringBuffer() as unknown as RenderBuffer<T, R>);
@@ -66,7 +67,6 @@ export function render<T, R = T, HC = unknown>(
             .filter(key => key[0] !== 'dump' && key[0] !== 'lines')
         )) }
     } satisfies Record<keyof RangeHookContext<any>, PropertyDescriptor>);
-    let lineBoundaries: LineBoundaries | null = null;
     let renderedOffset = 0;
     let segmentStart = 0;
     let segmentEnd = -1;

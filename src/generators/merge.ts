@@ -5,11 +5,11 @@ export function rangeMerge<Data, RenderOptions>(
     input: Ranges<Data, RenderOptions>,
     origins = false
 ): GenerateRanges<Data, RenderOptions> {
-    return (source, createRange, renderOptions) => {
-        const sortedRanges = generateRanges(source, input, Symbol('temp'), renderOptions)
+    return (source, createRange, context) => {
+        const sortedRanges = generateRanges(source, input, context)
             .sort((a, b) => a.start - b.start || a.end - b.end);
         const getOrigin = () => sortedRanges.slice(firstIndex, lastIndex + 1).map(
-            ({ start, end, data }) => ({ start, end, data })
+            ({ start, end, data, origin }) => ({ start, end, data, origin })
         );
         let firstIndex = 0;
         let lastIndex = 0;

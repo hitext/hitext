@@ -33,8 +33,8 @@ export function rangeExpandTo<Data, RenderOptions>(
     position: 'line' | 'lineContent' | 'lineStart' | 'lineEnd' | 'lineContentEnd',
     lines: number | [before: number, after: number] = 0
 ): GenerateRanges<Data, RenderOptions> {
-    return (source, createRange, renderOptions) => {
-        const lineBoundaries = getSharedLineBoundaries(source);
+    return (source, createRange, context) => {
+        const lineBoundaries = context?.lines || getSharedLineBoundaries(source);
 
         // Parse lines parameter
         const [linesBefore, linesAfter] = Array.isArray(lines)
@@ -68,6 +68,6 @@ export function rangeExpandTo<Data, RenderOptions>(
 
             // Use existing origin if present, otherwise create new origin from input range
             createRange(expandedStart, expandedEnd, data, origin || { start, end, data });
-        }, renderOptions);
+        }, context);
     };
 }

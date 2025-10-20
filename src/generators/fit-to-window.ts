@@ -35,8 +35,8 @@ export function rangeFitToWindow<Data, RenderOptions>(
     size: number = 80,
     allowTrimming: boolean = true
 ): GenerateRanges<Data, RenderOptions> {
-    return (source, createRange, renderOptions) => {
-        const lineBoundaries = getSharedLineBoundaries(source);
+    return (source, createRange, context) => {
+        const lineBoundaries = context?.lines || getSharedLineBoundaries(source);
 
         processRanges(
             source,
@@ -96,7 +96,7 @@ export function rangeFitToWindow<Data, RenderOptions>(
 
                 createRange(windowStart, windowEnd, data, origin || { start, end, data });
             },
-            renderOptions
+            context
         );
     };
 }

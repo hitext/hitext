@@ -32,7 +32,7 @@ import { processRanges } from '../ranges.js';
 export function rangeResetOrigin<Data, RenderOptions>(
     input: Ranges<Data, RenderOptions>
 ): GenerateRanges<Data, RenderOptions> {
-    return (source, createRange, renderOptions) => {
+    return (source, createRange, context) => {
         processRanges(
             source,
             input,
@@ -40,7 +40,7 @@ export function rangeResetOrigin<Data, RenderOptions>(
                 // Discard existing origin so the range becomes an original range
                 createRange(start, end, data);
             },
-            renderOptions
+            context
         );
     };
 }

@@ -35,8 +35,8 @@ export function rangeCollapseTo<Data, RenderOptions>(
     input: Ranges<Data, RenderOptions>,
     position: 'start' | 'end' | 'lineStart' | 'lineEnd' | 'lineContentEnd'
 ): GenerateRanges<Data, RenderOptions> {
-    return (source, createRange, renderOptions) => {
-        const lineBoundaries = getSharedLineBoundaries(source);
+    return (source, createRange, context) => {
+        const lineBoundaries = context?.lines || getSharedLineBoundaries(source);
 
         processRanges(
             source,
@@ -74,7 +74,7 @@ export function rangeCollapseTo<Data, RenderOptions>(
                 // Use existing origin if present, otherwise create new origin from input range
                 createRange(targetPos, targetPos, data, origin || { start, end, data });
             },
-            renderOptions
+            context
         );
     };
 }

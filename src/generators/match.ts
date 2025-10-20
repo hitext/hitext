@@ -7,7 +7,7 @@ export function rangeMatch<RenderOptions>(pattern: string): GenerateRanges<strin
 // Implementation signature (not visible to consumers)
 export function rangeMatch<RenderOptions>(
     pattern: RegExp | string
-): GenerateRanges<RegExpExecArray | string, RenderOptions> {
+): GenerateRanges<any, RenderOptions> {
     if (pattern instanceof RegExp) {
         const flags = pattern.flags.indexOf('g') !== -1 ? pattern.flags : pattern.flags + 'g';
         const matchRx = new RegExp(pattern, flags);

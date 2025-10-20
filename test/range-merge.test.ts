@@ -323,9 +323,9 @@ describe('rangeMerge', () => {
 
             deepStrictEqual(rangeWithoutMarker(ranges), [
                 [0, 11, undefined, [
-                    { start: 0, end: 5, data: undefined },
-                    { start: 3, end: 8, data: undefined },
-                    { start: 6, end: 11, data: undefined }
+                    { start: 0, end: 5, data: undefined, origin: undefined },
+                    { start: 3, end: 8, data: undefined, origin: undefined },
+                    { start: 6, end: 11, data: undefined, origin: undefined }
                 ]]
             ]);
         });
@@ -339,10 +339,10 @@ describe('rangeMerge', () => {
 
             deepStrictEqual(rangeWithoutMarker(ranges), [
                 [0, 5, undefined, [
-                    { start: 0, end: 5, data: undefined }
+                    { start: 0, end: 5, data: undefined, origin: undefined }
                 ]],
                 [6, 11, undefined, [
-                    { start: 6, end: 11, data: undefined }
+                    { start: 6, end: 11, data: undefined, origin: undefined }
                 ]]
             ]);
         });
@@ -356,7 +356,7 @@ describe('rangeMerge', () => {
 
             deepStrictEqual(rangeWithoutMarker(ranges), [
                 [0, 5, undefined, [
-                    { start: 0, end: 5, data: undefined }
+                    { start: 0, end: 5, data: undefined, origin: undefined}
                 ]]
             ]);
         });
