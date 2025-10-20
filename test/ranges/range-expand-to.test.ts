@@ -49,7 +49,7 @@ describe('rangeExpandTo', () => {
         it('should expand to line content (excluding newlines)', () => {
             const expanded = renderRanges(
                 'line1\nline2\nline3',
-                rangeExpandTo([[7, 9]], 'lineContent') // "in" from "line2"
+                rangeExpandTo([[7, 9]], 'line-content') // "in" from "line2"
             );
 
             // Should expand to line2 content without newline
@@ -59,7 +59,7 @@ describe('rangeExpandTo', () => {
         it('should work without trailing newline', () => {
             const expanded = renderRanges(
                 'line1\nline2\nline3',
-                rangeExpandTo([[13, 15]], 'lineContent') // "ne" from "line3"
+                rangeExpandTo([[13, 15]], 'line-content') // "ne" from "line3"
             );
 
             // Last line has no newline, same result
@@ -69,7 +69,7 @@ describe('rangeExpandTo', () => {
         it('should work with CRLF', () => {
             const expanded = renderRanges(
                 'line1\r\nline2\r\nline3',
-                rangeExpandTo([[9, 11]], 'lineContent') // "ne" from "line2"
+                rangeExpandTo([[9, 11]], 'line-content') // "ne" from "line2"
             );
 
             // Should exclude \r\n
@@ -79,7 +79,7 @@ describe('rangeExpandTo', () => {
         it('should expand with context lines', () => {
             const expanded = renderRanges(
                 'line1\nline2\nline3\nline4\nline5',
-                rangeExpandTo([[13, 15]], 'lineContent', 1) // "ne" from "line3", ±1 line
+                rangeExpandTo([[13, 15]], 'line-content', 1) // "ne" from "line3", ±1 line
             );
 
             // Should include line2, line3, line4 content without final newline
@@ -89,7 +89,7 @@ describe('rangeExpandTo', () => {
         it('should support tuple syntax for asymmetric context', () => {
             const expanded = renderRanges(
                 'line1\nline2\nline3\nline4\nline5',
-                rangeExpandTo([[13, 15]], 'lineContent', [1, 2]) // "ne" from "line3", 1 before, 2 after
+                rangeExpandTo([[13, 15]], 'line-content', [1, 2]) // "ne" from "line3", 1 before, 2 after
             );
 
             // Should include line2, line3, line4, line5 content without final newline
@@ -101,7 +101,7 @@ describe('rangeExpandTo', () => {
         it('should expand start to line start, keep original end', () => {
             const expanded = renderRanges(
                 'line1\nline2\nline3',
-                rangeExpandTo([[7, 9]], 'lineStart') // "in" from "line2"
+                rangeExpandTo([[7, 9]], 'line-start') // "in" from "line2"
             );
 
             // Should expand start to beginning of line2, keep end at 9
@@ -111,7 +111,7 @@ describe('rangeExpandTo', () => {
         it('should not expand end', () => {
             const expanded = renderRanges(
                 'line1\nline2\nline3',
-                rangeExpandTo([[7, 11]], 'lineStart') // "ine2" from "line2"
+                rangeExpandTo([[7, 11]], 'line-start') // "ine2" from "line2"
             );
 
             // Start expands to line start, end stays at 11
@@ -121,7 +121,7 @@ describe('rangeExpandTo', () => {
         it('should respect lines parameter for start', () => {
             const expanded = renderRanges(
                 'line1\nline2\nline3\nline4',
-                rangeExpandTo([[13, 15]], 'lineStart', 1) // "in" from "line3", -1 line
+                rangeExpandTo([[13, 15]], 'line-start', 1) // "in" from "line3", -1 line
             );
 
             // Should expand start to line2, keep end at 15
@@ -134,7 +134,7 @@ describe('rangeExpandTo', () => {
         it('should keep original start, expand end to line end (including newline)', () => {
             const expanded = renderRanges(
                 'line1\nline2\nline3',
-                rangeExpandTo([[7, 9]], 'lineEnd') // "in" from "line2"
+                rangeExpandTo([[7, 9]], 'line-end') // "in" from "line2"
             );
 
             // Should keep start at 7, expand end to after newline
@@ -144,7 +144,7 @@ describe('rangeExpandTo', () => {
         it('should expand end to line end without trailing newline', () => {
             const expanded = renderRanges(
                 'line1\nline2\nline3',
-                rangeExpandTo([[13, 15]], 'lineEnd') // "in" from "line3"
+                rangeExpandTo([[13, 15]], 'line-end') // "in" from "line3"
             );
 
             // Should keep start at 13, expand end to 17
@@ -154,7 +154,7 @@ describe('rangeExpandTo', () => {
         it('should respect linesAfter parameter', () => {
             const expanded = renderRanges(
                 'line1\nline2\nline3\nline4',
-                rangeExpandTo([[7, 9]], 'lineEnd', [0, 1]) // "in" from "line2", +1 line after
+                rangeExpandTo([[7, 9]], 'line-end', [0, 1]) // "in" from "line2", +1 line after
             );
 
             // Should keep start at 7, expand end through line3's newline
@@ -166,7 +166,7 @@ describe('rangeExpandTo', () => {
         it('should keep original start, expand end to line content end (excluding newline)', () => {
             const expanded = renderRanges(
                 'line1\nline2\nline3',
-                rangeExpandTo([[7, 9]], 'lineContentEnd') // "in" from "line2"
+                rangeExpandTo([[7, 9]], 'line-content-end') // "in" from "line2"
             );
 
             // Should keep start at 7, expand end to before newline
@@ -176,7 +176,7 @@ describe('rangeExpandTo', () => {
         it('should work without trailing newline', () => {
             const expanded = renderRanges(
                 'line1\nline2\nline3',
-                rangeExpandTo([[13, 15]], 'lineContentEnd') // "in" from "line3"
+                rangeExpandTo([[13, 15]], 'line-content-end') // "in" from "line3"
             );
 
             // Should keep start at 13, expand end to 17
@@ -186,7 +186,7 @@ describe('rangeExpandTo', () => {
         it('should work with CRLF', () => {
             const expanded = renderRanges(
                 'line1\r\nline2\r\nline3',
-                rangeExpandTo([[9, 11]], 'lineContentEnd') // "ne" from "line2"
+                rangeExpandTo([[9, 11]], 'line-content-end') // "ne" from "line2"
             );
 
             // Should keep start at 9, expand end to before \r\n
@@ -196,7 +196,7 @@ describe('rangeExpandTo', () => {
         it('should respect linesAfter parameter', () => {
             const expanded = renderRanges(
                 'line1\nline2\nline3\nline4',
-                rangeExpandTo([[7, 9]], 'lineContentEnd', [0, 1]) // "in" from "line2", +1 line after
+                rangeExpandTo([[7, 9]], 'line-content-end', [0, 1]) // "in" from "line2", +1 line after
             );
 
             // Should keep start at 7, expand end through line3 content
@@ -218,7 +218,7 @@ describe('rangeExpandTo', () => {
         it('should handle multiline range with lineContent mode', () => {
             const expanded = renderRanges(
                 'line1\nline2\nline3\nline4',
-                rangeExpandTo([[7, 15]], 'lineContent') // from "in" of line2 to "ne" of line3
+                rangeExpandTo([[7, 15]], 'line-content') // from "in" of line2 to "ne" of line3
             );
 
             // Should expand to line2-line3 content without final newline
@@ -240,7 +240,7 @@ describe('rangeExpandTo', () => {
         it('should preserve existing data with lineContent mode', () => {
             const expanded = renderRanges(
                 'line1\nline2\nline3',
-                rangeExpandTo([{ start: 7, end: 9, data: { id: 42, text: 'test' } }], 'lineContent')
+                rangeExpandTo([{ start: 7, end: 9, data: { id: 42, text: 'test' } }], 'line-content')
             );
 
             // Data is preserved internally, result shows expanded content
@@ -250,7 +250,7 @@ describe('rangeExpandTo', () => {
         it('should work with ranges without initial data', () => {
             const expanded = renderRanges(
                 'line1\nline2\nline3',
-                rangeExpandTo([[7, 9]], 'lineStart')
+                rangeExpandTo([[7, 9]], 'line-start')
             );
 
             deepStrictEqual(expanded, ['lin']);
@@ -299,6 +299,68 @@ describe('rangeExpandTo', () => {
         });
     });
 
+    describe('Document-level positions', () => {
+        it('should expand to entire document', () => {
+            const expanded = renderRanges(
+                'line1\nline2\nline3',
+                rangeExpandTo([[7, 9]], 'document') // "in" from "line2"
+            );
+
+            // Should expand to entire document
+            deepStrictEqual(expanded, ['line1\nline2\nline3']);
+        });
+
+        it('should expand to document-start (keep original end)', () => {
+            const expanded = renderRanges(
+                'line1\nline2\nline3',
+                rangeExpandTo([[7, 9]], 'document-start')
+            );
+
+            // Should expand start to 0, keep end at 9
+            deepStrictEqual(expanded, ['line1\nlin']);
+        });
+
+        it('should expand to document-end (keep original start)', () => {
+            const expanded = renderRanges(
+                'line1\nline2\nline3',
+                rangeExpandTo([[7, 9]], 'document-end')
+            );
+
+            // Should keep start at 7, expand end to source.length
+            deepStrictEqual(expanded, ['ine2\nline3']);
+        });
+
+        it('should handle multiple ranges with document positions', () => {
+            const expanded = renderRanges(
+                'one\ntwo\nthree',
+                rangeExpandTo([[0, 3], [8, 13]], 'document-start')
+            );
+
+            deepStrictEqual(expanded, ['one', 'one\ntwo\nthree']);
+        });
+
+        it('should preserve data with document positions', () => {
+            const source = 'hello world';
+            const input = [{ start: 6, end: 11, data: { type: 'word' } }];
+            const ranges = generateRanges(source, rangeExpandTo(input, 'document'));
+
+            strictEqual(ranges.length, 1);
+            strictEqual(ranges[0].start, 0);
+            strictEqual(ranges[0].end, 11);
+            deepStrictEqual(ranges[0].data, { type: 'word' });
+        });
+
+        it('should ignore lines parameter with document positions', () => {
+            const expanded = renderRanges(
+                'line1\nline2\nline3',
+                rangeExpandTo([[7, 9]], 'document', 5) // lines=5 should be ignored
+            );
+
+            // Should still expand to entire document
+            deepStrictEqual(expanded, ['line1\nline2\nline3']);
+        });
+    });
+
     describe('Origin tracking', () => {
         it('should create origin when input has no origin', () => {
             const source = 'line1\nline2\nline3';
@@ -318,7 +380,7 @@ describe('rangeExpandTo', () => {
             const inputWithOrigin = [{ start: 7, end: 9, data: 'test', origin: { start: 0, end: 5, data: 'original' } }];
             const ranges = generateRanges(
                 source,
-                rangeExpandTo(inputWithOrigin, 'lineContent')
+                rangeExpandTo(inputWithOrigin, 'line-content')
             );
 
             strictEqual(ranges.length, 1);

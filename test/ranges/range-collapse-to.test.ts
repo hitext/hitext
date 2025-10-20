@@ -76,7 +76,7 @@ describe('rangeCollapseTo', () => {
             const source = 'line1\nline2\nline3';
             const ranges = generateRanges(
                 source,
-                rangeCollapseTo([[9, 11]], 'lineStart') // "ne" from "line2"
+                rangeCollapseTo([[9, 11]], 'line-start') // "ne" from "line2"
             );
 
             // Should collapse to start of line2 (offset 6)
@@ -87,7 +87,7 @@ describe('rangeCollapseTo', () => {
             const source = 'line1\nline2\nline3';
             const ranges = generateRanges(
                 source,
-                rangeCollapseTo([[2, 4], [8, 10]], 'lineStart') // chars in line1 and line2
+                rangeCollapseTo([[2, 4], [8, 10]], 'line-start') // chars in line1 and line2
             );
 
             // First to start of line1 (0), second to start of line2 (6)
@@ -101,7 +101,7 @@ describe('rangeCollapseTo', () => {
             const source = 'line1\nline2\nline3';
             const ranges = generateRanges(
                 source,
-                rangeCollapseTo([[2, 10]], 'lineStart') // spans from line1 to line2
+                rangeCollapseTo([[2, 10]], 'line-start') // spans from line1 to line2
             );
 
             // Should use line containing start (line1), so collapse to offset 0
@@ -112,7 +112,7 @@ describe('rangeCollapseTo', () => {
             const source = 'line1\nline2\nline3';
             const ranges = generateRanges(
                 source,
-                rangeCollapseTo([[6, 11]], 'lineStart') // entire "line2"
+                rangeCollapseTo([[6, 11]], 'line-start') // entire "line2"
             );
 
             // Already at line start
@@ -123,7 +123,7 @@ describe('rangeCollapseTo', () => {
     describe('Collapse to lineContentEnd', () => {
         it('should collapse to end of line content (before newline)', () => {
             const source = 'line1\nline2\nline3';
-            const ranges = generateRanges(source, rangeCollapseTo([[8, 10]], 'lineContentEnd'));
+            const ranges = generateRanges(source, rangeCollapseTo([[8, 10]], 'line-content-end'));
 
             // "ne" from "line2" -> collapse to end of "line2" content (offset 11, before \n)
             deepStrictEqual(startEnd(ranges), [[11, 11]]);
@@ -132,7 +132,7 @@ describe('rangeCollapseTo', () => {
 
         it('should handle line without trailing newline', () => {
             const source = 'line1\nline2\nline3';
-            const ranges = generateRanges(source, rangeCollapseTo([[14, 16]], 'lineContentEnd'));
+            const ranges = generateRanges(source, rangeCollapseTo([[14, 16]], 'line-content-end'));
 
             // "ne" from "line3" -> collapse to end of "line3" content (offset 17, no newline)
             deepStrictEqual(startEnd(ranges), [[17, 17]]);
@@ -140,7 +140,7 @@ describe('rangeCollapseTo', () => {
 
         it('should handle multiline range - uses end line', () => {
             const source = 'line1\nline2\nline3';
-            const ranges = generateRanges(source, rangeCollapseTo([[2, 10]], 'lineContentEnd'));
+            const ranges = generateRanges(source, rangeCollapseTo([[2, 10]], 'line-content-end'));
 
             // Spans line1-line2, should use end line (line2)
             // Collapse to end of line2 content (offset 11)
@@ -151,7 +151,7 @@ describe('rangeCollapseTo', () => {
     describe('Collapse to lineEnd', () => {
         it('should collapse to end of line (after newline)', () => {
             const source = 'line1\nline2\nline3';
-            const ranges = generateRanges(source, rangeCollapseTo([[8, 10]], 'lineEnd'));
+            const ranges = generateRanges(source, rangeCollapseTo([[8, 10]], 'line-end'));
 
             // "ne" from "line2" -> collapse to after \n (offset 12, start of next line)
             deepStrictEqual(startEnd(ranges), [[12, 12]]);
@@ -160,7 +160,7 @@ describe('rangeCollapseTo', () => {
 
         it('should handle line without trailing newline', () => {
             const source = 'line1\nline2\nline3';
-            const ranges = generateRanges(source, rangeCollapseTo([[14, 16]], 'lineEnd'));
+            const ranges = generateRanges(source, rangeCollapseTo([[14, 16]], 'line-end'));
 
             // "ne" from "line3" -> collapse to end (offset 17, no newline to go after)
             deepStrictEqual(startEnd(ranges), [[17, 17]]);
@@ -168,7 +168,7 @@ describe('rangeCollapseTo', () => {
 
         it('should handle multiline range - uses end line', () => {
             const source = 'line1\nline2\nline3';
-            const ranges = generateRanges(source, rangeCollapseTo([[2, 10]], 'lineEnd'));
+            const ranges = generateRanges(source, rangeCollapseTo([[2, 10]], 'line-end'));
 
             // Spans line1-line2, should use end line (line2)
             // Collapse to after line2's \n (offset 12)
@@ -179,14 +179,14 @@ describe('rangeCollapseTo', () => {
     describe('Different line endings', () => {
         it('should work with \\n line endings', () => {
             const source = 'line1\nline2\nline3';
-            const ranges = generateRanges(source, rangeCollapseTo([[7, 9]], 'lineContentEnd'));
+            const ranges = generateRanges(source, rangeCollapseTo([[7, 9]], 'line-content-end'));
 
             deepStrictEqual(startEnd(ranges), [[11, 11]]);
         });
 
         it('should work with \\r line endings', () => {
             const source = 'line1\rline2\rline3';
-            const ranges = generateRanges(source, rangeCollapseTo([[7, 9]], 'lineContentEnd'));
+            const ranges = generateRanges(source, rangeCollapseTo([[7, 9]], 'line-content-end'));
 
             // "in" from "line2" -> collapse to end of line2 content (offset 11, before \r)
             deepStrictEqual(startEnd(ranges), [[11, 11]]);
@@ -195,7 +195,7 @@ describe('rangeCollapseTo', () => {
 
         it('should work with \\r\\n line endings', () => {
             const source = 'line1\r\nline2\r\nline3';
-            const ranges = generateRanges(source, rangeCollapseTo([[8, 10]], 'lineContentEnd'));
+            const ranges = generateRanges(source, rangeCollapseTo([[8, 10]], 'line-content-end'));
 
             // "in" from "line2" -> collapse to end of line2 content (offset 12, before \r\n)
             deepStrictEqual(startEnd(ranges), [[12, 12]]);
@@ -204,7 +204,7 @@ describe('rangeCollapseTo', () => {
 
         it('should work with mixed line endings', () => {
             const source = 'line1\nline2\r\nline3\rline4';
-            const ranges = generateRanges(source, rangeCollapseTo([[8, 10]], 'lineEnd'));
+            const ranges = generateRanges(source, rangeCollapseTo([[8, 10]], 'line-end'));
 
             // Position 8-10 is in line2 (CRLF ending)
             // Collapse to after \r\n (offset 13, start of line3)
@@ -213,7 +213,7 @@ describe('rangeCollapseTo', () => {
 
         it('should handle CRLF with lineEnd', () => {
             const source = 'line1\r\nline2\r\nline3';
-            const ranges = generateRanges(source, rangeCollapseTo([[9, 11]], 'lineEnd'));
+            const ranges = generateRanges(source, rangeCollapseTo([[9, 11]], 'line-end'));
 
             // "ne" from "line2" -> collapse to after \r\n (offset 14, start of line3)
             deepStrictEqual(startEnd(ranges), [[14, 14]]);
@@ -222,7 +222,7 @@ describe('rangeCollapseTo', () => {
 
         it('should handle CR with lineEnd', () => {
             const source = 'line1\rline2\rline3';
-            const ranges = generateRanges(source, rangeCollapseTo([[8, 10]], 'lineEnd'));
+            const ranges = generateRanges(source, rangeCollapseTo([[8, 10]], 'line-end'));
 
             // "ne" from "line2" -> collapse to after \r (offset 12, start of line3)
             deepStrictEqual(startEnd(ranges), [[12, 12]]);
@@ -252,7 +252,7 @@ describe('rangeCollapseTo', () => {
 
         it('should work with ranges without initial data', () => {
             const source = 'hello world';
-            const ranges = generateRanges(source, rangeCollapseTo([[0, 5]], 'lineStart'));
+            const ranges = generateRanges(source, rangeCollapseTo([[0, 5]], 'line-start'));
 
             deepStrictEqual(startEndData(ranges), [
                 [0, 0, undefined]
@@ -273,7 +273,7 @@ describe('rangeCollapseTo', () => {
 
         it('should handle zero-width range with lineContentEnd', () => {
             const source = 'line1\nline2';
-            const ranges = generateRanges(source, rangeCollapseTo([[5, 5]], 'lineContentEnd'));
+            const ranges = generateRanges(source, rangeCollapseTo([[5, 5]], 'line-content-end'));
 
             // Zero-width at end of line1, should collapse to end of line1 content
             deepStrictEqual(startEnd(ranges), [[5, 5]]);
@@ -283,14 +283,14 @@ describe('rangeCollapseTo', () => {
     describe('Edge cases', () => {
         it('should handle range at start of source', () => {
             const source = 'hello world';
-            const ranges = generateRanges(source, rangeCollapseTo([[0, 5]], 'lineStart'));
+            const ranges = generateRanges(source, rangeCollapseTo([[0, 5]], 'line-start'));
 
             deepStrictEqual(startEnd(ranges), [[0, 0]]);
         });
 
         it('should handle range at end of source', () => {
             const source = 'hello world';
-            const ranges = generateRanges(source, rangeCollapseTo([[6, 11]], 'lineEnd'));
+            const ranges = generateRanges(source, rangeCollapseTo([[6, 11]], 'line-end'));
 
             // No newline at end, should be at offset 11
             deepStrictEqual(startEnd(ranges), [[11, 11]]);
@@ -305,7 +305,7 @@ describe('rangeCollapseTo', () => {
 
         it('should handle single character source', () => {
             const source = 'x';
-            const ranges = generateRanges(source, rangeCollapseTo([[0, 1]], 'lineContentEnd'));
+            const ranges = generateRanges(source, rangeCollapseTo([[0, 1]], 'line-content-end'));
 
             deepStrictEqual(startEnd(ranges), [[1, 1]]);
         });
@@ -330,13 +330,56 @@ describe('rangeCollapseTo', () => {
             const source = 'error here\nwarning there\nok';
             const ranges = generateRanges(
                 source,
-                rangeCollapseTo(rangeMatch(/error|warning/g), 'lineContentEnd')
+                rangeCollapseTo(rangeMatch(/error|warning/g), 'line-content-end')
             );
 
             // Two matches on lines 0 and 1, both collapsed to zero-width at end of their lines
             deepStrictEqual(startEnd(ranges), [
                 [10, 10],  // End of "error here" line
                 [24, 24]   // End of "warning there" line
+            ]);
+        });
+    });
+
+    describe('Document-level positions', () => {
+        it('should collapse to document-start', () => {
+            const source = 'line1\nline2\nline3';
+            const ranges = generateRanges(
+                source,
+                rangeCollapseTo([[6, 11], [12, 17]], 'document-start')
+            );
+
+            deepStrictEqual(startEnd(ranges), [
+                [0, 0],
+                [0, 0]
+            ]);
+        });
+
+        it('should collapse to document-end', () => {
+            const source = 'line1\nline2\nline3';
+            const ranges = generateRanges(
+                source,
+                rangeCollapseTo([[0, 5], [6, 11]], 'document-end')
+            );
+
+            // source.length = 17
+            deepStrictEqual(startEnd(ranges), [
+                [17, 17],
+                [17, 17]
+            ]);
+        });
+
+        it('should preserve data when collapsing to document positions', () => {
+            const source = 'hello world';
+            const input = [
+                { start: 0, end: 5, data: { type: 'first' } },
+                { start: 6, end: 11, data: { type: 'second' } }
+            ];
+            const ranges = generateRanges(source, rangeCollapseTo(input, 'document-end'));
+
+            deepStrictEqual(startEndData(ranges), [
+                [11, 11, { type: 'first' }],
+                [11, 11, { type: 'second' }]
             ]);
         });
     });

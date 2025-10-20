@@ -12,12 +12,15 @@ import { createLineBoundaries } from '../utils/line-boundaries.js';
  * @param position - Where to collapse the range to:
  *   - 'start': Beginning of the range
  *   - 'end': End of the range
- *   - 'lineStart': Start of the line containing the range start
- *   - 'lineContentEnd': End of line content (before newline) containing the range end
- *   - 'lineEnd': End of line (including newline) containing the range end
+ *   - 'line-start': Start of the line containing the range start
+ *   - 'line-content-end': End of line content (before newline) containing the range end
+ *   - 'line-end': End of line (including newline) containing the range end
+ *   - 'document': Alias for 'document-start'
+ *   - 'document-start': Start of the document (offset 0)
+ *   - 'document-end': End of the document (source.length)
  *
- * Note: For multiline ranges, 'lineStart' uses the line of range.start,
- * while 'lineEnd'/'lineContentEnd' use the line of range.end.
+ * Note: For multiline ranges, 'line-start' uses the line of range.start,
+ * while 'line-end'/'line-content-end' use the line of range.end.
  *
  * @example
  * // Collapse matches to start position
@@ -25,15 +28,26 @@ import { createLineBoundaries } from '../utils/line-boundaries.js';
  *
  * @example
  * // Create markers at end of line content (before newline)
- * rangeCollapseTo(rangeMatch(/error/g), 'lineContentEnd')
+ * rangeCollapseTo(rangeMatch(/error/g), 'line-content-end')
  *
  * @example
  * // Create markers at end of line (after newline, start of next line)
- * rangeCollapseTo(rangeMatch(/error/g), 'lineEnd')
+ * rangeCollapseTo(rangeMatch(/error/g), 'line-end')
+ *
+ * @example
+ * // Create markers at document start
+ * rangeCollapseTo(rangeMatch(/error/g), 'document-start')
  */
 export function rangeCollapseTo<Data, RenderOptions>(
     input: Ranges<Data, RenderOptions>,
-    position: 'start' | 'end' | 'lineStart' | 'lineEnd' | 'lineContentEnd'
+    position:
+        | 'start'
+        | 'end'
+        | 'line-start'
+        | 'line-end'
+        | 'line-content-end'
+        | 'document-start'
+        | 'document-end'
 ): GenerateRanges<Data, RenderOptions> {
     return (source, createRange, context) => {
         const lineBoundaries = context?.lines || createLineBoundaries(source);
@@ -53,21 +67,29 @@ export function rangeCollapseTo<Data, RenderOptions>(
                         targetPos = end;
                         break;
 
-                    case 'lineStart':
+                    case 'line-start':
                         // Use start offset to find the line
                         targetPos = lineBoundaries.getLineStart(start);
                         break;
 
-                    case 'lineContentEnd':
+                    case 'line-content-end':
                         // Use end offset (or end-1 for non-empty ranges) to handle multiline ranges correctly
                         // Get line content end (excludes newline)
                         targetPos = lineBoundaries.getLineContentEnd(end > start ? end - 1 : end);
                         break;
 
-                    case 'lineEnd':
+                    case 'line-end':
                         // Use end offset (or end-1 for non-empty ranges) to handle multiline ranges correctly
                         // Get line end (includes newline)
                         targetPos = lineBoundaries.getLineEnd(end > start ? end - 1 : end);
+                        break;
+
+                    case 'document-start':
+                        targetPos = 0;
+                        break;
+
+                    case 'document-end':
+                        targetPos = source.length;
                         break;
                 }
 
