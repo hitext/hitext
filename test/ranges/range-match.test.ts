@@ -1,7 +1,7 @@
 import { deepStrictEqual } from 'assert';
-import { rangeMatch, generateRanges } from '../src/index.js';
-import type { GeneratedRange } from '../src/types.js';
-import { startEndData, regexpMatch } from './utils.js';
+import { rangeMatch, generateRanges } from '../../src/index.js';
+import type { GeneratedRange } from '../../src/types.js';
+import { startEndData, regexpMatch } from '../utils.js';
 
 // Overloaded gen function for type inference
 function gen(source: string, pattern: RegExp): Array<GeneratedRange<RegExpExecArray>>;

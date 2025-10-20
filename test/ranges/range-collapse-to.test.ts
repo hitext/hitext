@@ -1,6 +1,6 @@
 import { deepStrictEqual, strictEqual } from 'assert';
-import { rangeMatch, rangeCollapseTo, generateRanges } from '../src/index.js';
-import { startEndData } from './utils.js';
+import { rangeMatch, rangeCollapseTo, generateRanges } from '../../src/index.js';
+import { startEndData } from '../utils.js';
 
 // Helper to extract just [start, end] without data
 function startEnd(ranges: Array<{ start: number; end: number }>): Array<[number, number]> {

@@ -1,7 +1,7 @@
 import { strictEqual } from 'assert';
 import { h, Fragment } from 'preact';
 import { renderToString } from 'preact-render-to-string';
-import { jsx } from '../src/index.js';
+import { jsx } from '../../src/index.js';
 
 describe('JSX renderer', () => {
     it('should render plain text', () => {

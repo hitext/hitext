@@ -1,6 +1,6 @@
 import { strictEqual, deepStrictEqual } from 'assert';
-import { render } from '../src/index.js';
-import type { GeneratedRange, RangeHookContext } from '../src/types.js';
+import { render } from '../../src/index.js';
+import type { GeneratedRange, RangeHookContext } from '../../src/types.js';
 
 describe('render range hooks context', () => {
     const source = 'Hello, World!';

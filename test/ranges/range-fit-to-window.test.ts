@@ -1,6 +1,6 @@
 import { deepStrictEqual, strictEqual } from 'assert';
-import { rangeMatch, rangeFitToWindow, generateRanges } from '../src/index.js';
-import { renderRanges } from './utils.js';
+import { rangeMatch, rangeFitToWindow, generateRanges } from '../../src/index.js';
+import { renderRanges } from '../utils.js';
 
 describe('rangeFitToWindow', () => {
     describe('Basic window expansion', () => {

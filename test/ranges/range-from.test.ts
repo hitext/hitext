@@ -1,6 +1,6 @@
 import { deepStrictEqual } from 'assert';
-import { generateRanges, rangeFrom } from '../src/index.js';
-import { renderRanges, startEndData } from './utils.js';
+import { generateRanges, rangeFrom } from '../../src/index.js';
+import { renderRanges, startEndData } from '../utils.js';
 
 describe('rangeFrom', () => {
     describe('Generator function input', () => {

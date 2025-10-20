@@ -1,6 +1,6 @@
 import { deepStrictEqual, strictEqual } from 'assert';
-import { rangeExpandTo, generateRanges } from '../src/index.js';
-import { renderRanges } from './utils.js';
+import { rangeExpandTo, generateRanges } from '../../src/index.js';
+import { renderRanges } from '../utils.js';
 
 describe('rangeExpandTo', () => {
     describe('Position: line', () => {

@@ -1,5 +1,5 @@
 import { strictEqual } from 'assert';
-import { RangeHooks, render } from '../src/index.js';
+import { RangeHooks, render } from '../../src/index.js';
 // import type { RangeHookText } from '../src/index.js';
 
 describe('render / text hook', () => {

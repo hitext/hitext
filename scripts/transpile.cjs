@@ -8,30 +8,37 @@ function createPathRewritePlugin(outputExt) {
     return {
         name: 'path-rewrite',
         setup(build) {
-            // Handle original TypeScript test files
+            // Handle .ts files (first transpilation step)
             build.onLoad({ filter: /test\/.*\.ts$/ }, async (args) => {
                 let text = await fs.promises.readFile(args.path, 'utf8');
                 return {
                     contents: text
-                        .replace(/\.\.\/src\/index\.js/g, 'hitext')
-                        .replace(/from '\.\.\/.*?\.[mc]?[jt]s'/, (m) => {
-                            // test should import only public API, except to src/types.ts,
-                            // which is removing on transpile
-                            if (!/types(\.d)?\.[mc]?[jt]s/.test(m)) {
+                        .replace(/(\.\.\/)+(src\/)?index\.js/g, 'hitext')
+                        .replace(/from '(\.\.\/.*?)\.[mc]?[jt]s'/g, (m, importPath) => {
+                            // test should import only public API, except for:
+                            // - src/types.ts (which is removed on transpile)
+                            // - test/utils.ts (test utility file)
+                            if (!/types(\.d)?$/.test(importPath) && !/\/utils$/.test(importPath)) {
                                 throw new Error(`Unexpected relative import ${m} in ${args.path}`);
                             }
-                            return m;
+                            return `from '${importPath}${outputExt}'`;
                         }),
                     loader: 'ts'
                 };
             });
 
-            // Handle intermediate JavaScript files during ESM->CJS conversion
+            // Handle .js files (second transpilation step: ESM to CJS)
             build.onLoad({ filter: /lib-test\/.*\.js$/ }, async (args) => {
                 let text = await fs.promises.readFile(args.path, 'utf8');
+                text = text
+                    .replace(/from (["'])(\.\/[^"']+)\.js\1/g, (m, quote, importPath) => {
+                        return `from ${quote}${importPath}${outputExt}${quote}`;
+                    })
+                    .replace(/from (["'])(\.\.\/.+?)\.js\1/g, (m, quote, importPath) => {
+                        return `from ${quote}${importPath}${outputExt}${quote}`;
+                    });
                 return {
-                    contents: text
-                        .replace(/(from |require\()"(\.\/[^"]+)\.js"/g, `$1"$2${outputExt}"`),
+                    contents: text,
                     loader: 'js'
                 };
             });
@@ -39,14 +46,7 @@ function createPathRewritePlugin(outputExt) {
     };
 }
 
-function readDir(dir) {
-    return fs
-        .readdirSync(dir)
-        .filter((fn) => fn.endsWith('.js') || fn.endsWith('.ts'))
-        .map((fn) => `${dir}/${fn}`);
-}
-
-function getAllSourceFiles(dir, fileList = []) {
+function getAllSourceFiles(dir, extensions = ['.ts'], fileList = []) {
     const files = fs.readdirSync(dir);
 
     for (const file of files) {
@@ -54,8 +54,8 @@ function getAllSourceFiles(dir, fileList = []) {
         const stat = fs.statSync(filePath);
 
         if (stat.isDirectory()) {
-            getAllSourceFiles(filePath, fileList);
-        } else if (file.endsWith('.ts') && !file.endsWith('.d.ts')) {
+            getAllSourceFiles(filePath, extensions, fileList);
+        } else if (extensions.some(ext => file.endsWith(ext)) && !file.endsWith('.d.ts')) {
             fileList.push(filePath);
         }
     }
@@ -142,7 +142,7 @@ async function transpileAll(options) {
     const { watch = false, types = false } = options || {};
 
     await transpile({
-        entryPoints: getAllSourceFiles('src'),
+        entryPoints: getAllSourceFiles('src', ['.ts']),
         outputDir: './lib',
         format: 'esm',
         watch,
@@ -154,14 +154,14 @@ async function transpileAll(options) {
         }
     });
     await transpile({
-        entryPoints: readDir('test'),
+        entryPoints: getAllSourceFiles('test', ['.ts']),
         outputDir: './lib-test',
         format: 'esm',
         watch,
         ts: true,
         onSuccess: () =>
             transpile({
-                entryPoints: readDir('lib-test'),
+                entryPoints: getAllSourceFiles('lib-test', ['.js']),
                 outputDir: './lib-test',
                 format: 'cjs'
             })

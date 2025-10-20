@@ -1,5 +1,5 @@
 import { strictEqual } from 'assert';
-import { rangeMatch, tty } from '../src/index.js';
+import { rangeMatch, tty } from '../../src/index.js';
 
 describe('TTY renderer', () => {
     describe('basic styling', () => {

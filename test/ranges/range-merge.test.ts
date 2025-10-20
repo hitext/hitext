@@ -1,6 +1,6 @@
 import { deepStrictEqual } from 'assert';
-import { rangeCombine, rangeMatch, rangeMerge, generateRanges } from '../src/index.js';
-import { getMatchRanges, renderRanges, rangeWithoutMarker } from './utils.js';
+import { rangeCombine, rangeMatch, rangeMerge, generateRanges } from '../../src/index.js';
+import { getMatchRanges, renderRanges, rangeWithoutMarker } from '../utils.js';
 
 describe('rangeMerge', () => {
     describe('Basic merging', () => {

@@ -1,6 +1,6 @@
 import { deepStrictEqual } from 'assert';
-import { rangeResetOrigin, generateRanges } from '../src/index.js';
-import { rangeWithoutMarker } from './utils.js';
+import { rangeResetOrigin, generateRanges } from '../../src/index.js';
+import { rangeWithoutMarker } from '../utils.js';
 
 describe('rangeResetOrigin', () => {
     it('should discard existing origin', () => {

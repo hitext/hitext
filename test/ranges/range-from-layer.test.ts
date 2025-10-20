@@ -1,7 +1,7 @@
 import { deepStrictEqual } from 'assert';
-import { rangeFromLayer, rangeMatch, string, generateRanges } from '../src/index.js';
-import { rangeWithoutMarker, regexpMatch } from './utils.js';
-import type { GeneratedRange } from '../src/types.js';
+import { rangeFromLayer, rangeMatch, string, generateRanges } from '../../src/index.js';
+import { rangeWithoutMarker, regexpMatch } from '../utils.js';
+import type { GeneratedRange } from '../../src/types.js';
 
 describe('rangeFromLayer', () => {
     describe('with generateRanges', () => {

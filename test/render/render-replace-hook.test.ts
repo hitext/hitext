@@ -1,5 +1,5 @@
 import assert from 'assert';
-import { RangeCallableHook, RangeHookContext, render } from '../src/index.js';
+import { RangeCallableHook, RangeHookContext, render } from '../../src/index.js';
 
 /**
  * Visual test helper for rendering with ranges.

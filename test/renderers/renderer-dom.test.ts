@@ -1,7 +1,7 @@
 import { strictEqual } from 'assert';
 import { parseHTML } from 'linkedom';
-import { dom } from '../src/index.js';
-import type { RangeHookContext } from '../src/types.js';
+import { dom } from '../../src/index.js';
+import type { RangeHookContext } from '../../src/types.js';
 
 // Setup DOM environment for tests
 const { document: doc } = parseHTML('<!DOCTYPE html><html></html>');

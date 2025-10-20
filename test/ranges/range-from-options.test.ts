@@ -1,6 +1,6 @@
 import { deepStrictEqual } from 'assert';
-import { rangeFromOptions, rangeMatch, string, generateRanges } from '../src/index.js';
-import { rangeWithoutMarker, regexpMatch } from './utils.js';
+import { rangeFromOptions, rangeMatch, string, generateRanges } from '../../src/index.js';
+import { rangeWithoutMarker, regexpMatch } from '../utils.js';
 
 describe('rangeFromOptions', () => {
     describe('with generateRanges', () => {
