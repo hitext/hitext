@@ -9,4 +9,5 @@ export { rangeExpandTo } from './expand-to.js';
 export { rangeFitToWindow } from './fit-to-window.js';
 export { rangeCollapseTo } from './collapse-to.js';
 export { rangeFrom } from './from.js';
+export { rangeFromLayer } from './from-layer.js';
 export { rangeResetOrigin } from './reset-origin.js';

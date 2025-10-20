@@ -4,6 +4,7 @@ import type {
     GenerateRangesContext,
     LineBoundaries,
     PipelineLayer,
+    RangeMarker,
     Ranges
 } from './types.js';
 import { createLineBoundaries } from './utils/line-boundaries.js';
@@ -24,15 +25,29 @@ export function generateRangesFromLayers<RenderOptions, Data, T, R, HC>(
     renderOptions?: RenderOptions,
     lines: LineBoundaries = createLineBoundaries(source)
 ): GeneratedRange<Data>[] {
-    return layers.reduce(
-        (buffer, { marker, ranges }) =>
-            buffer.concat(generateRanges(source, ranges, {
-                renderOptions,
-                marker,
-                lines
-            })),
-        [] as GeneratedRange<Data>[]
-    );
+    let result: GeneratedRange<Data>[] = [];
+    const rangesByMarker: Record<RangeMarker, GeneratedRange<Data>[]> = Object.create(null);
+    const rangesByName: Record<string, GeneratedRange<Data>[]> = Object.create(null);
+
+    for (const layer of layers) {
+        const { name, marker, ranges } = layer;
+        const buffer = generateRanges(source, ranges, {
+            renderOptions,
+            rangesByMarker,
+            rangesByName,
+            marker,
+            lines
+        });
+
+        rangesByMarker[marker] = buffer;
+        result = result.concat(buffer);
+
+        if (name) {
+            rangesByName[name] = buffer;
+        }
+    }
+
+    return result;
 }
 
 /**

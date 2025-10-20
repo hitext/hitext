@@ -14,6 +14,7 @@ export {
     rangeCollapseTo,
     rangeFitToWindow,
     rangeFrom,
+    rangeFromLayer,
     rangeResetOrigin
 } from './generators/index.js';
 

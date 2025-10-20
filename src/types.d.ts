@@ -14,7 +14,8 @@ export interface PipelineNode<RenderOptions, T, R = T, HC = unknown> {
     layers: PipelineLayer<RenderOptions, any, T, R, HC>[];
     addLayer<D = unknown>(
         ranges: Ranges<D, RenderOptions>,
-        rangeHooks: RangeHooksDefinition<D, T, R, HC> | null
+        rangeHooks: RangeHooksDefinition<D, T, R, HC> | null,
+        name?: string
     ): PipelineNode<RenderOptions, T, R, HC>;
     ranges(source: string, options?: RenderOptions): GeneratedRange[];
     rangeHooksMap(): RangeHooksMap<any, T, R, HC>;
@@ -44,6 +45,8 @@ export type GenerateRangesContext<Data, RenderOptions> = {
     renderOptions?: RenderOptions,
     marker?: RangeMarker,
     ranges?: GeneratedRange<Data>[];
+    rangesByMarker?: Record<RangeMarker, GeneratedRange<Data>[]>;
+    rangesByName?: Record<string, GeneratedRange<Data>[]>;
     lines?: LineBoundaries;
 }
 export type RangesGenerator<Data, RenderOptions> =
