@@ -4,15 +4,35 @@ const { exec } = require('child_process');
 const esbuild = require('esbuild');
 const chalk = require('chalk');
 
-function createPathRewritePlugin() {
+function createPathRewritePlugin(outputExt) {
     return {
         name: 'path-rewrite',
         setup(build) {
+            // Handle original TypeScript test files
             build.onLoad({ filter: /test\/.*\.ts$/ }, async (args) => {
                 let text = await fs.promises.readFile(args.path, 'utf8');
                 return {
-                    contents: text.replace(/\.\.\/src\/index\.js/, 'hitext'),
+                    contents: text
+                        .replace(/\.\.\/src\/index\.js/g, 'hitext')
+                        .replace(/from '\.\.\/.*?\.[mc]?[jt]s'/, (m) => {
+                            // test should import only public API, except to src/types.ts,
+                            // which is removing on transpile
+                            if (!/types(\.d)?\.[mc]?[jt]s/.test(m)) {
+                                throw new Error(`Unexpected relative import ${m} in ${args.path}`);
+                            }
+                            return m;
+                        }),
                     loader: 'ts'
+                };
+            });
+
+            // Handle intermediate JavaScript files during ESM->CJS conversion
+            build.onLoad({ filter: /lib-test\/.*\.js$/ }, async (args) => {
+                let text = await fs.promises.readFile(args.path, 'utf8');
+                return {
+                    contents: text
+                        .replace(/(from |require\()"(\.\/[^"]+)\.js"/g, `$1"$2${outputExt}"`),
+                    loader: 'js'
                 };
             });
         }
@@ -65,7 +85,7 @@ async function transpile({
         platform: 'node',
         target: 'node14',
         sourcemap: false, // ts
-        plugins: [createPathRewritePlugin()],
+        plugins: [createPathRewritePlugin(outputExt)],
         logLevel: 'warning',
         packages: 'external' // Mark all imports as external (don't bundle dependencies)
     };
