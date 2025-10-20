@@ -1,6 +1,7 @@
 import type { RangeHookContext, RangeHooks, RangeHooksFactory } from '../types.js';
 import { createRenderPipeline } from '../pipeline.js';
 import { createStringBuffer } from '../utils/buffer-string.js';
+import { createNoProtoObject, entries, hasOwn } from '../utils/misc.js';
 
 type ForegroundColorName = keyof typeof styles.color;
 type BackgroundColorName = keyof typeof styles.bgColor;
@@ -62,20 +63,20 @@ function createStyle(...style: StyleMod[]): Style {
         if (name === 'reset') {
             result.color = '\u001B[39m';
             result.bgColor = '\u001B[49m';
-        } else if (Object.hasOwn(styles.color, name)) {
+        } else if (hasOwn(styles.color, name)) {
             result.color = `\u001B[${styles.color[name as ForegroundColorName]}m`;
-        } else if (Object.hasOwn(styles.bgColor, name)) {
+        } else if (hasOwn(styles.bgColor, name)) {
             result.bgColor = `\u001B[${styles.bgColor[name as BackgroundColorName]}m`;
         }
 
         return result;
-    }, Object.create(null));
+    }, createNoProtoObject());
 }
 
 function createStyleMap(map: StyleModMap): { [key: string]: Style } {
     const result: { [key: string]: Style } = {};
 
-    for (const [key, value] of Object.entries(map)) {
+    for (const [key, value] of entries(map)) {
         result[key] = Array.isArray(value) ? createStyle(...value) : createStyle(value);
     }
 

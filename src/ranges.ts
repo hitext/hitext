@@ -1,3 +1,4 @@
+import { createNoProtoObject, createLineBoundaries } from './utils/index.js';
 import type {
     CreateRange,
     GeneratedRange,
@@ -7,7 +8,6 @@ import type {
     RangeMarker,
     Ranges
 } from './types.js';
-import { createLineBoundaries } from './utils/line-boundaries.js';
 
 /**
  * Generate ranges from multiple pipeline layers.
@@ -26,8 +26,8 @@ export function generateRangesFromLayers<RenderOptions, Data, T, R, HC>(
     lines: LineBoundaries = createLineBoundaries(source)
 ): GeneratedRange<Data>[] {
     let result: GeneratedRange<Data>[] = [];
-    const rangesByMarker: Record<RangeMarker, GeneratedRange<Data>[]> = Object.create(null);
-    const rangesByName: Record<string, GeneratedRange<Data>[]> = Object.create(null);
+    const rangesByMarker: Record<RangeMarker, GeneratedRange<Data>[]> = createNoProtoObject();
+    const rangesByName: Record<string, GeneratedRange<Data>[]> = createNoProtoObject();
 
     for (const layer of layers) {
         const { name, marker, ranges } = layer;

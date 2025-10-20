@@ -1,3 +1,4 @@
+import { createNoProtoObject, fromEntries, functionOrValue, ownKeys } from './utils/misc.js';
 import type {
     PipelineLayer,
     RangeHooks,
@@ -7,14 +8,10 @@ import type {
     RenderHooks
 } from './types.js';
 
-function functionOrValue<K, T>(value: K, fallback: T): (K extends Function ? K : T) {
-    return typeof value === 'function' ? value as any : fallback as any;
-}
-
 export function createRangeHooksMapFromLayers<RenderOptions, Data, T, R = T, HC = unknown>(
     layers: PipelineLayer<RenderOptions, Data, T, R, HC>[]
 ): RangeHooksDefinitionMap<Data, T, R, HC> {
-    return Object.fromEntries(layers.map(
+    return fromEntries(layers.map(
         ({ marker, rangeHooks }) => [marker, rangeHooks]
     ));
 }
@@ -23,9 +20,9 @@ export function resolveRangeHooksMap<Data, T, R = T, HC = unknown>(
     rangeHooksMap: RangeHooksDefinitionMap<Data, T, R, HC>,
     renderHooks: Partial<RenderHooks<T, R, HC>>
 ): RangeHooksMap<Data, T, R> {
-    const resolvedMap: RangeHooksMap<Data, T, R> = Object.create(null);
+    const resolvedMap: RangeHooksMap<Data, T, R> = createNoProtoObject();
 
-    for (const key of Reflect.ownKeys(rangeHooksMap)) {
+    for (const key of ownKeys(rangeHooksMap)) {
         const definition = resolveRangeHooksDefinition(rangeHooksMap[key], renderHooks);
 
         // Skip empty definitions

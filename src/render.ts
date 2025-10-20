@@ -1,5 +1,5 @@
 import { resolveRangeHooksMap } from './range-hooks-map.js';
-import { StringBuffer, createLineBoundaries } from './utils/index.js';
+import { StringBuffer, createLineBoundaries, createNoProtoObject, defineProperties, fromEntries, functionOrValue, hasOwn, ownKeys } from './utils/index.js';
 import type {
     LineBoundaries,
     GeneratedRange,
@@ -11,10 +11,6 @@ import type {
     RenderBuffer,
     RangeCallableHook
 } from './types.js';
-
-function functionOrValue<K, T>(value: K, fallback: T): (K extends Function ? K : T) {
-    return typeof value === 'function' ? value as any : fallback as any;
-}
 
 export function render<T, R = T, HC = unknown>(
     source: string,
@@ -38,7 +34,7 @@ export function render<T, R = T, HC = unknown>(
 
     // Get hooks map from definitions
     const rangeHooksMap = resolveRangeHooksMap(rangeHooksDefinitionMap || {}, renderHooks);
-    const rangePriority: RangeMarker[] = Reflect.ownKeys(rangeHooksMap);
+    const rangePriority: RangeMarker[] = ownKeys(rangeHooksMap);
     const rangeWeight = new Map<RangeMarker, number>(
         rangePriority.map((marker) => [marker,
             (rangeHooksMap[marker].break ? 2 : 0) +
@@ -48,7 +44,7 @@ export function render<T, R = T, HC = unknown>(
 
     // Create renderer context with options
     const rangeIndexMap = new Map<GeneratedRange, number>();
-    const rangeHookContext: RangeHookContext<any, T, R> = Object.defineProperties(Object.create(null), {
+    const rangeHookContext: RangeHookContext<any, T, R> = defineProperties(createNoProtoObject(), {
         hook: { get: () => currentRangeHook },
         lines: { get: getLineBoundaries },
         source: { value: source },
@@ -62,7 +58,7 @@ export function render<T, R = T, HC = unknown>(
         range: { get: () => currentRange },
         data: { get: () => currentRange.data },
         createBuffer: { value: createBuffer },
-        dump: { value: () => (Object.fromEntries(Reflect.ownKeys(rangeHookContext)
+        dump: { value: () => (fromEntries(ownKeys(rangeHookContext)
             .map((key) => [key, (rangeHookContext as any)[key]])
             .filter(key => key[0] !== 'dump' && key[0] !== 'lines' && key[0] !== 'createBuffer')
         )) }
@@ -92,7 +88,7 @@ export function render<T, R = T, HC = unknown>(
     // Remove ranges without hooks and invalid ranges upfront
     ranges = ranges
         .filter(range =>
-            Object.hasOwn(rangeHooksMap, range.type) &&
+            hasOwn(rangeHooksMap, range.type) &&
             range.start <= range.end &&
             Number.isFinite(range.start) &&
             Number.isFinite(range.end)
