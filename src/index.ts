@@ -36,7 +36,8 @@ export {
     rangeFrom,
     rangeFromLayer,
     rangeFromOptions,
-    rangeResetOrigin
+    rangeResetOrigin,
+    rangeFallback
 } from './ranges/index.js';
 export {
     rangeHooksHide
