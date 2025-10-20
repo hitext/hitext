@@ -582,7 +582,7 @@ console.log(highlighter.render('ERROR: Failed\nWARN: Slow\nINFO: Done'));
 
 The TTY renderer provides helper functions for easy styling:
 - `tty.createStyle(...styles)` – Returns a factory wrapper for specific ANSI styles
-- `tty.createStyleMap(map, fetcher?)` – Returns a factory wrapper that maps data values to styles (automatically handles RegExp match arrays by using `data[0]`, falls back to `data ?? rangeText`)
+- `tty.createStyleMap(map, fetcher?)` – Returns a factory wrapper that maps data values to styles (default fetcher is `data ?? rangeText`)
 
 **Example with `createStyleMap`:**
 ```js
@@ -611,7 +611,8 @@ const highlighter2 = tty()
         )
     );
 
-// Using rangeMatch with automatic data - no need for rangeText fallback
+// Default fetcher is `({ data, rangeText }) => data ?? rangeText`, so in most cases
+// with rangeMatch() you might not need a custom fetcher at all:
 const highlighter3 = tty()
     .addLayer(
         rangeMatch(/ERROR|WARN|INFO/g),
@@ -620,8 +621,6 @@ const highlighter3 = tty()
             'WARN': 'yellow',
             'INFO': 'blue'
         })
-        // Automatically uses data[0] from rangeMatch RegExp results,
-        // falls back to data ?? rangeText
     );
 ```
 
@@ -1028,7 +1027,6 @@ rangeMatch(/error/i)  // Becomes /error/gi internally
 **Data in generated ranges:**
 - For **string patterns**: The matched string is stored as `data`
 - For **RegExp patterns**: The full match object (including capture groups) is stored as `data`
-- Access the matched text via `data` (strings) or `data[0]` (RegExp match objects)
 
 #### `rangeLines`
 
