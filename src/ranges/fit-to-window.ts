@@ -94,7 +94,21 @@ export function rangeFitToWindow<Data, RenderOptions>(
                     // Case 3: Range is larger but trimming disabled - keep as is
                 }
 
-                createRange(windowStart, windowEnd, data, origin || { start, end, data });
+                const trimmedStart = Math.max(start, windowStart);
+                const trimmedEnd = Math.min(end, windowEnd);
+                let rangeOrigin = origin || { start, end, data };
+
+                // If trimming occurred, update origin to reflect trimmed range
+                if (trimmedStart !== start || trimmedEnd !== end) {
+                    rangeOrigin = {
+                        start: trimmedStart,
+                        end: trimmedEnd,
+                        data,
+                        origin: rangeOrigin
+                    };
+                }
+
+                createRange(windowStart, windowEnd, data, rangeOrigin);
             },
             context
         );

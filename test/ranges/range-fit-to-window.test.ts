@@ -1,6 +1,6 @@
 import { deepStrictEqual, strictEqual } from 'assert';
 import { rangeMatch, rangeFitToWindow, generateRanges } from '../../src/index.js';
-import { renderRanges } from '../utils.js';
+import { rangeWithoutMarker, renderRanges } from '../utils.js';
 
 describe('rangeFitToWindow', () => {
     describe('Basic window expansion', () => {
@@ -371,6 +371,28 @@ describe('rangeFitToWindow', () => {
 
             strictEqual(ranges.length, 1);
             deepStrictEqual(ranges[0].origin, { start: 100, end: 105, data: 'original' });
+        });
+
+        it('should wrap origin when range is adjusted', () => {
+            const source = 'Lorem ipsum dolor sit amet ERROR consectetur';
+            const input = [
+                { start: 20, end: 30, data: 'test1' }, // fit to window
+                { start: 10, end: 30, data: 'test2' }  // doesn't fit to window
+            ];
+            const ranges = generateRanges(
+                source,
+                rangeFitToWindow(input, 16)
+            );
+
+            deepStrictEqual(rangeWithoutMarker(ranges), [
+                [17, 33, 'test1', { start: 20, end: 30, data: 'test1' }],
+                [10, 26, 'test2', {
+                    start: 10,
+                    end: 26,
+                    data: 'test2',
+                    origin: { start: 10, end: 30, data: 'test2' }
+                }]
+            ]);
         });
     });
 });
