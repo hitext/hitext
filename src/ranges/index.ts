@@ -13,3 +13,5 @@ export { rangeFromLayer } from './from-layer.js';
 export { rangeFromOptions } from './from-options.js';
 export { rangeResetOrigin } from './reset-origin.js';
 export { rangeFallback } from './fallback.js';
+export { rangeFilter } from './filter.js';
+export { rangeDataMap } from './data-map.js';

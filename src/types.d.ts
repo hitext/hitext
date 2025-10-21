@@ -52,6 +52,14 @@ export type GenerateRangesContext<Data, RenderOptions> = {
 export type RangesGenerator<Data, RenderOptions> =
     (source: string, renderOptions?: RenderOptions) => Ranges<Data, RenderOptions>;
 
+// Range operation context (for filter, map, sort, etc.)
+export interface RangeOperationContext<RenderOptions = any> {
+    source: string;
+    lines: LineBoundaries;
+    renderOptions?: RenderOptions;
+    ranges: Array<RangeRecord<any>>;
+}
+
 // generated
 export type RangeMarker = symbol | string | number;
 export interface GeneratedRange<Data = unknown> {
