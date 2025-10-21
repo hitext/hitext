@@ -15,3 +15,4 @@ export { rangeResetOrigin } from './reset-origin.js';
 export { rangeFallback } from './fallback.js';
 export { rangeFilter } from './filter.js';
 export { rangeDataMap } from './data-map.js';
+export { rangeSort } from './sort.js';

@@ -39,7 +39,8 @@ export {
     rangeResetOrigin,
     rangeFallback,
     rangeFilter,
-    rangeDataMap
+    rangeDataMap,
+    rangeSort
 } from './ranges/index.js';
 export {
     rangeHooksHide
