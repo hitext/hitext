@@ -41,7 +41,8 @@ export {
     rangeFilter,
     rangeDataMap,
     rangeSort,
-    rangePick
+    rangePick,
+    rangePadLines
 } from './ranges/index.js';
 export {
     rangeHooksHide

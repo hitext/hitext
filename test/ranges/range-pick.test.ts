@@ -1,6 +1,5 @@
 import { strictEqual, deepStrictEqual } from 'assert';
-import { rangePick } from '../../src/ranges/pick.js';
-import { generateRanges } from '../../src/ranges.js';
+import { rangePick, generateRanges } from '../../src/index.js';
 import { startEndData } from '../utils.js';
 
 describe('rangePick()', () => {
