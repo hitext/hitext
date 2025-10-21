@@ -40,7 +40,8 @@ export {
     rangeFallback,
     rangeFilter,
     rangeDataMap,
-    rangeSort
+    rangeSort,
+    rangePick
 } from './ranges/index.js';
 export {
     rangeHooksHide

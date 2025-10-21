@@ -16,3 +16,4 @@ export { rangeFallback } from './fallback.js';
 export { rangeFilter } from './filter.js';
 export { rangeDataMap } from './data-map.js';
 export { rangeSort } from './sort.js';
+export { rangePick } from './pick.js';
