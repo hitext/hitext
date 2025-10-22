@@ -22,7 +22,7 @@ import { generateRanges } from '../ranges.js';
  * )
  */
 export function applyMerge<Data, RenderOptions>(
-    origins = false
+    origins = true
 ): (input: Ranges<Data, RenderOptions>) => GenerateRanges<Data, RenderOptions> {
     return (input: Ranges<Data, RenderOptions>) => {
         return (source, createRange, context) => {
