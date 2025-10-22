@@ -1,4 +1,4 @@
-import type { GenerateRanges, Ranges } from '../types.js';
+import type { Ranges, TransformRanges } from '../types.js';
 import { generateRanges } from '../ranges.js';
 import { applyMerge } from './apply-merge.js';
 
@@ -26,7 +26,7 @@ import { applyMerge } from './apply-merge.js';
  */
 export function applyInvert<Data, RenderOptions>(
     exact = false
-): (input: Ranges<Data, RenderOptions>) => GenerateRanges<Data, RenderOptions> {
+): TransformRanges<Data, RenderOptions> {
     return (input: Ranges<Data, RenderOptions>) => {
         return (source, createRange, context) => {
             const ranges = generateRanges(source, applyMerge<Data, RenderOptions>()(input), context);

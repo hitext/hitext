@@ -1,4 +1,4 @@
-import type { GenerateRanges, Ranges } from '../types.js';
+import type { Ranges, TransformRanges } from '../types.js';
 import { processRanges } from '../ranges.js';
 
 /**
@@ -16,8 +16,7 @@ import { processRanges } from '../ranges.js';
  *   applyCollapseTo('line-end')
  * )
  */
-export function applyResetOrigin<Data, RenderOptions>():
-    (input: Ranges<Data, RenderOptions>) => GenerateRanges<Data, RenderOptions> {
+export function applyResetOrigin<Data, RenderOptions>(): TransformRanges<Data, RenderOptions> {
     return (input: Ranges<Data, RenderOptions>) => {
         return (source, createRange, context) => {
             processRanges(

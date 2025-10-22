@@ -36,6 +36,9 @@ export type RangeOrigin<Data> = RangeRecord<Data> | RangeRecord<Data>[];
 export type RangeTuple<Data = unknown> = [start: number, end: number, data?: Data, origin?: RangeOrigin<Data>];
 export type RangeRecord<Data = unknown> = { start: number, end: number, data?: Data, origin?: RangeOrigin<Data> };
 export type CreateRange<Data = unknown> = (start: number, end: number, data?: Data, origin?: RangeOrigin<Data>) => void;
+export type TransformRanges<Data = unknown, RenderOptions = unknown> = (
+    input: Ranges<Data, RenderOptions>
+) => GenerateRanges<Data, RenderOptions>;
 export type GenerateRanges<Data = unknown, RenderOptions = unknown> = (
     source: string,
     createRange: CreateRange<Data>,

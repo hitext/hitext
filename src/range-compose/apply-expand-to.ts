@@ -1,4 +1,4 @@
-import type { GenerateRanges, Ranges } from '../types.js';
+import type { Ranges, TransformRanges } from '../types.js';
 import { processRanges } from '../ranges.js';
 import { createLineBoundaries } from '../utils/line-boundaries.js';
 
@@ -60,7 +60,7 @@ export function applyExpandTo<Data, RenderOptions>(
         | 'document-start'
         | 'document-end',
     lines: number | [before: number, after: number] = 0
-): (input: Ranges<Data, RenderOptions>) => GenerateRanges<Data, RenderOptions> {
+): TransformRanges<Data, RenderOptions> {
     return (input: Ranges<Data, RenderOptions>) => {
         return (source, createRange, context) => {
             const lineBoundaries = context?.lines || createLineBoundaries(source);

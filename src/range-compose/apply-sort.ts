@@ -22,7 +22,7 @@ export function applySort<Data, RenderOptions>(
         rangeB: RangeRecord<Data>,
         context: RangeOperationContext<RenderOptions>
     ) => number
-): (input: Ranges<Data, RenderOptions>) => GenerateRanges<Data, RenderOptions> {
+): RangesTransform<Data, RenderOptions> {
     return (input: Ranges<Data, RenderOptions>) => {
         return (source, createRange, genContext) => {
             const ranges: Array<RangeRecord<Data>> = [];

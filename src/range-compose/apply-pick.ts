@@ -1,4 +1,4 @@
-import type { GenerateRanges, Ranges, RangeRecord, RangeOperationContext } from '../types.js';
+import type { Ranges, RangeRecord, RangeOperationContext, TransformRanges } from '../types.js';
 import { processRanges } from '../ranges.js';
 import { createLineBoundaries } from '../utils/line-boundaries.js';
 
@@ -25,7 +25,7 @@ export function applyPick<Data, RenderOptions>(
         index: number,
         context: RangeOperationContext<RenderOptions>
     ) => boolean)
-): (input: Ranges<Data, RenderOptions>) => GenerateRanges<Data, RenderOptions> {
+): TransformRanges<Data, RenderOptions> {
     return (input: Ranges<Data, RenderOptions>) => {
         return (source, createRange, genContext) => {
             const ranges: Array<RangeRecord<Data>> = [];
