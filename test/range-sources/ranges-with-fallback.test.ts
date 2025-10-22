@@ -1,12 +1,12 @@
 import { deepStrictEqual } from 'assert';
-import { generateRanges, coalesceRanges } from '../../src/index.js';
+import { generateRanges, rangesWithFallback } from '../../src/index.js';
 import { rangeWithoutMarker, startEndData } from '../utils.js';
 
-describe('coalesceRanges', () => {
+describe('rangesWithFallback', () => {
     it('should use first source when it produces ranges', () => {
         const result = generateRanges(
             'Hello world',
-            coalesceRanges(
+            rangesWithFallback(
                 [[0, 5]],  // first (used)
                 [[6, 11]]  // fallback (not used)
             )
@@ -20,7 +20,7 @@ describe('coalesceRanges', () => {
     it('should use fallback when first source is empty', () => {
         const result = generateRanges(
             'Hello world',
-            coalesceRanges(
+            rangesWithFallback(
                 [],        // first (empty)
                 [[6, 11]]  // fallback (used)
             )
@@ -34,7 +34,7 @@ describe('coalesceRanges', () => {
     it('should handle null/undefined as empty', () => {
         const result = generateRanges(
             'Hello world',
-            coalesceRanges(
+            rangesWithFallback(
                 null as any,
                 [[6, 11]]
             )
@@ -48,7 +48,7 @@ describe('coalesceRanges', () => {
     it('should return empty when all sources are empty', () => {
         const result = generateRanges(
             'Hello world',
-            coalesceRanges([], [], [])
+            rangesWithFallback([], [], [])
         );
 
         deepStrictEqual(startEndData(result), []);
@@ -57,7 +57,7 @@ describe('coalesceRanges', () => {
     it('should support multiple fallbacks', () => {
         const result = generateRanges(
             'Hello world',
-            coalesceRanges(
+            rangesWithFallback(
                 [],        // first (empty)
                 [],        // second (empty)
                 [[0, 5]],  // third (used)
@@ -73,7 +73,7 @@ describe('coalesceRanges', () => {
     it('should preserve data from used source', () => {
         const result = generateRanges(
             'Hello world',
-            coalesceRanges(
+            rangesWithFallback(
                 [],
                 [[6, 11, { type: 'fallback' }]]
             )
@@ -88,7 +88,7 @@ describe('coalesceRanges', () => {
         const origin = { type: 'test' as const, start: 0, end: 100, data: null, origin: undefined };
         const result = generateRanges(
             'Hello world',
-            coalesceRanges(
+            rangesWithFallback(
                 [],
                 [[6, 11, { type: 'fallback' }, origin]]
             )
@@ -102,7 +102,7 @@ describe('coalesceRanges', () => {
     it('should pass through all ranges from used source', () => {
         const result = generateRanges(
             'Hello world test',
-            coalesceRanges(
+            rangesWithFallback(
                 [],
                 [[0, 5], [6, 11], [12, 16]]
             )
@@ -118,7 +118,7 @@ describe('coalesceRanges', () => {
     it('should work with generator function that yields nothing', () => {
         const result = generateRanges(
             'Hello world',
-            coalesceRanges(
+            rangesWithFallback(
                 () => {
                     // Yields nothing
                 },
@@ -134,7 +134,7 @@ describe('coalesceRanges', () => {
     it('should work with single input (no fallback)', () => {
         const result = generateRanges(
             'Hello world',
-            coalesceRanges([[0, 5]])
+            rangesWithFallback([[0, 5]])
         );
 
         deepStrictEqual(startEndData(result), [
@@ -145,7 +145,7 @@ describe('coalesceRanges', () => {
     it('should handle object form ranges', () => {
         const result = generateRanges(
             'Hello world',
-            coalesceRanges(
+            rangesWithFallback(
                 [],
                 [{ start: 0, end: 5 }, { start: 6, end: 11 }]
             )
@@ -160,7 +160,7 @@ describe('coalesceRanges', () => {
     it('should handle zero-length ranges', () => {
         const result = generateRanges(
             'Hello',
-            coalesceRanges(
+            rangesWithFallback(
                 [],
                 [[0, 0]]
             )

@@ -12,7 +12,7 @@ import type { GenerateRanges, Ranges } from '../types.js';
  *
  * @example
  * // Try multiple patterns with final fallback
- * coalesceRanges(
+ * rangesWithFallback(
  *     rangesForMatch(/error/gi),
  *     rangesForMatch(/warning/gi),
  *     [[0, 100]]  // Show first 100 chars if no errors or warnings
@@ -20,7 +20,7 @@ import type { GenerateRanges, Ranges } from '../types.js';
  *
  * @example
  * // Select insertion point with fallbacks
- * coalesceRanges(
+ * rangesWithFallback(
  *     rangesFromOptions('tocInsertPoint'),
  *     rangesForMatch(/<!-- TOC -->/),
  *     [[0, 0]]  // Document start as final fallback
@@ -28,12 +28,12 @@ import type { GenerateRanges, Ranges } from '../types.js';
  *
  * @example
  * // Placeholder for missing content
- * coalesceRanges(
+ * rangesWithFallback(
  *     rangesForMatch(/^(?=#[^#])/m),  // Start of first H1
  *     [[0, 0]]  // Document start
  * )
  */
-export function coalesceRanges<Data = unknown, RenderOptions = unknown>(
+export function rangesWithFallback<Data = unknown, RenderOptions = unknown>(
     ...inputs: Ranges<Data, RenderOptions>[]
 ): GenerateRanges<Data, RenderOptions> {
     return (source, createRange, context) => {

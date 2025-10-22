@@ -23,29 +23,30 @@ export {
 
 // Range sources: generators and combiners
 export {
+    concatRanges,
     rangesForLines,
     rangesForMatch,
     rangesForPoint,
     rangesFrom,
     rangesFromLayer,
     rangesFromOptions,
-    concatRanges,
-    coalesceRanges
+    rangesWithFallback
 } from './range-sources/index.js';
 
 // Range transformers: curried functions for composition
 export {
-    applyMerge,
-    applyInvert,
-    applyExpandTo,
     applyCollapseTo,
-    applyFitToWindow,
-    applyFilter,
     applyDataMap,
-    applySort,
-    applyPick,
+    applyExpandTo,
+    applyFallback,
+    applyFilter,
+    applyFitToWindow,
+    applyInvert,
+    applyMerge,
     applyPadLines,
+    applyPick,
     applyResetOrigin,
+    applySort,
     // Functional composition helper
     composeRanges
 } from './range-compose/index.js';

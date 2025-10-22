@@ -10,3 +10,4 @@ export { applySort } from './apply-sort.js';
 export { applyPick } from './apply-pick.js';
 export { applyPadLines } from './apply-pad-lines.js';
 export { applyResetOrigin } from './apply-reset-origin.js';
+export { applyFallback } from './apply-fallback.js';
