@@ -12,7 +12,6 @@ import { createLineBoundaries } from '../utils/line-boundaries.js';
  * other generators.
  *
  * The mapper receives:
- * - `data` - The current range's data
  * - `range` - The full range object with start, end, data, and origin
  * - `index` - Zero-based index of the range in the input sequence
  * - `context` - Operation context with source, lines, renderOptions, and all ranges
@@ -24,8 +23,8 @@ import { createLineBoundaries } from '../utils/line-boundaries.js';
  * // Add line information to each range's data
  * composeRanges(
  *   rangesForMatch(/error/g),
- *   applyDataMap((data, range, index, { lines }) => ({
- *     ...data,
+ *   applyDataMap((range, index, { lines }) => ({
+ *     match: range.data,
  *     line: lines.getLine(range.start),
  *     column: lines.getColumn(range.start)
  *   }))
@@ -35,8 +34,8 @@ import { createLineBoundaries } from '../utils/line-boundaries.js';
  * // Transform data based on index
  * composeRanges(
  *   ranges,
- *   applyDataMap((data, range, index) => ({
- *     ...data,
+ *   applyDataMap((range, index) => ({
+ *     ...range.data,
  *     index,
  *     label: `Item ${index + 1}`
  *   }))
@@ -44,7 +43,6 @@ import { createLineBoundaries } from '../utils/line-boundaries.js';
  */
 export function applyDataMap<Data, NewData, RenderOptions>(
     mapper: (
-        data: Data,
         range: RangeRecord<Data>,
         index: number,
         context: RangeOperationContext<RenderOptions>
@@ -74,7 +72,7 @@ export function applyDataMap<Data, NewData, RenderOptions>(
             // Map and output ranges
             for (let index = 0; index < ranges.length; index++) {
                 const range = ranges[index];
-                const newData = mapper(range.data as Data, range, index, context);
+                const newData = mapper(range, index, context);
                 // New data means new origin - pass undefined to make this range its own origin
                 createRange(range.start, range.end, newData, undefined);
             }

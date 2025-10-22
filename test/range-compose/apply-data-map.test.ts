@@ -12,7 +12,7 @@ describe('applyDataMap', () => {
 
         const ranges = generateRanges(
             'hello world test',
-            applyDataMap<number, number, unknown>((data) => data * 2)(input)
+            applyDataMap<number, number, unknown>((range) => (range.data ?? 0) * 2)(input)
         );
 
         deepStrictEqual(startEndData(ranges), [
@@ -28,7 +28,7 @@ describe('applyDataMap', () => {
             { start: 6, end: 11, data: 'string' }
         ];
 
-        const ranges = generateRanges('hello world', applyDataMap((data) => ({ type: data, highlighted: true }))(input));
+        const ranges = generateRanges('hello world', applyDataMap((range) => ({ type: range.data, highlighted: true }))(input));
 
         deepStrictEqual(startEndData(ranges), [
             [0, 5, { type: 'keyword', highlighted: true }],
@@ -37,7 +37,7 @@ describe('applyDataMap', () => {
     });
 
     it('should handle empty input', () => {
-        const ranges = generateRanges('test', applyDataMap((data) => data)([]));
+        const ranges = generateRanges('test', applyDataMap((range) => range.data)([]));
 
         deepStrictEqual(ranges, []);
     });
@@ -48,7 +48,7 @@ describe('applyDataMap', () => {
             { start: 6, end: 11 }
         ];
 
-        const ranges = generateRanges('hello world', applyDataMap((data) => ({ value: data, hasData: data !== undefined }))(input));
+        const ranges = generateRanges('hello world', applyDataMap((range) => ({ value: range.data, hasData: range.data !== undefined }))(input));
 
         deepStrictEqual(startEndData(ranges), [
             [0, 5, { value: undefined, hasData: false }],
@@ -65,7 +65,7 @@ describe('applyDataMap', () => {
 
         const ranges = generateRanges(
             'some longer text for testing',
-            applyDataMap((data, range) => ({ original: data, length: range.end - range.start }))(input)
+            applyDataMap((range) => ({ original: range.data, length: range.end - range.start }))(input)
         );
 
         deepStrictEqual(startEndData(ranges), [
@@ -82,7 +82,7 @@ describe('applyDataMap', () => {
             { start: 2, end: 3, data: 'c' }
         ];
 
-        const ranges = generateRanges('abc', applyDataMap((data, range, index) => ({ char: data, index }))(input));
+        const ranges = generateRanges('abc', applyDataMap((range, index) => ({ char: range.data, index }))(input));
 
         deepStrictEqual(startEndData(ranges), [
             [0, 1, { char: 'a', index: 0 }],
@@ -101,8 +101,8 @@ describe('applyDataMap', () => {
         type NewData = { text: string };
         const ranges = generateRanges(
             'Hello World',
-            applyDataMap<Data, NewData, unknown>((data, range, index, { source }) => ({
-                ...data,
+            applyDataMap<Data, NewData, unknown>((range, index, { source }) => ({
+                ...range.data,
                 text: source.slice(range.start, range.end)
             }))(input)
         );
@@ -124,8 +124,8 @@ describe('applyDataMap', () => {
         type NewData = { text: string; line: number; column: number };
         const ranges = generateRanges(
             'line1\nline2\nline3',
-            applyDataMap<Data, NewData, unknown>((data, range, index, { lines }) => ({
-                ...data,
+            applyDataMap<Data, NewData, unknown>((range, index, { lines }) => ({
+                text: range.data?.text || '',
                 line: lines.getLine(range.start),
                 column: lines.getColumn(range.start)
             }))(input)
@@ -149,9 +149,9 @@ describe('applyDataMap', () => {
         type NewData = { value: number; total: number };
         const ranges = generateRanges(
             'hello world test',
-            applyDataMap<Data, NewData, unknown>((data, range, index, { ranges }) => {
-                const total = ranges.reduce((sum, r) => sum + (r.data?.value || 0), 0);
-                return { ...data, total };
+            applyDataMap<Data, NewData, unknown>((range, index, { ranges }) => {
+                const total = ranges.reduce((sum: number, r) => sum + (r.data?.value || 0), 0);
+                return { value: range.data?.value || 0, total };
             })(input)
         );
 
@@ -174,8 +174,8 @@ describe('applyDataMap', () => {
 
         const ranges = generateRanges(
             'hello world',
-            applyDataMap<any, any, RenderOpts>((data, range, index, { renderOptions }) => ({
-                ...data,
+            applyDataMap<any, any, RenderOpts>((range, index, { renderOptions }) => ({
+                ...range.data,
                 theme: renderOptions?.theme || 'default'
             }))(input),
             { renderOptions: { theme: 'dark' } }
@@ -197,7 +197,7 @@ describe('applyDataMap', () => {
         type NewData = { value: number };
         const ranges = generateRanges(
             'hello world',
-            applyDataMap<Data, NewData, unknown>((data) => ({ value: data * 10 }))(input)
+            applyDataMap<Data, NewData, unknown>((range) => ({ value: (range.data ?? 0) * 10 }))(input)
         );
 
         deepStrictEqual(startEndData(ranges), [
