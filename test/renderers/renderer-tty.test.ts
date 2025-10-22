@@ -146,7 +146,7 @@ describe('TTY renderer', () => {
 
         it('should work with rangesForMatch', () => {
             const result = tty()
-                .addLayer(rangesForMatch(/error|warning/), tty.createStyleMap({
+                .addLayer(rangesForMatch(/error|warning/g), tty.createStyleMap({
                     'error': ['red', 'bgWhite'],
                     'warning': ['yellow', 'bgBlack']
                 }))

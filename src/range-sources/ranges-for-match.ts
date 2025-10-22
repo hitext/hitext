@@ -1,26 +1,58 @@
 import { GenerateRanges } from '../types.js';
 
-// Overload: when pattern is RegExp, Data is RegExpExecArray
+/**
+ * Creates a range generator that finds all occurrences matching a pattern.
+ *
+ * For string patterns, finds all occurrences of the literal string in the source.
+ * For RegExp patterns, respects the 'g' (global) flag:
+ * - With 'g' flag: finds all matches
+ * - Without 'g' flag: finds only the first match
+ *
+ * @param pattern - String literal or RegExp to search for
+ * @returns A GenerateRanges function that creates ranges for each match
+ *
+ * The data stored in each range depends on the pattern type:
+ * - For string patterns: The matched string
+ * - For RegExp patterns: The full RegExpExecArray (includes capture groups)
+ *
+ * @example
+ * ```typescript
+ * // String pattern - finds all occurrences
+ * rangesForMatch('error')
+ *
+ * // RegExp with global flag - finds all matches
+ * rangesForMatch(/\w+/g)
+ * rangesForMatch(/error/gi)
+ *
+ * // RegExp without global flag - finds only first match
+ * rangesForMatch(/\w+/)
+ * rangesForMatch(/error/i)
+ *
+ * // With capture groups (stored in range data)
+ * rangesForMatch(/function\s+(\w+)/g)
+ * ```
+ */
 export function rangesForMatch<RenderOptions>(pattern: RegExp): GenerateRanges<RegExpExecArray, RenderOptions>;
-// Overload: when pattern is string, Data is string
 export function rangesForMatch<RenderOptions>(pattern: string): GenerateRanges<string, RenderOptions>;
-// Implementation signature (not visible to consumers)
 export function rangesForMatch<RenderOptions>(
     pattern: RegExp | string
 ): GenerateRanges<any, RenderOptions> {
     if (pattern instanceof RegExp) {
-        const flags = pattern.flags.indexOf('g') !== -1 ? pattern.flags : pattern.flags + 'g';
-        const matchRx = new RegExp(pattern, flags);
+        const isGlobal = pattern.flags.includes('g');
 
         return function(source, createRange) {
             let match: ReturnType<RegExp['exec']>;
 
-            while (match = matchRx.exec(source)) {
+            while (match = pattern.exec(source)) {
                 createRange(
                     match.index,
                     match.index + match[0].length,
                     match
                 );
+
+                if (!isGlobal) {
+                    break;
+                }
             }
         };
     }

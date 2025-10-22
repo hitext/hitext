@@ -64,7 +64,7 @@ describe('rangesForMatch', () => {
     describe('RegExp patterns', () => {
         it('should find matches with simple regex', () => {
             const input = 'Hello world!';
-            const ranges = gen(input, /\w+/);
+            const ranges = gen(input, /\w+/g);
             deepStrictEqual(startEndData(ranges), [
                 [0, 5, regexpMatch(input, ['Hello'], 0)],
                 [6, 11, regexpMatch(input, ['world'], 6)]
@@ -80,9 +80,23 @@ describe('rangesForMatch', () => {
             ]);
         });
 
-        it('should add global flag if missing', () => {
-            const ranges = gen('Hello world Hello', /Hello/);
-            deepStrictEqual(ranges.length, 2); // Finds all despite no 'g' flag
+        it('should find only first match without global flag', () => {
+            const input = 'Hello world Hello';
+            const ranges = gen(input, /Hello/);
+            deepStrictEqual(ranges.length, 1); // Finds only first match without 'g' flag
+            deepStrictEqual(startEndData(ranges), [
+                [0, 5, regexpMatch(input, ['Hello'], 0)]
+            ]);
+        });
+
+        it('should find all matches with global flag', () => {
+            const input = 'Hello world Hello';
+            const ranges = gen(input, /Hello/g);
+            deepStrictEqual(ranges.length, 2); // Finds all with 'g' flag
+            deepStrictEqual(startEndData(ranges), [
+                [0, 5, regexpMatch(input, ['Hello'], 0)],
+                [12, 17, regexpMatch(input, ['Hello'], 12)]
+            ]);
         });
 
         it('should handle multiline flag', () => {
