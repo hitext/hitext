@@ -119,7 +119,7 @@ async function generateTypes(fatal = true) {
 
     return new Promise((resolve, reject) => {
         const startTime = Date.now();
-        exec('npm run ts-emit-types', (error, stdout, stderr) => {
+        exec('npm run ts:emit', (error, stdout, stderr) => {
             if (error) {
                 console.error(chalk.bgRed.white('ERROR!'), chalk.red(error.message));
                 stdout && console.error(chalk.red(stdout));

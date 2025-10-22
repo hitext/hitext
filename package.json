@@ -25,10 +25,13 @@
         "./src/printer/tty.ts": "./src/printer/noop.ts"
     },
     "scripts": {
+        "check": "npm run lint:fix && npm test && npm run typecheck && npm run build-and-test",
+        "fast-check": "npm run lint && npm test && npm run typecheck",
         "lint": "eslint scripts src test",
+        "lint:fix": "npm run lint -- --fix",
         "lint-and-test": "npm run lint && npm test",
-        "ts-check": "tsc --noEmit",
-        "ts-emit-types": "tsc --project tsconfig.types.json && cp src/types.d.ts lib/types.d.ts",
+        "typecheck": "tsc --noEmit",
+        "ts:emit": "tsc --project tsconfig.types.json && cp src/types.d.ts lib/types.d.ts",
         "test": "mocha --import=tsx --conditions=test --reporter ${REPORTER:-progress} 'test/**/*.test.ts'",
         "test:all": "npm run test:cjs && npm run test:esm && npm run test:dist",
         "test:all-unit": "npm run test:cjs && npm run test:esm",
@@ -36,13 +39,13 @@
         "test:esm": "mocha --reporter ${REPORTER:-progress} 'lib-test/**/*.test.js'",
         "test:dist": "mocha --reporter ${REPORTER:-progress} dist/test",
         "watch": "npm run transpile -- --watch",
-        "build": "npm run bundle && npm run transpile && npm run ts-emit-types",
+        "build": "npm run bundle && npm run transpile && npm run ts:emit",
         "build-and-test": "npm run build && npm run test:all",
         "transpile": "node scripts/transpile.cjs",
         "transpile-and-test": "npm run bundle && npm run transpile && npm run test:all",
         "bundle": "node scripts/bundle",
         "bundle-and-test": "npm run bundle && npm run test:dist",
-        "prepublishOnly": "npm run build-and-test",
+        "prepublishOnly": "npm run check",
         "coverage": "c8 --reporter=lcovonly npm run test:esm"
     },
     "devDependencies": {
