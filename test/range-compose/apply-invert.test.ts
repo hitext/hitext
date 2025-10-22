@@ -13,9 +13,9 @@ describe('applyInvert', () => {
         deepStrictEqual(inverted, [' ']);
     });
 
-    it('should return full source when given empty ranges', () => {
+    it('should return empty when given empty ranges', () => {
         const inverted = renderRanges('Hello world', applyInvert()([]));
-        deepStrictEqual(inverted, ['Hello world']);
+        deepStrictEqual(inverted, []);
     });
 
     it('should return empty when full range is excluded', () => {
