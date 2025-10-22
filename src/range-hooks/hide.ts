@@ -38,8 +38,15 @@ type SkippedLinesValue<V> = V | SkippedLinesHook<V>;
  * @example
  * // Basic viewport with default ellipsis
  * html()
- *   .addLayer(rangeMatch(/error/g), highlight)
- *   .addLayer(rangeInvert(rangeExpandTo(rangeMatch(/error/g), 'line', 1)), rangeHooksHide())
+ *   .addLayer(rangesForMatch(/error/g), highlight)
+ *   .addLayer(
+ *     composeRanges(
+ *       rangesForMatch(/error/g),
+ *       applyExpandTo('line', 1),
+ *       applyInvert()
+ *     ),
+ *     rangeHooksHide()
+ *   )
  *
  * @example
  * // Custom truncation markers with functions

@@ -1,5 +1,5 @@
 import { strictEqual } from 'assert';
-import { rangeMatch, tty } from '../../src/index.js';
+import { rangesForMatch, tty } from '../../src/index.js';
 
 describe('TTY renderer', () => {
     describe('basic styling', () => {
@@ -144,9 +144,9 @@ describe('TTY renderer', () => {
             strictEqual(result, '\u001b[31m1\u001b[32m2\u001b[39m');
         });
 
-        it('should work with rangeMatch', () => {
+        it('should work with rangesForMatch', () => {
             const result = tty()
-                .addLayer(rangeMatch(/error|warning/), tty.createStyleMap({
+                .addLayer(rangesForMatch(/error|warning/), tty.createStyleMap({
                     'error': ['red', 'bgWhite'],
                     'warning': ['yellow', 'bgBlack']
                 }))

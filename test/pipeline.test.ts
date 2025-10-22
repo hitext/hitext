@@ -1,5 +1,5 @@
 import { strictEqual, deepStrictEqual } from 'assert';
-import { html, string, rangeLines, rangeMatch, createRenderPipeline, RangeHooks } from '../src/index.js';
+import { html, string, rangesForLines, rangesForMatch, createRenderPipeline, RangeHooks } from '../src/index.js';
 import type { GeneratedRange } from '../src/types.js';
 
 const startEndPairs = (ranges: GeneratedRange[]) => ranges.map(r => [r.start, r.end]);
@@ -76,7 +76,7 @@ describe('Pipeline API', () => {
     describe('with generators', () => {
         it('should work with built-in match generator', () => {
             const result = html()
-                .addLayer(rangeMatch('world'), (content) => `<mark>${content}</mark>`)
+                .addLayer(rangesForMatch('world'), (content) => `<mark>${content}</mark>`)
                 .render('Hello world! Hello world!');
 
             strictEqual(result, 'Hello <mark>world</mark>! Hello <mark>world</mark>!');
@@ -85,7 +85,7 @@ describe('Pipeline API', () => {
         it('should work with built-in lines generator', () => {
             const result = html()
                 .addLayer(
-                    rangeLines,
+                    rangesForLines('line'),
                     {
                         open: ({ line }) => `<div data-line="${line}">`,
                         close: () => '</div>'
@@ -150,7 +150,7 @@ describe('Pipeline API', () => {
 
         it('should generate ranges with generator function', () => {
             const pipeline = html()
-                .addLayer(rangeMatch('world'), (content) => `<mark>${content}</mark>`);
+                .addLayer(rangesForMatch('world'), (content) => `<mark>${content}</mark>`);
 
             const ranges = pipeline.ranges('Hello world! Hello world!');
 
@@ -160,7 +160,7 @@ describe('Pipeline API', () => {
         it('should generate ranges from multiple layers', () => {
             const pipeline = html()
                 .addLayer([[0, 5]], (content) => `<a>${content}</a>`)
-                .addLayer(rangeMatch('o'), (content) => `<mark>${content}</mark>`);
+                .addLayer(rangesForMatch('o'), (content) => `<mark>${content}</mark>`);
 
             const ranges = pipeline.ranges('Hello world');
 

@@ -3,7 +3,7 @@ import {
     generateRanges,
     generateRangesFromLayers,
     processRanges,
-    rangeMatch
+    rangesForMatch
 } from '../src/index.js';
 import type { GenerateRanges, GeneratedRange } from '../src/types.js';
 import { regexpMatch } from './utils.js';
@@ -137,7 +137,7 @@ describe('Range Generation Helpers', () => {
 
             processRanges(
                 'ERROR: Something went wrong. WARNING: Check logs.',
-                rangeMatch(/ERROR|WARNING/g),
+                rangesForMatch(/ERROR|WARNING/g),
                 (start, end) => {
                     collected.push('ERROR: Something went wrong. WARNING: Check logs.'.slice(start, end));
                 }
@@ -373,7 +373,7 @@ describe('Range Generation Helpers', () => {
 
         it('should safely handle non-iterable values', () => {
             const marker = Symbol('test');
-            
+
             // Should not crash with null
             const ranges1 = generateRanges('Hello', null as any, { marker });
             deepStrictEqual(ranges1, []);
@@ -423,7 +423,7 @@ describe('Range Generation Helpers', () => {
             const ranges = generateRangesFromLayers(input, [
                 {
                     marker,
-                    ranges: rangeMatch(/\w+/g)
+                    ranges: rangesForMatch(/\w+/g)
                 }
             ]);
 
@@ -459,7 +459,7 @@ describe('Range Generation Helpers', () => {
 
             const ranges = generateRangesFromLayers(input, [
                 { marker: marker1, ranges: [[0, 11] as [number, number]] },
-                { marker: marker2, ranges: rangeMatch(/\w+/g) },
+                { marker: marker2, ranges: rangesForMatch(/\w+/g) },
                 { marker: marker3, ranges: [[0, 5] as [number, number]] }
             ]);
 
@@ -510,7 +510,7 @@ describe('Range Generation Helpers', () => {
         it('should work with built-in generators', () => {
             const ranges = generateRanges(
                 'ERROR: Something went wrong. WARNING: Check logs.',
-                rangeMatch(/ERROR|WARNING/g)
+                rangesForMatch(/ERROR|WARNING/g)
             );
 
             deepStrictEqual(startEndPairs(ranges), [[0, 5], [29, 36]]);

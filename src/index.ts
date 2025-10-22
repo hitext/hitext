@@ -21,29 +21,34 @@ export {
     resolveRangeHooksDefinition
 } from './range-hooks-map.js';
 
-// Range generators, range transformers and range hooks factories
+// Range sources: generators and combiners
 export {
-    rangeLines,
-    rangeLineContents,
-    rangeMatch,
-    rangeNewlines,
-    rangeCombine,
-    rangeMerge,
-    rangeInvert,
-    rangeExpandTo,
-    rangeCollapseTo,
-    rangeFitToWindow,
-    rangeFrom,
-    rangeFromLayer,
-    rangeFromOptions,
-    rangeResetOrigin,
-    rangeFallback,
-    rangeFilter,
-    rangeDataMap,
-    rangeSort,
-    rangePick,
-    rangePadLines
-} from './ranges/index.js';
+    rangesForLines,
+    rangesForMatch,
+    rangesFrom,
+    rangesFromLayer,
+    rangesFromOptions,
+    concatRanges,
+    coalesceRanges
+} from './range-sources/index.js';
+
+// Range transformers: curried functions for composition
+export {
+    applyMerge,
+    applyInvert,
+    applyExpandTo,
+    applyCollapseTo,
+    applyFitToWindow,
+    applyFilter,
+    applyDataMap,
+    applySort,
+    applyPick,
+    applyPadLines,
+    applyResetOrigin,
+    // Functional composition helper
+    composeRanges
+} from './range-compose/index.js';
+
 export {
     rangeHooksHide
 } from './range-hooks/index.js';

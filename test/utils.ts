@@ -14,6 +14,14 @@ export function startEndData<Data>(ranges: GeneratedRange<Data>[]): Array<[numbe
 }
 
 /**
+ * Helper function to extract [start, end] tuples from ranges.
+ * Useful for asserting range positions without data in tests.
+ */
+export function startEnd(ranges: Array<{ start: number; end: number }>): Array<[number, number]> {
+    return ranges.map(r => [r.start, r.end]);
+}
+
+/**
  * Helper function to create a RegExpExecArray-like object for testing.
  * This mimics the structure returned by RegExp.exec().
  */
