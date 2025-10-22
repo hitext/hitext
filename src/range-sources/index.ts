@@ -6,4 +6,5 @@ export { rangesFrom } from './ranges-from.js';
 export { rangesFromLayer } from './ranges-from-layer.js';
 export { rangesFromOptions } from './ranges-from-options.js';
 export { concatRanges } from './concat-ranges.js';
+export { composeRanges } from './compose-ranges.js';
 export { rangesWithFallback } from './ranges-with-fallback.js';

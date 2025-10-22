@@ -1,4 +1,3 @@
-export { composeRanges } from './compose-ranges.js';
 export { applyCollapseTo } from './apply-collapse-to.js';
 export { applyExpandTo } from './apply-expand-to.js';
 export { applyFitToWindow } from './apply-fit-to-window.js';
