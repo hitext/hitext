@@ -6,10 +6,11 @@ import { createLineBoundaries } from '../utils/line-boundaries.js';
  * Maps the data of each range using a mapper function (curried transformer).
  * The range positions (start, end) are preserved, but the data is transformed.
  *
- * **Important**: Since the data changes, the output ranges have no origin tracking
- * (origin is set to undefined). This is because the transformed data represents a new
- * semantic meaning. The typical use case is fixing/enriching data from rangesForMatch or
- * other generators.
+ * **Important**: Since the data changes, the origin is cleared (set to undefined).
+ * This is because the transformed data represents a new semantic meaning, not a
+ * transformation of the original range's position. The typical use case is fixing/enriching
+ * data from rangesForMatch or other generators where you want to transform match results
+ * into structured data.
  *
  * The mapper receives:
  * - `range` - The full range object with start, end, data, and origin
@@ -73,7 +74,7 @@ export function applyDataMap<Data, NewData, RenderOptions>(
             for (let index = 0; index < ranges.length; index++) {
                 const range = ranges[index];
                 const newData = mapper(range, index, context);
-                // New data means new origin - pass undefined to make this range its own origin
+                // Origin is cleared because data transformation creates new semantic meaning
                 createRange(range.start, range.end, newData, undefined);
             }
         };

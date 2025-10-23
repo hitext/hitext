@@ -38,7 +38,7 @@ export function applyMerge<Data, RenderOptions>(): TransformRanges<Data, RenderO
         return (source, createRange, context) => {
             const sortedRanges = generateRanges(source, input, context)
                 .sort((a, b) => a.start - b.start || a.end - b.end);
-            
+
             let firstIndex = 0;
             let lastIndex = 0;
 

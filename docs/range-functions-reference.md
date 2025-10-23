@@ -38,7 +38,7 @@ Range Transformers:
 | [`applyPick`](#applypickselector) | N-to-1 | Single selection | No | Inherits | Temp array* |
 | [`applySort`](#applysortcomparator) | N-to-N | Custom ordering | No | Inherits | Temp array* |
 | [`applyDataMap`](#applydatamapmapper) | 1-to-1 | Data transformation | Yes | Cleared | Temp array* |
-| [`applyFitToWindow`](#applyfittowindowsize-allowtrimming) | N-to-N | Horizontal viewport | No | Inherits | Temp array |
+| [`applyFitToWindow`](#applyfittowindowsize-allowtrimming) | 1-to-1 | Horizontal viewport | No | Inherits | Streaming |
 | [`applyPadLines`](#applypadlineslines-size) | 1-to-N | Add padding | No | Inherits | Temp array |
 | [`applyResetOrigin`](#applyresetorigin) | 1-to-1 | Clear origins | No | Cleared | Streaming |
 | [`applyFallback`](#applyfallbackfallbacks) | N-to-N | Provide fallback | No | From source | Wrapper |

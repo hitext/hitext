@@ -14,7 +14,6 @@ import { createLineBoundaries } from '../utils/line-boundaries.js';
  *   - 'line-start': Start of the line containing the range start
  *   - 'line-content-end': End of line content (before newline) containing the range end
  *   - 'line-end': End of line (including newline) containing the range end
- *   - 'document': Alias for 'document-start'
  *   - 'document-start': Start of the document (offset 0)
  *   - 'document-end': End of the document (source.length)
  *

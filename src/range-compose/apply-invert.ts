@@ -30,12 +30,12 @@ export function applyInvert<Data, RenderOptions>(
     return (input: Ranges<Data, RenderOptions>) => {
         return (source, createRange, context) => {
             const ranges = generateRanges(source, applyMerge<Data, RenderOptions>()(input), context);
-            
+
             // If no input ranges, return empty (don't invert to entire document)
             if (ranges.length === 0) {
                 return;
             }
-            
+
             let offset = 0;
 
             for (const range of ranges) {

@@ -23,7 +23,7 @@ export function applyResetOrigin<Data, RenderOptions>(): TransformRanges<Data, R
                 source,
                 input,
                 (start, end, data) => {
-                    createRange(start, end, data);
+                    createRange(start, end, data, undefined);
                 },
                 context
             );
