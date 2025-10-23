@@ -21,7 +21,7 @@ import { createLineBoundaries } from '../utils/line-boundaries.js';
  * @returns A transformer function that accepts ranges and returns ranges with mapped data
  *
  * @example
- * composeRanges(
+ * rangesCompose(
  *   ...,
  *   applyDataMap((range, index, { lines }) => ({
  *     match: range.data,

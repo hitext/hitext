@@ -22,13 +22,13 @@ import { createLineBoundaries } from '../utils/line-boundaries.js';
  * @returns A transformer function that accepts ranges and returns expanded ranges
  *
  * @example
- * composeRanges(
+ * rangesCompose(
  *   ...,
  *   applyExpandTo('line', 2)
  * )
  *
  * @example
- * composeRanges(
+ * rangesCompose(
  *   ...,
  *   applyExpandTo('line', [1, 3])
  * )

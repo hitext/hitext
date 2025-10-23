@@ -17,7 +17,7 @@ import { processRanges } from '../ranges.js';
  *
  * @example
  * pipeline.addLayer(
- *   composeRanges(
+ *   rangesCompose(
  *     rangesFromLayer('matches'),
  *     applyExpandTo('line')
  *   ),

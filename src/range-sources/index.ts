@@ -5,6 +5,6 @@ export { rangesForPoint } from './ranges-for-point.js';
 export { rangesFrom } from './ranges-from.js';
 export { rangesFromLayer } from './ranges-from-layer.js';
 export { rangesFromOptions } from './ranges-from-options.js';
-export { concatRanges } from './concat-ranges.js';
-export { composeRanges } from './compose-ranges.js';
+export { rangesConcat } from './ranges-concat.js';
+export { rangesCompose } from './ranges-compose.js';
 export { rangesWithFallback } from './ranges-with-fallback.js';

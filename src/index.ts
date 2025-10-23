@@ -30,8 +30,8 @@ export {
     rangesFromLayer,
     rangesFromOptions,
     rangesWithFallback,
-    concatRanges,
-    composeRanges
+    rangesConcat,
+    rangesCompose
 } from './range-sources/index.js';
 
 // Range transformers: curried functions for composition

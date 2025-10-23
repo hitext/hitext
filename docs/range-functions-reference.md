@@ -22,9 +22,9 @@ Range Sources:
 | [`rangesFrom`](#rangesfrominput) | Source | Raw data conversion | None (new ranges) |
 | [`rangesFromLayer`](#rangesfromlayername) | Source | Layer reference | Preserves existing |
 | [`rangesFromOptions`](#rangesfromoptionskey) | Source | User options | Preserves existing |
-| [`concatRanges`](#concatrangesinputs) | Combiner | Combine sources | Preserves existing |
+| [`rangesConcat`](#rangesconcatinputs) | Combiner | Combine sources | Preserves existing |
 | [`rangesWithFallback`](#rangeswithfallbackinputs) | Combiner | First non-empty | Preserves existing |
-| [`composeRanges`](#composerangessource-transformers) | Composer | Pipeline composition | Per transformer |
+| [`rangesCompose`](#rangescomposerangeinput-transformers) | Composer | Pipeline composition | Per transformer |
 
 Range Transformers:
 
@@ -252,12 +252,12 @@ rangesFromOptions(({ pattern }) => pattern && rangesForMatch(pattern))
 
 ---
 
-### `concatRanges(...inputs)`
+### `rangesConcat(...inputs)`
 
 Combine multiple range sources into a flat list without merging.
 
 ```typescript
-concatRanges<Data, RenderOptions>(
+rangesConcat<Data, RenderOptions>(
     ...inputs: Array<Ranges<Data, RenderOptions>>
 ): GenerateRanges<Data, RenderOptions>
 ```
@@ -273,7 +273,7 @@ concatRanges<Data, RenderOptions>(
 **Example:**
 ```typescript
 // Collect multiple severity levels
-concatRanges(
+rangesConcat(
     rangesForMatch(/ERROR/g),
     rangesForMatch(/WARNING/g),
     rangesFromLayer('diagnostics')
@@ -312,12 +312,12 @@ rangesWithFallback(
 
 ---
 
-### `composeRanges(rangeInput, ...transformers)`
+### `rangesCompose(rangeInput, ...transformers)`
 
 Compose a range generator with multiple transformers (left-to-right).
 
 ```typescript
-composeRanges<Data, RenderOptions>(
+rangesCompose<Data, RenderOptions>(
     rangeInput: Ranges<Data, RenderOptions>,
     ...transformers: Array<(input: Ranges) => GenerateRanges>
 ): GenerateRanges<Data, RenderOptions>
@@ -335,7 +335,7 @@ composeRanges<Data, RenderOptions>(
 **Example:**
 ```typescript
 // Multi-step pipeline
-composeRanges(
+rangesCompose(
     rangesFromLayer('diagnostics'),
     applyFilter(range => range.data.severity === 'error'),
     applyExpandTo('line', 2),
@@ -380,7 +380,7 @@ applyCollapseTo(
 **Example:**
 ```typescript
 // Insert markers at match start
-composeRanges(
+rangesCompose(
     rangesForMatch(/error/g),
     applyCollapseTo('start')
 )
@@ -416,13 +416,13 @@ applyExpandTo(
 **Example:**
 ```typescript
 // Expand to full lines with 2 lines context
-composeRanges(
+rangesCompose(
     rangesForMatch(/error/g),
     applyExpandTo('line', 2)
 )
 
 // Asymmetric context: show function body
-composeRanges(
+rangesCompose(
     rangesForMatch(/^function/gm),
     applyExpandTo('line', [0, 5])
 )
@@ -449,7 +449,7 @@ applyMerge(): TransformRanges
 **Example:**
 ```typescript
 // Merge with access to individual headers via origin
-composeRanges(
+rangesCompose(
     rangesForMatch(/^#{1,6}\s+(.+)$/gm),
     applyDataMap(match => ({
         level: match[1].length,
@@ -486,7 +486,7 @@ applyInvert(exact?: boolean): TransformRanges
 **Example:**
 ```typescript
 // Create gaps between headers for collapsing
-composeRanges(
+rangesCompose(
     rangesForMatch(/^#{1,6}\s/gm),
     applyExpandTo('line'),
     applyInvert()
@@ -521,7 +521,7 @@ applyFilter(
 **Example:**
 ```typescript
 // Filter single-line ranges only
-composeRanges(
+rangesCompose(
     rangesForMatch(/\w+/g),
     applyFilter((range, i, { lines }) =>
         lines.getLine(range.start) === lines.getLine(range.end)
@@ -529,7 +529,7 @@ composeRanges(
 )
 
 // Filter by data property
-composeRanges(
+rangesCompose(
     diagnostics,
     applyFilter(range => range.data.severity === 'error')
 )
@@ -563,14 +563,14 @@ applyPick(
 **Example:**
 ```typescript
 // Show only first error
-composeRanges(
+rangesCompose(
     rangesForMatch(/error/g),
     applyPick('first'),
     applyExpandTo('line')
 )
 
 // Pick first error diagnostic
-composeRanges(
+rangesCompose(
     diagnostics,
     applyPick(range => range.data.severity === 'error')
 )
@@ -604,10 +604,10 @@ applySort(
 **Example:**
 ```typescript
 // Default sort
-composeRanges(ranges, applySort())
+rangesCompose(ranges, applySort())
 
 // Sort by line number
-composeRanges(
+rangesCompose(
     ranges,
     applySort((a, b, { lines }) =>
         lines.getLine(a.start) - lines.getLine(b.start)
@@ -643,7 +643,7 @@ applyDataMap<Data, NewData>(
 **Example:**
 ```typescript
 // Parse match data
-composeRanges(
+rangesCompose(
     rangesForMatch(/(\w+)=(\w+)/g),
     applyDataMap(range => {
         const [, key, value] = range.data;
@@ -652,7 +652,7 @@ composeRanges(
 )
 
 // Add sequential IDs
-composeRanges(
+rangesCompose(
     ranges,
     applyDataMap((range, index) => ({
         ...range.data,
@@ -688,13 +688,13 @@ applyFitToWindow(
 **Example:**
 ```typescript
 // Fit into 80-char window (default)
-composeRanges(
+rangesCompose(
     rangesForMatch(/error/g),
     applyFitToWindow()
 )
 
 // Custom size with no trimming
-composeRanges(
+rangesCompose(
     rangesForMatch(/error/g),
     applyFitToWindow(120, false)
 )
@@ -729,13 +729,13 @@ applyPadLines(
 **Example:**
 ```typescript
 // Add 2 lines after each range
-composeRanges(
+rangesCompose(
     rangesForLines('line-content'),
     applyPadLines(2, 50)
 )
 
 // Add 1 before and 2 after
-composeRanges(
+rangesCompose(
     rangesForLines('line-content'),
     applyPadLines([1, 2], 50)
 )
@@ -761,7 +761,7 @@ applyResetOrigin(): TransformRanges
 **Example:**
 ```typescript
 // Clear origins after complex transformations
-composeRanges(
+rangesCompose(
     ranges,
     applyExpandTo('line'),
     applyMerge(),
@@ -794,7 +794,7 @@ applyFallback<Data, RenderOptions>(
 **Example:**
 ```typescript
 // Show errors, or warnings if no errors
-composeRanges(
+rangesCompose(
     rangesForMatch(/error/gi),
     applyFallback(
         rangesForMatch(/warning/gi),
@@ -803,7 +803,7 @@ composeRanges(
 )
 
 // Insert TOC with fallback positions
-composeRanges(
+rangesCompose(
     rangesFromOptions('tocInsertPoint'),
     applyFallback(
         rangesForMatch(/^(?=#[^#])/m),  // Before first H1

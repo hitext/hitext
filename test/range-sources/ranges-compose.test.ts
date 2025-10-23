@@ -1,15 +1,15 @@
 import { deepStrictEqual, strictEqual } from 'assert';
-import { composeRanges, generateRanges } from '../../src/index.js';
+import { rangesCompose, generateRanges } from '../../src/index.js';
 import type { GenerateRanges, Ranges } from '../../src/types.js';
 import { startEndData } from '../utils.js';
 
-describe('composeRanges', () => {
+describe('rangesCompose', () => {
     describe('Basic composition', () => {
         it('should work with no transformers (pass-through)', () => {
             const document = 'Hello world';
             const ranges = generateRanges(
                 document,
-                composeRanges([[0, 5], [6, 11]])
+                rangesCompose([[0, 5], [6, 11]])
             );
 
             deepStrictEqual(startEndData(ranges), [
@@ -42,7 +42,7 @@ describe('composeRanges', () => {
 
             const ranges = generateRanges(
                 document,
-                composeRanges(
+                rangesCompose(
                     [[0, 2]],
                     doubleRanges
                 )
@@ -95,7 +95,7 @@ describe('composeRanges', () => {
 
             const ranges = generateRanges(
                 document,
-                composeRanges(
+                rangesCompose(
                     [[0, 2]],
                     doubleRanges,
                     shiftRanges
@@ -150,7 +150,7 @@ describe('composeRanges', () => {
 
             generateRanges(
                 document,
-                composeRanges(
+                rangesCompose(
                     [[0, 2]],
                     transformer1,
                     transformer2
@@ -188,7 +188,7 @@ describe('composeRanges', () => {
 
             const ranges = generateRanges(
                 document,
-                composeRanges(
+                rangesCompose(
                     [[0, 2]],
                     addData('first'),
                     addData('second') // This will overwrite
@@ -213,7 +213,7 @@ describe('composeRanges', () => {
 
             const ranges = generateRanges(
                 document,
-                composeRanges(
+                rangesCompose(
                     [],
                     identity,
                     identity
@@ -236,7 +236,7 @@ describe('composeRanges', () => {
 
             const ranges = generateRanges(
                 document,
-                composeRanges(
+                rangesCompose(
                     [[0, 2], [2, 4]],
                     filterAll
                 )
@@ -266,7 +266,7 @@ describe('composeRanges', () => {
 
             const ranges = generateRanges(
                 document,
-                composeRanges(
+                rangesCompose(
                     [{ start: 0, end: 2, data: 'str' }],
                     toNumber
                 )
@@ -279,7 +279,7 @@ describe('composeRanges', () => {
     });
 
     describe('Nested composition', () => {
-        it('should support nested composeRanges calls', () => {
+        it('should support nested rangesCompose calls', () => {
             const document = 'test';
 
             const double = (input: Ranges<any, any>): GenerateRanges<any, any> => {
@@ -305,8 +305,8 @@ describe('composeRanges', () => {
 
             const ranges = generateRanges(
                 document,
-                composeRanges(
-                    composeRanges(
+                rangesCompose(
+                    rangesCompose(
                         [[0, 2]],
                         double  // 2 ranges
                     ),
@@ -337,9 +337,9 @@ describe('composeRanges', () => {
 
             const ranges = generateRanges(
                 document,
-                composeRanges(
-                    composeRanges(
-                        composeRanges(
+                rangesCompose(
+                    rangesCompose(
+                        rangesCompose(
                             [{ start: 0, end: 2, data: 0 }],
                             increment  // data = 1
                         ),
@@ -374,7 +374,7 @@ describe('composeRanges', () => {
 
             const ranges = generateRanges(
                 document,
-                composeRanges(
+                rangesCompose(
                     [[0, 2], [2, 4]],
                     identity
                 )
@@ -400,7 +400,7 @@ describe('composeRanges', () => {
 
             const ranges = generateRanges(
                 document,
-                composeRanges(
+                rangesCompose(
                     genFunc,
                     identity
                 )

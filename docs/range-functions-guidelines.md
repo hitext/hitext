@@ -44,7 +44,7 @@ See [Range Functions Reference](range-functions-reference.md) for the complete A
 
 ### 1. Composability First
 
-Functions work together via `composeRanges()` for left-to-right composition. Enables readable pipelines.
+Functions work together via `rangesCompose()` for left-to-right composition. Enables readable pipelines.
 
 ### 2. Currying for Transformers
 
@@ -199,7 +199,7 @@ applyDataMap((range, index, { lines }) => ({
  *
  * @example
  * // Concise semantic reference showing call pattern
- * composeRanges(..., functionName(args))
+ * rangesCompose(..., functionName(args))
  */
 ```
 
@@ -224,7 +224,7 @@ Examples are **quick semantic reference** (shown in tooltips), NOT tutorials or 
 
 ✅ **Good - use `...` when source doesn't matter:**
 ```typescript
-composeRanges(
+rangesCompose(
   ...,
   applyFilter((range, index, { lines }) =>
     lines.getLine(range.start) < 10
@@ -234,7 +234,7 @@ composeRanges(
 
 ✅ **Good - keep named variable when it provides semantic context:**
 ```typescript
-composeRanges(
+rangesCompose(
   rangesForMatch(/\w+/g),
   applyFilter((range) => range.data[0] === 'hello')  // uses match data
 )
@@ -242,7 +242,7 @@ composeRanges(
 
 ❌ **Bad - keeps source but doesn't use its specific data:**
 ```typescript
-composeRanges(
+rangesCompose(
   rangesForMatch(/\w+/g),  // ❌ irrelevant - match data not used
   applyFilter((range, index, { lines }) =>
     lines.getLine(range.start) < 10

@@ -14,12 +14,12 @@ import { processRanges } from '../ranges.js';
  * @returns A GenerateRanges function that yields all ranges from all sources
  *
  * @example
- * concatRanges(
+ * rangesConcat(
  *   rangesForMatch(/ERROR/g),
  *   rangesForMatch(/WARNING/g)
  * )
  */
-export function concatRanges<Data, RenderOptions>(
+export function rangesConcat<Data, RenderOptions>(
     ...inputs: Array<Ranges<Data, RenderOptions>>
 ): GenerateRanges<Data, RenderOptions> {
     return (document, createRange, context) => {

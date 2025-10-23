@@ -22,13 +22,13 @@ import { createLineBoundaries } from '../utils/line-boundaries.js';
  * @returns A transformer function that accepts ranges and returns fitted ranges
  *
  * @example
- * composeRanges(
+ * rangesCompose(
  *   ...,
  *   applyFitToWindow(80)
  * )
  *
  * @example
- * composeRanges(
+ * rangesCompose(
  *   ...,
  *   applyFitToWindow(120, false)
  * )

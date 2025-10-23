@@ -11,7 +11,7 @@ import { applyMerge } from './apply-merge.js';
  * @returns A transformer function that accepts ranges and returns inverted ranges
  *
  * @example
- * composeRanges(
+ * rangesCompose(
  *   ...,
  *   applyInvert()
  * )

@@ -13,7 +13,7 @@ import { generateRanges } from '../ranges.js';
  * @returns A transformer function that accepts ranges and returns merged ranges
  *
  * @example
- * composeRanges(
+ * rangesCompose(
  *   ...,
  *   applyExpandTo('line'),
  *   applyMerge()

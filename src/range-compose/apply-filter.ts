@@ -15,7 +15,7 @@ import { createLineBoundaries } from '../utils/line-boundaries.js';
  * @returns A transformer function that accepts ranges and returns filtered ranges
  *
  * @example
- * composeRanges(
+ * rangesCompose(
  *   ...,
  *   applyFilter((range, index, { lines }) =>
  *     lines.getLine(range.start) < 10

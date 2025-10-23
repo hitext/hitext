@@ -9,7 +9,7 @@ import { processRanges } from '../ranges.js';
  *
  * @example
  * // Display matches in a window and annotate the visible portions
- * composeRanges(
+ * rangesCompose(
  *   rangesForMatch(/error/g),
  *   applyFitToWindow(80),
  *   applyResetOrigin(), // Make trimmed ranges the new originals

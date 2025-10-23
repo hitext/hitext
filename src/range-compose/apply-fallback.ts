@@ -11,7 +11,7 @@ import { rangesWithFallback } from '../range-sources/ranges-with-fallback.js';
  * @returns A transformer function that provides fallbacks when input is empty
  *
  * @example
- * composeRanges(
+ * rangesCompose(
  *   rangesForMatch(/error/gi),
  *   applyFallback(
  *     rangesForMatch(/warning/gi),

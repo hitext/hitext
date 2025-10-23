@@ -40,7 +40,7 @@ type SkippedLinesValue<V> = V | SkippedLinesHook<V>;
  * html()
  *   .addLayer(rangesForMatch(/error/g), highlight)
  *   .addLayer(
- *     composeRanges(
+ *     rangesCompose(
  *       rangesForMatch(/error/g),
  *       applyExpandTo('line', 1),
  *       applyInvert()

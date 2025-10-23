@@ -8,13 +8,13 @@ import type { GenerateRanges, Ranges } from '../types.js';
  * @returns The final composed GenerateRanges function
  *
  * @example
- * composeRanges(
+ * rangesCompose(
  *   rangesForMatch(/error/g),
  *   applyCollapseTo('start'),
  *   applyMerge()
  * )
  */
-export function composeRanges<Data, RenderOptions>(
+export function rangesCompose<Data, RenderOptions>(
     rangeInput: Ranges<Data, RenderOptions>,
     ...transformers: Array<(input: Ranges<any, RenderOptions>) => GenerateRanges<any, RenderOptions>>
 ): GenerateRanges<Data, RenderOptions> {

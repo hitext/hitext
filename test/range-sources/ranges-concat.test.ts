@@ -1,12 +1,12 @@
 import { deepStrictEqual, strictEqual } from 'assert';
-import { generateRanges, concatRanges } from '../../src/index.js';
+import { generateRanges, rangesConcat } from '../../src/index.js';
 import { renderRanges } from '../utils.js';
 
-describe('concatRanges', () => {
+describe('rangesConcat', () => {
     it('should concatenate ranges from multiple documents', () => {
         const combined = renderRanges(
             'Hello world',
-            concatRanges(
+            rangesConcat(
                 [[0, 5]],  // Hello
                 [[6, 11]]  // world
             )
@@ -18,7 +18,7 @@ describe('concatRanges', () => {
     it('should preserve document order (not position order)', () => {
         const combined = renderRanges(
             'ABC123XYZ789',
-            concatRanges(
+            rangesConcat(
                 [[3, 6], [9, 12]],  // 123, 789 (later in text)
                 [[0, 3], [6, 9]]    // ABC, XYZ (earlier in text)
             )
@@ -31,7 +31,7 @@ describe('concatRanges', () => {
     it('should preserve duplicates', () => {
         const combined = renderRanges(
             'Hello world',
-            concatRanges(
+            rangesConcat(
                 [[0, 5]],
                 [[0, 5]],
                 [[6, 11]]
@@ -44,7 +44,7 @@ describe('concatRanges', () => {
     it('should work with single document', () => {
         const combined = renderRanges(
             'Hello world',
-            concatRanges([[0, 5], [6, 11]])
+            rangesConcat([[0, 5], [6, 11]])
         );
 
         deepStrictEqual(combined, ['Hello', 'world']);
@@ -53,7 +53,7 @@ describe('concatRanges', () => {
     it('should work with many documents', () => {
         const combined = renderRanges(
             'a1b2c3',
-            concatRanges(
+            rangesConcat(
                 [[0, 1]],                    // a
                 [[1, 2], [3, 4], [5, 6]],    // 1, 2, 3
                 [[2, 3], [4, 5]]             // b, c
@@ -66,7 +66,7 @@ describe('concatRanges', () => {
     it('should handle empty documents', () => {
         const combined = renderRanges(
             'Hello world',
-            concatRanges(
+            rangesConcat(
                 [],
                 [[0, 5]],
                 []
@@ -79,7 +79,7 @@ describe('concatRanges', () => {
     it('should handle all empty documents', () => {
         const combined = renderRanges(
             'Hello world',
-            concatRanges()
+            rangesConcat()
         );
 
         deepStrictEqual(combined, []);
@@ -88,7 +88,7 @@ describe('concatRanges', () => {
     it('should handle overlapping ranges', () => {
         const combined = renderRanges(
             'abcdefgh',
-            concatRanges(
+            rangesConcat(
                 [[0, 4]],  // abcd
                 [[2, 6]]   // cdef (overlaps)
             )
@@ -100,7 +100,7 @@ describe('concatRanges', () => {
     it('should handle zero-length ranges', () => {
         const combined = renderRanges(
             'Hello',
-            concatRanges(
+            rangesConcat(
                 [[0, 0]],
                 [[5, 5]]
             )
@@ -112,7 +112,7 @@ describe('concatRanges', () => {
     it('should preserve data from documents', () => {
         const combined = renderRanges(
             'Hello world',
-            concatRanges(
+            rangesConcat(
                 [[0, 5, { type: 'greeting' }]],
                 [[6, 11, { type: 'noun' }]]
             )
@@ -125,7 +125,7 @@ describe('concatRanges', () => {
         const document = 'Hello world';
         const ranges = generateRanges(
             document,
-            concatRanges(
+            rangesConcat(
                 [{ start: 0, end: 5, data: 'a', origin: { start: 100, end: 105, data: 'orig1' } }],
                 [{ start: 6, end: 11, data: 'b', origin: { start: 200, end: 205, data: 'orig2' } }]
             )
@@ -140,7 +140,7 @@ describe('concatRanges', () => {
         const document = 'Hello world';
         const ranges = generateRanges(
             document,
-            concatRanges(
+            rangesConcat(
                 [[0, 5]],
                 [[6, 11]]
             )
