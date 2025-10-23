@@ -9,11 +9,12 @@ import { createLineBoundaries } from '../utils/line-boundaries.js';
  * @returns A transformer function that accepts ranges and returns a single picked range
  *
  * @example
- * // Pick first range
- * composeRanges(ranges, applyPick('first'))
+ * composeRanges(
+ *   ...,
+ *   applyPick('first')
+ * )
  *
  * @example
- * // Pick first error diagnostic
  * composeRanges(
  *   diagnostics,
  *   applyPick((range) => range.data.severity === 'error')

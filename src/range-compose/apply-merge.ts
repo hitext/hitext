@@ -13,24 +13,10 @@ import { generateRanges } from '../ranges.js';
  * @returns A transformer function that accepts ranges and returns merged ranges
  *
  * @example
- * // Use origin to access merged ranges (e.g., generate TOC)
  * composeRanges(
- *   rangesForMatch(/^#{1,6}\s+(.+)$/gm),
- *   applyDataMap(([, hashes, text]) => ({
- *     level: hashes.length,
- *     text
- *   })),
- *   applyCollapseTo('document-start'),
- *   applyMerge()  // origin contains all headers
- * )
- * // Later: range.origin.map(({ data }) => ...)
- *
- * @example
- * // Merge overlapping line expansions
- * composeRanges(
- *   rangesForMatch(/\w+/g),
+ *   ...,
  *   applyExpandTo('line'),
- *   applyMerge()  // Combines adjacent/overlapping lines
+ *   applyMerge()
  * )
  */
 export function applyMerge<Data, RenderOptions>(): TransformRanges<Data, RenderOptions> {

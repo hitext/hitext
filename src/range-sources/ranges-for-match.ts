@@ -16,21 +16,13 @@ import { GenerateRanges } from '../types.js';
  * - For RegExp patterns: The full RegExpExecArray (includes capture groups)
  *
  * @example
- * ```typescript
- * // String pattern - finds all occurrences
  * rangesForMatch('error')
  *
- * // RegExp with global flag - finds all matches
+ * @example
  * rangesForMatch(/\w+/g)
- * rangesForMatch(/error/gi)
  *
- * // RegExp without global flag - finds only first match
- * rangesForMatch(/\w+/)
- * rangesForMatch(/error/i)
- *
- * // With capture groups (stored in range data)
+ * @example
  * rangesForMatch(/function\s+(\w+)/g)
- * ```
  */
 export function rangesForMatch<RenderOptions>(pattern: RegExp): GenerateRanges<RegExpExecArray, RenderOptions>;
 export function rangesForMatch<RenderOptions>(pattern: string): GenerateRanges<string, RenderOptions>;

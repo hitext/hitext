@@ -11,23 +11,12 @@ import { rangesWithFallback } from '../range-sources/ranges-with-fallback.js';
  * @returns A transformer function that provides fallbacks when input is empty
  *
  * @example
- * // Show errors, or warnings if no errors, or first 100 chars if nothing found
  * composeRanges(
- *     rangesForMatch(/error/gi),
- *     applyFallback(
- *         rangesForMatch(/warning/gi),
- *         [[0, 100]]
- *     )
- * )
- *
- * @example
- * // Insert TOC at custom marker, or before first H1, or at document start
- * composeRanges(
- *     rangesFromOptions('tocInsertPoint'),
- *     applyFallback(
- *         rangesForMatch(/^(?=#[^#])/m),
- *         [[0, 0]]
- *     )
+ *   rangesForMatch(/error/gi),
+ *   applyFallback(
+ *     rangesForMatch(/warning/gi),
+ *     [[0, 100]]
+ *   )
  * )
  */
 export function applyFallback<Data, RenderOptions>(

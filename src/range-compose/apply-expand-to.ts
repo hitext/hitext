@@ -22,31 +22,15 @@ import { createLineBoundaries } from '../utils/line-boundaries.js';
  * @returns A transformer function that accepts ranges and returns expanded ranges
  *
  * @example
- * // Expand ranges to full lines
  * composeRanges(
- *   rangesForMatch(/error/g),
- *   applyExpandTo('line')
+ *   ...,
+ *   applyExpandTo('line', 2)
  * )
  *
  * @example
- * // Expand to line content with symmetric context
  * composeRanges(
- *   rangesForMatch(/error/g),
- *   applyExpandTo('line-content', 2) // 2 lines before and after
- * )
- *
- * @example
- * // Expand with asymmetric context using tuple
- * composeRanges(
- *   rangesForMatch(/error/g),
- *   applyExpandTo('line', [1, 3]) // 1 line before, 3 lines after
- * )
- *
- * @example
- * // Expand to entire document
- * composeRanges(
- *   rangesForMatch(/error/g),
- *   applyExpandTo('document')
+ *   ...,
+ *   applyExpandTo('line', [1, 3])
  * )
  */
 export function applyExpandTo<Data, RenderOptions>(

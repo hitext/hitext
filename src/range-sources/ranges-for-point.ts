@@ -16,13 +16,10 @@ import type { GenerateRanges } from '../types.js';
  * The data stored in the range is `null`.
  *
  * @example
- * ```typescript
- * // Insert content at document start
- * html()
- *   .addLayer(
- *     rangesForPoint('document-start'),
- *     { open: () => '<header>Document Header</header>\n' }
- *   )
+ * pipeline.addLayer(
+ *   rangesForPoint('document-start'),
+ *   { open: () => '<header>...</header>' }
+ * )
  */
 export function rangesForPoint<RenderOptions = unknown>(
     position: 'document-start' | 'document-end'

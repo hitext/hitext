@@ -15,19 +15,11 @@ import { createLineBoundaries } from '../utils/line-boundaries.js';
  * @returns A transformer function that accepts ranges and returns filtered ranges
  *
  * @example
- * // Filter ranges that span multiple lines
  * composeRanges(
- *   rangesForMatch(/\w+/g),
- *   applyFilter((range, index, { lines }) => {
- *     return lines.getLine(range.start) !== lines.getLine(range.end);
- *   })
- * )
- *
- * @example
- * // Filter by data property
- * composeRanges(
- *   diagnostics,
- *   applyFilter((range) => range.data.severity === 'error')
+ *   ...,
+ *   applyFilter((range, index, { lines }) =>
+ *     lines.getLine(range.start) < 10
+ *   )
  * )
  */
 export function applyFilter<Data, RenderOptions>(

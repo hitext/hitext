@@ -22,17 +22,15 @@ import { createLineBoundaries } from '../utils/line-boundaries.js';
  * @returns A transformer function that accepts ranges and returns fitted ranges
  *
  * @example
- * // Fit small range into 80-char window
  * composeRanges(
- *   rangesForMatch(/error/g),
+ *   ...,
  *   applyFitToWindow(80)
  * )
  *
  * @example
- * // Preserve long ranges
  * composeRanges(
- *   rangesForMatch(/very long match/g),
- *   applyFitToWindow(20, false)
+ *   ...,
+ *   applyFitToWindow(120, false)
  * )
  */
 export function applyFitToWindow<Data, RenderOptions>(

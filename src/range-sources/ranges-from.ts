@@ -11,23 +11,13 @@ import type { GenerateRanges, Ranges, RangeIterable, RangesGenerator } from '../
  * - Iterables: `[[0, 10], [20, 30]]`
  *
  * @param input - The input to normalize
+ * @returns A GenerateRanges function
  *
  * @example
- * // Generator function
- * rangesFrom(function*(source) {
- *     yield [0, 10];
- *     yield [10, 20, { type: 'match' }];
- * })
+ * rangesFrom([[0, 10], [20, 30]])
  *
  * @example
- * // Function returning iterable
- * rangesFrom(() => [[0, 10], [20, 30]])
- *
- * @example
- * // Function returning GenerateRanges
- * rangesFrom(() => (source, createRange) => {
- *     createRange(0, 10);
- * })
+ * rangesFrom((source) => [[0, source.length]])
  */
 export function rangesFrom<Data = unknown, RenderOptions = unknown>(
     input: RangeIterable<Data> | RangesGenerator<Data, RenderOptions>

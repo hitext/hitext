@@ -12,24 +12,14 @@ import type { Ranges, GenerateRanges, CreateRange, GenerateRangesContext } from 
  * @returns A range generator function
  *
  * @example
- * // Using a callback to conditionally generate ranges
- * html<{ pattern?: RegExp | string }>()
- *     .addLayer(rangesFromOptions(({ pattern }) => pattern && rangesForMatch(pattern)))
- *     .render('Hello world', { pattern: /Hello/ })
+ * pipeline.addLayer(
+ *   rangesFromOptions(({ pattern }) =>
+ *     pattern && rangesForMatch(pattern)
+ *   )
+ * )
  *
  * @example
- * // Using a field name shortcut
- * html<{ ranges?: Ranges }>()
- *     .addLayer(rangesFromOptions('ranges'))
- *     .render('Hello world', { ranges: [[1, 5]] })
- *
- * @example
- * // The callback can return null/undefined when no ranges should be generated
- * html<{ highlight?: boolean }>()
- *     .addLayer(rangesFromOptions(({ highlight }) =>
- *         highlight ? rangesForMatch(/\w+/g) : null
- *     ))
- *     .render('Hello world', { highlight: true })
+ * pipeline.addLayer(rangesFromOptions('ranges'))
  */
 export function rangesFromOptions<Data = unknown, RenderOptions = unknown>(
     source: ((renderOptions: RenderOptions) => Ranges<Data, RenderOptions> | null | undefined) | keyof RenderOptions

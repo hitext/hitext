@@ -11,17 +11,9 @@ import { applyMerge } from './apply-merge.js';
  * @returns A transformer function that accepts ranges and returns inverted ranges
  *
  * @example
- * // Invert matches to create viewport gaps (default extended range)
  * composeRanges(
- *   rangesForMatch(/error/g),
+ *   ...,
  *   applyInvert()
- * )
- *
- * @example
- * // Invert with exact source boundaries
- * composeRanges(
- *   rangesForMatch(/error/g),
- *   applyInvert(true)
  * )
  */
 export function applyInvert<Data, RenderOptions>(

@@ -10,14 +10,14 @@ import { processRanges } from '../ranges.js';
  * from different sources (e.g., different regex patterns) while keeping
  * them as separate ranges.
  *
+ * @param inputs - Range sources to combine
+ * @returns A GenerateRanges function that yields all ranges from all sources
+ *
  * @example
- * ```typescript
- * // Collect ERROR and WARNING matches as separate ranges
  * concatRanges(
  *   rangesForMatch(/ERROR/g),
  *   rangesForMatch(/WARNING/g)
  * )
- * ```
  */
 export function concatRanges<Data, RenderOptions>(
     ...inputs: Array<Ranges<Data, RenderOptions>>

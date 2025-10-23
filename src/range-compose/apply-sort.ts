@@ -9,12 +9,16 @@ import { createLineBoundaries } from '../utils/line-boundaries.js';
  * @returns A transformer function that accepts ranges and returns sorted ranges
  *
  * @example
- * // Default sort (by start ascending, then end descending)
- * composeRanges(ranges, applySort())
+ * composeRanges(
+ *   ...,
+ *   applySort()
+ * )
  *
  * @example
- * // Sort by end position
- * composeRanges(ranges, applySort((a, b) => a.end - b.end))
+ * composeRanges(
+ *   ...,
+ *   applySort((a, b) => a.end - b.end)
+ * )
  */
 export function applySort<Data, RenderOptions>(
     comparator?: (

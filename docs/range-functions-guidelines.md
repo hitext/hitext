@@ -198,12 +198,8 @@ applyDataMap((range, index, { lines }) => ({
  * @returns Description of return value
  *
  * @example
- * // Descriptive comment for this use case
- * const result = functionName(args)
- *
- * @example
- * // Only add more examples if truly different use cases
- * const other = functionName(otherArgs)
+ * // Concise semantic reference showing call pattern
+ * composeRanges(..., functionName(args))
  */
 ```
 
@@ -211,8 +207,57 @@ applyDataMap((range, index, { lines }) => ({
 - Brief summary (imperative mood: "Creates...", "Filters...", "Merges...")
 - ALL parameters documented
 - Return value described
-- At least one `@example` with typical usage
+- **One or more `@example` blocks showing semantic usage** (see below)
 - Important behaviors noted (origin tracking, memory, edge cases)
+
+**CRITICAL - Example Requirements:**
+
+Examples are **quick semantic reference** (shown in tooltips), NOT tutorials or documentation:
+
+- ✅ **Minimal examples** - typically one, occasionally 2-3 if showing truly unique semantics
+- ✅ **Use `...` for irrelevant context** - replace parts that don't contribute to understanding
+- ✅ **Multiline format for transforms** - always use multiline format for readability
+- ✅ **Show semantic meaning** - what the function does, not implementation variations
+- ✅ **Concise** - typically 3-5 lines per example
+
+**When to use `...` vs named variables:**
+
+✅ **Good - use `...` when source doesn't matter:**
+```typescript
+composeRanges(
+  ...,
+  applyFilter((range, index, { lines }) =>
+    lines.getLine(range.start) < 10
+  )
+)
+```
+
+✅ **Good - keep named variable when it provides semantic context:**
+```typescript
+composeRanges(
+  rangesForMatch(/\w+/g),
+  applyFilter((range) => range.data[0] === 'hello')  // uses match data
+)
+```
+
+❌ **Bad - keeps source but doesn't use its specific data:**
+```typescript
+composeRanges(
+  rangesForMatch(/\w+/g),  // ❌ irrelevant - match data not used
+  applyFilter((range, index, { lines }) =>
+    lines.getLine(range.start) < 10
+  )
+)
+```
+
+**When to add multiple examples:**
+
+- ✅ **Different parameter types** (e.g., `applyPick('first')` vs `applyPick(predicate)`)
+- ✅ **Different parameter forms** (e.g., `applyExpandTo('line', 2)` vs `applyExpandTo('line', [1, 3])`)
+- ✅ **Optional parameters with significant behavior change** (e.g., `applySort()` vs `applySort(comparator)`)
+- ❌ **NOT for using different range properties** (data vs lines vs index - all show same pattern)
+- ❌ **NOT for parameter value variations** (different regex, different field names, different numbers)
+- ❌ **NOT for different input sources** (unless source provides semantic context)
 
 ### Test Structure
 

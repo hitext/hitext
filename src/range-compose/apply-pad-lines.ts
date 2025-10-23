@@ -10,12 +10,16 @@ import { createLineBoundaries } from '../utils/line-boundaries.js';
  * @returns A transformer function that accepts ranges and returns padding ranges
  *
  * @example
- * // Add 1 line before and after each range, target width 80
- * composeRanges(ranges, applyPadLines([1, 1], 80))
+ * composeRanges(
+ *   ...,
+ *   applyPadLines([1, 1], 80)
+ * )
  *
  * @example
- * // Add 2 lines after each range, target width 100
- * composeRanges(ranges, applyPadLines(2, 100))
+ * composeRanges(
+ *   ...,
+ *   applyPadLines(2, 100)
+ * )
  */
 export function applyPadLines<Data, RenderOptions>(
     lines: number | [number, number],

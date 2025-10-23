@@ -21,24 +21,11 @@ import { createLineBoundaries } from '../utils/line-boundaries.js';
  * @returns A transformer function that accepts ranges and returns ranges with mapped data
  *
  * @example
- * // Add line information to each range's data
  * composeRanges(
- *   rangesForMatch(/error/g),
+ *   ...,
  *   applyDataMap((range, index, { lines }) => ({
  *     match: range.data,
- *     line: lines.getLine(range.start),
- *     column: lines.getColumn(range.start)
- *   }))
- * )
- *
- * @example
- * // Transform data based on index
- * composeRanges(
- *   ranges,
- *   applyDataMap((range, index) => ({
- *     ...range.data,
- *     index,
- *     label: `Item ${index + 1}`
+ *     line: lines.getLine(range.start)
  *   }))
  * )
  */

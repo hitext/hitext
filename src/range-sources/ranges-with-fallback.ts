@@ -11,26 +11,10 @@ import type { GenerateRanges, Ranges } from '../types.js';
  * @returns A GenerateRanges function that tries each input until one produces ranges
  *
  * @example
- * // Try multiple patterns with final fallback
  * rangesWithFallback(
- *     rangesForMatch(/error/gi),
- *     rangesForMatch(/warning/gi),
- *     [[0, 100]]  // Show first 100 chars if no errors or warnings
- * )
- *
- * @example
- * // Select insertion point with fallbacks
- * rangesWithFallback(
- *     rangesFromOptions('tocInsertPoint'),
- *     rangesForMatch(/<!-- TOC -->/),
- *     [[0, 0]]  // Document start as final fallback
- * )
- *
- * @example
- * // Placeholder for missing content
- * rangesWithFallback(
- *     rangesForMatch(/^(?=#[^#])/m),  // Start of first H1
- *     [[0, 0]]  // Document start
+ *   rangesForMatch(/error/gi),
+ *   rangesForMatch(/warning/gi),
+ *   [[0, 100]]
  * )
  */
 export function rangesWithFallback<Data = unknown, RenderOptions = unknown>(

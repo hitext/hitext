@@ -23,24 +23,9 @@ import { createLineBoundaries } from '../utils/line-boundaries.js';
  * @returns A transformer function that accepts ranges and returns collapsed ranges
  *
  * @example
- * // Collapse matches to start position
  * composeRanges(
- *   rangesForMatch(/error/g),
+ *   ...,
  *   applyCollapseTo('start')
- * )
- *
- * @example
- * // Create markers at end of line content (before newline)
- * composeRanges(
- *   rangesForMatch(/error/g),
- *   applyCollapseTo('line-content-end')
- * )
- *
- * @example
- * // Create markers at document start
- * composeRanges(
- *   rangesForMatch(/error/g),
- *   applyCollapseTo('document-start')
  * )
  */
 export function applyCollapseTo<Data, RenderOptions>(

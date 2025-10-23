@@ -14,22 +14,10 @@ import type { GenerateRanges } from '../types.js';
  * @returns A GenerateRanges function that creates ranges for each line
  *
  * @example
- * ```typescript
- * // Generate ranges for full lines (including newlines) - default
  * rangesForLines()
- * rangesForLines('line')
  *
- * // Generate ranges for line content only (excluding newlines)
+ * @example
  * rangesForLines('line-content')
- *
- * // Generate ranges for newline characters only
- * rangesForLines('newline')
- *
- * // Generate zero-length ranges at line boundaries
- * rangesForLines('line-start')
- * rangesForLines('line-end')
- * rangesForLines('line-content-end')
- * ```
  */
 export function rangesForLines<RenderOptions = unknown>(
     type:

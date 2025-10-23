@@ -8,21 +8,10 @@ import type { GenerateRanges, Ranges } from '../types.js';
  * @returns The final composed GenerateRanges function
  *
  * @example
- * // Find matches, collapse to start, and merge
  * composeRanges(
  *   rangesForMatch(/error/g),
  *   applyCollapseTo('start'),
- *   applyMerge(true)
- * )
- *
- * @example
- * // Complex composition with multiple transformers
- * composeRanges(
- *   rangesFromLayer('diagnostics'),
- *   applyFilter((range) => range.data.severity === 'error'),
- *   applyExpandTo('line'),
- *   applySort(),
- *   applyPick('first')
+ *   applyMerge()
  * )
  */
 export function composeRanges<Data, RenderOptions>(

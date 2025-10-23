@@ -11,16 +11,18 @@ import { processRanges } from '../ranges.js';
  * @returns A generator function that yields ranges from the named layer
  *
  * @example
- * // Reference ranges from a named layer
  * pipeline
  *   .addLayer(rangesForMatch(/error/g), highlight, 'errors')
  *   .addLayer(rangesFromLayer('errors'), underline)
  *
  * @example
- * // Use ranges from one layer to create derived ranges in another
- * pipeline
- *   .addLayer(rangesForMatch(/\w+/g), null, 'matches')
- *   .addLayer(applyExpandTo('line')(rangesFromLayer('matches')), fadeOut)
+ * pipeline.addLayer(
+ *   composeRanges(
+ *     rangesFromLayer('matches'),
+ *     applyExpandTo('line')
+ *   ),
+ *   fadeOut
+ * )
  */
 export function rangesFromLayer<Data = unknown, RenderOptions = unknown>(
     name: string
