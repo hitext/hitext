@@ -26,9 +26,9 @@ export function applyPadLines<Data, RenderOptions>(
     size: number
 ): (input: Ranges<Data, RenderOptions>) => GenerateRanges<number, RenderOptions> {
     return (input: Ranges<Data, RenderOptions>) => {
-        return (source, createRange, genContext) => {
+        return (document, createRange, genContext) => {
             const ranges: Array<RangeRecord<Data>> = [];
-            processRanges(source, input, (start, end, data, origin) => {
+            processRanges(document, input, (start, end, data, origin) => {
                 ranges.push({ start, end, data, origin });
             }, genContext as any);
 
@@ -36,7 +36,7 @@ export function applyPadLines<Data, RenderOptions>(
                 return;
             }
 
-            const lineBoundaries = createLineBoundaries(source);
+            const lineBoundaries = createLineBoundaries(document);
             const [linesBefore, linesAfter] = typeof lines === 'number' ? [0, lines] : lines;
 
             for (const origRange of ranges) {

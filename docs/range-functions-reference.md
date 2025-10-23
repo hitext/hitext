@@ -146,7 +146,7 @@ rangesForPoint(position: 'document-start' | 'document-end'): GenerateRanges<null
 **Parameters:**
 - `position` - Document boundary:
   - `'document-start'` - Position 0
-  - `'document-end'` - Position `source.length`
+  - `'document-end'` - Position `document.length`
 
 **Data:** `null`
 
@@ -175,25 +175,25 @@ rangesFrom<Data>(
 ```
 
 **Parameters:**
-- `input` - Iterable of tuples `[start, end, data?]` or objects `{start, end, data?}`, OR a generator function `(source, renderOptions?) => Ranges`
+- `input` - Iterable of tuples `[start, end, data?]` or objects `{start, end, data?}`, OR a generator function `(document, renderOptions?) => Ranges`
 
 **Use cases:**
 - Integrating external tools (linters, parsers)
 - Converting custom formats
 - Testing with fixtures
-- Dynamic range generation based on source
+- Dynamic range generation based on document
 
 **Example:**
 ```typescript
 // From external linter
-const diagnostics = await linter.lint(source);
+const diagnostics = await linter.lint(document);
 rangesFrom(diagnostics)
 
 // From tuple array
 rangesFrom([[0, 5], [10, 15]])
 
 // From generator function
-rangesFrom((source) => source.length > 100 ? [[0, 100]] : [])
+rangesFrom((document) => document.length > 100 ? [[0, 100]] : [])
 ```
 
 ---
@@ -222,18 +222,18 @@ rangesFromLayer('diagnostics')
 
 ---
 
-### `rangesFromOptions(source)`
+### `rangesFromOptions(rangeInput)`
 
 Get ranges from render options (user-configurable).
 
 ```typescript
 rangesFromOptions<Data>(
-    source: ((renderOptions: RenderOptions) => Ranges<Data, RenderOptions> | null | undefined) | keyof RenderOptions
+    rangeInput: ((renderOptions: RenderOptions) => Ranges<Data, RenderOptions> | null | undefined) | keyof RenderOptions
 ): GenerateRanges<Data, RenderOptions>
 ```
 
 **Parameters:**
-- `source` - Either a callback function that receives render options and returns ranges, or a field name (shortcut for accessing a property)
+- `rangeInput` - Either a callback function that receives render options and returns ranges, or a field name (shortcut for accessing a property)
 
 **Use cases:**
 - User-configurable highlighting
@@ -312,19 +312,19 @@ rangesWithFallback(
 
 ---
 
-### `composeRanges(source, ...transformers)`
+### `composeRanges(rangeInput, ...transformers)`
 
-Compose a range source with multiple transformers (left-to-right).
+Compose a range generator with multiple transformers (left-to-right).
 
 ```typescript
 composeRanges<Data, RenderOptions>(
-    source: Ranges<Data, RenderOptions>,
+    rangeInput: Ranges<Data, RenderOptions>,
     ...transformers: Array<(input: Ranges) => GenerateRanges>
 ): GenerateRanges<Data, RenderOptions>
 ```
 
 **Parameters:**
-- `source` - Initial range source
+- `rangeInput` - Initial range generator
 - `transformers` - Transformation functions to apply in sequence
 
 **Use cases:**
@@ -368,7 +368,7 @@ applyCollapseTo(
   - `'line-end'` - End of line containing range end (after newline)
   - `'line-content-end'` - End of line content (before newline)
   - `'document-start'` - Start of document (0)
-  - `'document-end'` - End of document (`source.length`)
+  - `'document-end'` - End of document (`document.length`)
 
 **Origin:** Inherits from input range (direct connection)
 
@@ -473,8 +473,8 @@ applyInvert(exact?: boolean): TransformRanges
 
 **Parameters:**
 - `exact` - Boundary behavior:
-  - `true` - Bound to `[0, source.length]`
-  - `false` (default) - Extend to `[0, source.length + 1]`
+  - `true` - Bound to `[0, document.length]`
+  - `false` (default) - Extend to `[0, document.length + 1]`
 
 **Origin:** None (no connection between input and output)
 
@@ -509,7 +509,7 @@ applyFilter(
 - `predicate` - Function receiving:
   - `range` - Full range object `{start, end, data, origin}`
   - `index` - Zero-based position in sequence
-  - `context` - `{source, lines, renderOptions, ranges}`
+  - `context` - `{document, lines, renderOptions, ranges}`
 
 **Origin:** Inherits from input range (direct connection)
 

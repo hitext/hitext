@@ -22,26 +22,26 @@ describe('rangesFrom', () => {
         ]);
     });
 
-    it('should pass source and renderOptions to generator', () => {
+    it('should pass document and renderOptions to generator', () => {
         const result = generateRanges(
             'test',
-            rangesFrom(function*(source, options) {
-                yield[0, 4, { source, options }];
+            rangesFrom(function*(document, options) {
+                yield[0, 4, { document, options }];
             }),
             { renderOptions: { render: 'options' } }
         );
 
         deepStrictEqual(startEndData(result), [
-            [0, 4, { source: 'test', options: { render: 'options' } }]
+            [0, 4, { document: 'test', options: { render: 'options' } }]
         ]);
     });
 
     it('should work with function returning array', () => {
         const result = generateRanges(
             'Hello world',
-            rangesFrom<any>((source, renderOptions) => [
+            rangesFrom<any>((document, renderOptions) => [
                 [0, 1],
-                [2, 4, { source }],
+                [2, 4, { document }],
                 { start: 3, end: 5 },
                 { start: 4, end: 11, data: { renderOptions } }
             ]),
@@ -50,7 +50,7 @@ describe('rangesFrom', () => {
 
         deepStrictEqual(startEndData(result), [
             [0, 1, undefined],
-            [2, 4, { source: 'Hello world' }],
+            [2, 4, { document: 'Hello world' }],
             [3, 5, undefined],
             [4, 11, { renderOptions: 'options' }]
         ]);
@@ -59,9 +59,9 @@ describe('rangesFrom', () => {
     it('should work with function returning GenerateRanges', () => {
         const result = generateRanges(
             'Hello world',
-            rangesFrom(() => (source, createRange, context) => {
+            rangesFrom(() => (document, createRange, context) => {
                 createRange(0, 5);
-                createRange(6, 11, { test: source, renderOptions: context?.renderOptions });
+                createRange(6, 11, { test: document, renderOptions: context?.renderOptions });
             }),
             { renderOptions: { someOption: true } }
         );

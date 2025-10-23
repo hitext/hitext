@@ -3,7 +3,7 @@ import { GenerateRanges } from '../types.js';
 /**
  * Creates a range generator that finds all occurrences matching a pattern.
  *
- * For string patterns, finds all occurrences of the literal string in the source.
+ * For string patterns, finds all occurrences of the literal string in the document.
  * For RegExp patterns, respects the 'g' (global) flag:
  * - With 'g' flag: finds all matches
  * - Without 'g' flag: finds only the first match
@@ -32,10 +32,10 @@ export function rangesForMatch<RenderOptions>(
     if (pattern instanceof RegExp) {
         const isGlobal = pattern.flags.includes('g');
 
-        return function(source, createRange) {
+        return function(document, createRange) {
             let match: ReturnType<RegExp['exec']>;
 
-            while (match = pattern.exec(source)) {
+            while (match = pattern.exec(document)) {
                 createRange(
                     match.index,
                     match.index + match[0].length,
@@ -51,11 +51,11 @@ export function rangesForMatch<RenderOptions>(
 
     const patternStr = String(pattern);
 
-    return function(source, createRange) {
+    return function(document, createRange) {
         let index = -1;
 
         while (true) {
-            index = source.indexOf(patternStr, index + 1);
+            index = document.indexOf(patternStr, index + 1);
 
             if (index === -1) {
                 break;

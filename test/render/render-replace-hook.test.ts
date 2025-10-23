@@ -5,7 +5,7 @@ import { RangeCallableHook, RangeHookContext, render } from '../../src/index.js'
  * Visual test helper for rendering with ranges.
  *
  * Each range line uses lowercase letters to mark start/end positions.
- * Spaces are ignored (just for alignment with source string).
+ * Spaces are ignored (just for alignment with document string).
  *
  * The last argument can optionally be a hooks object to customize range behavior.
  * Ranges without custom hooks get default wrap behavior: <letter>content</letter>
@@ -33,7 +33,7 @@ import { RangeCallableHook, RangeHookContext, render } from '../../src/index.js'
  *     → <mark>Text</mark>
  */
 function renderTest(
-    source: string,
+    document: string,
     ...args: Array<string | Record<string, any>>
 ): string {
     const ranges: Array<{ type: string; start: number; end: number; data?: any }> = [];
@@ -88,7 +88,7 @@ function renderTest(
         }
     }
 
-    return render(source, ranges, normalizedHooks);
+    return render(document, ranges, normalizedHooks);
 }
 
 /**
@@ -191,7 +191,7 @@ describe('Replace Hook', () => {
         });
     });
 
-    it('should replace source text with custom content', () => {
+    it('should replace document text with custom content', () => {
         const result = renderTest(
             'Hello [REDACTED] World',
             '      xxxxxxxxxx',
@@ -249,9 +249,9 @@ describe('Replace Hook', () => {
 
     it('should handle zero-length replace (injection)', () => {
         // Zero-length ranges can't be represented visually, keep explicit
-        const source = 'Insert here';
+        const document = 'Insert here';
         const ranges = [{ type: 'replace', start: 7, end: 7, data: undefined }];  // Zero-length
-        const result = render(source, ranges, {
+        const result = render(document, ranges, {
             replace: { replace: () => '[INJECTED] ' }
         });
         assert.strictEqual(result, 'Insert [INJECTED] here');
@@ -329,7 +329,7 @@ describe('Replace Hook', () => {
             {
                 a: {
                     open: () => '<',                     // Step 1: output '<'
-                    replace: () => 'REPLACED',           // Step 2: return 'REPLACED' (skips source "content")
+                    replace: () => 'REPLACED',           // Step 2: return 'REPLACED' (skips document "content")
                     wrap: (content: string) => `[${content}]`,  // Step 3: wrap 'REPLACED' -> '[REPLACED]'
                     close: () => '>'                     // Step 4: output '>'
                 }
@@ -792,8 +792,8 @@ describe('Replace Hook', () => {
 
     describe('Hook context (offset, line, column) correctness', () => {
         it('should provide correct context for each hook type', () => {
-            // Source with multiple lines to verify line/column calculations
-            const source = 'Line 1\n[REPLACE]\nLine 3';
+            // Document with multiple lines to verify line/column calculations
+            const document = 'Line 1\n[REPLACE]\nLine 3';
             //             0123456 789012345 6789012
             //             Line 1: 0-6 (line 1)
             //             [REPLACE]: 7-16 (line 2)
@@ -807,7 +807,7 @@ describe('Replace Hook', () => {
                 capturedContexts[context.hook] = context.dump();
             };
 
-            render(source, ranges, {
+            render(document, ranges, {
                 r: {
                     open: captureContextHook,
                     replace: captureContextHook,
@@ -819,7 +819,7 @@ describe('Replace Hook', () => {
             // Verify open hook context: should use range.start (7)
             assert.deepStrictEqual(capturedContexts.open, {
                 hook: 'open',
-                source,
+                document,
                 offset: 7,
                 line: 2,
                 column: 1,
@@ -834,7 +834,7 @@ describe('Replace Hook', () => {
             // Verify replace hook context: should use range.start (7)
             assert.deepStrictEqual(capturedContexts.replace, {
                 hook: 'replace',
-                source,
+                document,
                 offset: 7,
                 line: 2,
                 column: 1,
@@ -849,7 +849,7 @@ describe('Replace Hook', () => {
             // Verify wrap hook context: should use range.end (16)
             assert.deepStrictEqual(capturedContexts.wrap, {
                 hook: 'wrap',
-                source,
+                document,
                 offset: 18,
                 line: 3,
                 column: 2,
@@ -864,7 +864,7 @@ describe('Replace Hook', () => {
             // Verify close hook context: should use range.end (16)
             assert.deepStrictEqual(capturedContexts.close, {
                 hook: 'close',
-                source,
+                document,
                 offset: 18,
                 line: 3,
                 column: 2,
@@ -878,7 +878,7 @@ describe('Replace Hook', () => {
         });
 
         it('should provide correct context for hooks on same line', () => {
-            const source = 'Start [RANGE] End';
+            const document = 'Start [RANGE] End';
             //             012345 6789012 3456
             //             [RANGE]: 6-13
 
@@ -890,7 +890,7 @@ describe('Replace Hook', () => {
                 capturedContexts[context.hook] = context.dump();
             };
 
-            render(source, ranges, {
+            render(document, ranges, {
                 r: {
                     open: captureContextHook,
                     replace: captureContextHook,
@@ -902,7 +902,7 @@ describe('Replace Hook', () => {
             // open and replace: offset at start (6), line 1, column 7
             assert.deepStrictEqual(capturedContexts.open, {
                 hook: 'open',
-                source,
+                document,
                 offset: 6,
                 line: 1,
                 column: 7,
@@ -916,7 +916,7 @@ describe('Replace Hook', () => {
 
             assert.deepStrictEqual(capturedContexts.replace, {
                 hook: 'replace',
-                source,
+                document,
                 offset: 6,
                 line: 1,
                 column: 7,
@@ -931,7 +931,7 @@ describe('Replace Hook', () => {
             // wrap and close: offset at end (13), line 1, column 14
             assert.deepStrictEqual(capturedContexts.wrap, {
                 hook: 'wrap',
-                source,
+                document,
                 offset: 13,
                 line: 1,
                 column: 14,
@@ -945,7 +945,7 @@ describe('Replace Hook', () => {
 
             assert.deepStrictEqual(capturedContexts.close, {
                 hook: 'close',
-                source,
+                document,
                 offset: 13,
                 line: 1,
                 column: 14,

@@ -3,7 +3,7 @@ import { generateRanges, concatRanges } from '../../src/index.js';
 import { renderRanges } from '../utils.js';
 
 describe('concatRanges', () => {
-    it('should concatenate ranges from multiple sources', () => {
+    it('should concatenate ranges from multiple documents', () => {
         const combined = renderRanges(
             'Hello world',
             concatRanges(
@@ -15,7 +15,7 @@ describe('concatRanges', () => {
         deepStrictEqual(combined, ['Hello', 'world']);
     });
 
-    it('should preserve source order (not position order)', () => {
+    it('should preserve document order (not position order)', () => {
         const combined = renderRanges(
             'ABC123XYZ789',
             concatRanges(
@@ -41,7 +41,7 @@ describe('concatRanges', () => {
         deepStrictEqual(combined, ['Hello', 'Hello', 'world']);
     });
 
-    it('should work with single source', () => {
+    it('should work with single document', () => {
         const combined = renderRanges(
             'Hello world',
             concatRanges([[0, 5], [6, 11]])
@@ -50,7 +50,7 @@ describe('concatRanges', () => {
         deepStrictEqual(combined, ['Hello', 'world']);
     });
 
-    it('should work with many sources', () => {
+    it('should work with many documents', () => {
         const combined = renderRanges(
             'a1b2c3',
             concatRanges(
@@ -63,7 +63,7 @@ describe('concatRanges', () => {
         deepStrictEqual(combined, ['a', '1', '2', '3', 'b', 'c']);
     });
 
-    it('should handle empty sources', () => {
+    it('should handle empty documents', () => {
         const combined = renderRanges(
             'Hello world',
             concatRanges(
@@ -76,7 +76,7 @@ describe('concatRanges', () => {
         deepStrictEqual(combined, ['Hello']);
     });
 
-    it('should handle all empty sources', () => {
+    it('should handle all empty documents', () => {
         const combined = renderRanges(
             'Hello world',
             concatRanges()
@@ -109,7 +109,7 @@ describe('concatRanges', () => {
         deepStrictEqual(combined, ['', '']);
     });
 
-    it('should preserve data from sources', () => {
+    it('should preserve data from documents', () => {
         const combined = renderRanges(
             'Hello world',
             concatRanges(
@@ -122,9 +122,9 @@ describe('concatRanges', () => {
     });
 
     it('should preserve origins when present', () => {
-        const source = 'Hello world';
+        const document = 'Hello world';
         const ranges = generateRanges(
-            source,
+            document,
             concatRanges(
                 [{ start: 0, end: 5, data: 'a', origin: { start: 100, end: 105, data: 'orig1' } }],
                 [{ start: 6, end: 11, data: 'b', origin: { start: 200, end: 205, data: 'orig2' } }]
@@ -137,9 +137,9 @@ describe('concatRanges', () => {
     });
 
     it('should handle missing origins gracefully', () => {
-        const source = 'Hello world';
+        const document = 'Hello world';
         const ranges = generateRanges(
-            source,
+            document,
             concatRanges(
                 [[0, 5]],
                 [[6, 11]]

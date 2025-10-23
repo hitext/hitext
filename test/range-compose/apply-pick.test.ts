@@ -70,7 +70,7 @@ describe('applyPick()', () => {
         strictEqual(ranges.length, 0);
     });
 
-    it('should provide source in context', () => {
+    it('should provide document in context', () => {
         const input = [
             { start: 0, end: 5, data: 'a' },
             { start: 6, end: 11, data: 'b' }
@@ -78,7 +78,7 @@ describe('applyPick()', () => {
         const ranges = generateRanges(
             'hello world',
             applyPick((range, index, context) => {
-                return context.source.substring(range.start, range.end) === 'world';
+                return context.document.substring(range.start, range.end) === 'world';
             })(input)
         );
         deepStrictEqual(startEndData(ranges), [[6, 11, 'b']]);

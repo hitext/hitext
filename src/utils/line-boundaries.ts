@@ -5,12 +5,12 @@ import type { LineBoundaries } from '../types.js';
  * Builds line boundary information incrementally as needed for efficient offset lookups.
  * Optimized for sequential access patterns (adjacent ranges).
  */
-export function createLineBoundaries(source: string): LineBoundaries {
+export function createLineBoundaries(document: string): LineBoundaries {
     const newlineRegex = /\r\n|\r|\n/g; // Global regex for scanning
     const lineStarts: number[] = [0]; // Line starts cache (always includes 0)
     let lastLineStart = 0;
     let lastLineIndex = 0; // Cache for last looked up line index
-    let fullyScanned = false; // Whether we've scanned the entire source
+    let fullyScanned = false; // Whether we've scanned the entire document
 
     /**
      * Ensure we have scanned enough lines.
@@ -18,7 +18,7 @@ export function createLineBoundaries(source: string): LineBoundaries {
      * If targetOffset is provided, scans until we've covered that offset.
      */
     function ensureLines(lineCount: number, targetOffset?: number): void {
-        // Scan until we have enough lines or covered the offset or reach end of source
+        // Scan until we have enough lines or covered the offset or reach end of document
         while (!fullyScanned) {
             if (lineCount <= lineStarts.length &&
                 (targetOffset === undefined || lastLineStart > targetOffset)) {
@@ -26,7 +26,7 @@ export function createLineBoundaries(source: string): LineBoundaries {
             }
 
             newlineRegex.lastIndex = lastLineStart;
-            const match = newlineRegex.exec(source);
+            const match = newlineRegex.exec(document);
 
             if (match) {
                 lastLineStart = newlineRegex.lastIndex;
@@ -53,7 +53,7 @@ export function createLineBoundaries(source: string): LineBoundaries {
     }
 
     /**
-     * Get the line index for a given offset in the source.
+     * Get the line index for a given offset in the document.
      * If lines parameter is provided:
      *   - Positive value: move forward N lines
      *   - Negative value: move backward N lines
@@ -63,8 +63,8 @@ export function createLineBoundaries(source: string): LineBoundaries {
         if (offset < 0) {
             return 0;
         }
-        if (offset >= source.length) {
-            offset = source.length - 1;
+        if (offset >= document.length) {
+            offset = document.length - 1;
         }
 
         let lineIndex: number;
@@ -120,8 +120,8 @@ export function createLineBoundaries(source: string): LineBoundaries {
         if (offset < 0) {
             return 1;
         }
-        if (offset >= source.length) {
-            offset = source.length;
+        if (offset >= document.length) {
+            offset = document.length;
         }
 
         const lineStart = getLineStart(offset, lines);
@@ -150,10 +150,10 @@ export function createLineBoundaries(source: string): LineBoundaries {
         const offset = lineStart + column - 1;
 
         // If next line exists, clamp to its start (which is current line's end)
-        // Otherwise, clamp to source length
+        // Otherwise, clamp to document length
         return actualLineIndex + 1 < lineStarts.length
             ? Math.min(offset, lineStarts[actualLineIndex + 1])
-            : Math.min(offset, source.length);
+            : Math.min(offset, document.length);
     }
 
     function getLineStart(offset: number, lines = 0): number {
@@ -167,10 +167,10 @@ export function createLineBoundaries(source: string): LineBoundaries {
         // Ensure we have the next line to get the end
         ensureLines(lineIndex + 2);
 
-        // The line end is the start of the next line, or source.length
+        // The line end is the start of the next line, or document.length
         return lineIndex + 1 < lineStarts.length
             ? lineStarts[lineIndex + 1]
-            : source.length;
+            : document.length;
     }
 
     function getLineContentEnd(offset: number, lines = 0): number {
@@ -180,11 +180,11 @@ export function createLineBoundaries(source: string): LineBoundaries {
         // Exclude newline characters (\n, \r, or \r\n)
         const lineStart = lineStarts[lineIndex];
 
-        if (lineEnd > lineStart && source[lineEnd - 1] === '\n') {
+        if (lineEnd > lineStart && document[lineEnd - 1] === '\n') {
             lineEnd--;
         }
 
-        if (lineEnd > lineStart && source[lineEnd - 1] === '\r') {
+        if (lineEnd > lineStart && document[lineEnd - 1] === '\r') {
             lineEnd--;
         }
 
@@ -197,9 +197,9 @@ export function createLineBoundaries(source: string): LineBoundaries {
 
     function isLineEnd(offset: number): boolean {
         // An offset is at a line end if:
-        // - It's at the end of the source (including empty source where offset 0 === source.length)
+        // - It's at the end of the document (including empty document where offset 0 === document.length)
         // - It's at the start of a line (which is the end of the previous line), but not offset 0
-        return offset === source.length || (offset !== 0 && offset === getLineStart(offset));
+        return offset === document.length || (offset !== 0 && offset === getLineStart(offset));
     }
 
     function isLineContentEnd(offset: number): boolean {
@@ -210,25 +210,25 @@ export function createLineBoundaries(source: string): LineBoundaries {
         const lineContentEnd = getLineContentEnd(offset, lines);
         const lineEnd = getLineEnd(offset, lines);
 
-        return source.slice(lineContentEnd, lineEnd);
+        return document.slice(lineContentEnd, lineEnd);
     }
 
     function getLineText(offset: number, lines = 0): string {
         const lineStart = getLineStart(offset, lines);
         const lineEnd = getLineEnd(offset, lines);
 
-        return source.slice(lineStart, lineEnd);
+        return document.slice(lineStart, lineEnd);
     }
 
     function getLineContentText(offset: number, lines = 0): string {
         const lineStart = getLineStart(offset, lines);
         const lineContentEnd = getLineContentEnd(offset, lines);
 
-        return source.slice(lineStart, lineContentEnd);
+        return document.slice(lineStart, lineContentEnd);
     }
 
     function getLastLine(): number {
-        // Ensure we've scanned the entire source
+        // Ensure we've scanned the entire document
         ensureLines(Infinity);
         return lineStarts.length;
     }

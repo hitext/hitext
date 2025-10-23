@@ -23,19 +23,19 @@ describe('applyCollapseTo', () => {
         });
 
         it('should collapse to line-end (after newline)', () => {
-            const source = 'line1\nline2\nline3';
-            const ranges = generateRanges(source, applyCollapseTo('line-end')([[8, 10]]));
+            const document = 'line1\nline2\nline3';
+            const ranges = generateRanges(document, applyCollapseTo('line-end')([[8, 10]]));
 
             deepStrictEqual(startEnd(ranges), [[12, 12]]);
-            strictEqual(source[12], 'l');  // Start of line3
+            strictEqual(document[12], 'l');  // Start of line3
         });
 
         it('should collapse to line-content-end (before newline)', () => {
-            const source = 'line1\nline2\nline3';
-            const ranges = generateRanges(source, applyCollapseTo('line-content-end')([[8, 10]]));
+            const document = 'line1\nline2\nline3';
+            const ranges = generateRanges(document, applyCollapseTo('line-content-end')([[8, 10]]));
 
             deepStrictEqual(startEnd(ranges), [[11, 11]]);
-            strictEqual(source[11], '\n');
+            strictEqual(document[11], '\n');
         });
 
         it('should collapse to document-start', () => {
@@ -82,19 +82,19 @@ describe('applyCollapseTo', () => {
     });
 
     it('should work with \\r line endings', () => {
-        const source = 'line1\rline2\rline3';
-        const ranges = generateRanges(source, applyCollapseTo('line-content-end')([[7, 9]]));
+        const document = 'line1\rline2\rline3';
+        const ranges = generateRanges(document, applyCollapseTo('line-content-end')([[7, 9]]));
 
         deepStrictEqual(startEnd(ranges), [[11, 11]]);
-        strictEqual(source[11], '\r');
+        strictEqual(document[11], '\r');
     });
 
     it('should work with \\r\\n line endings', () => {
-        const source = 'line1\r\nline2\r\nline3';
-        const ranges = generateRanges(source, applyCollapseTo('line-content-end')([[8, 10]]));
+        const document = 'line1\r\nline2\r\nline3';
+        const ranges = generateRanges(document, applyCollapseTo('line-content-end')([[8, 10]]));
 
         deepStrictEqual(startEnd(ranges), [[12, 12]]);
-        strictEqual(source.slice(12, 14), '\r\n');
+        strictEqual(document.slice(12, 14), '\r\n');
     });
 
     it('should handle zero-width range', () => {
@@ -103,7 +103,7 @@ describe('applyCollapseTo', () => {
         deepStrictEqual(startEnd(ranges), [[5, 5]]);
     });
 
-    it('should handle empty source', () => {
+    it('should handle empty document', () => {
         const ranges = generateRanges('', applyCollapseTo('start')([[0, 0]]));
 
         deepStrictEqual(startEnd(ranges), [[0, 0]]);

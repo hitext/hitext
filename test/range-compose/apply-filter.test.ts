@@ -65,14 +65,14 @@ describe('applyFilter', () => {
         deepStrictEqual(startEndData(ranges), [[0, 1, 0], [2, 3, 2]]);
     });
 
-    it('should access source from context', () => {
+    it('should access document from context', () => {
         const input = [
             { start: 0, end: 5 },
             { start: 6, end: 11 }
         ];
 
-        const ranges = generateRanges('Hello World', applyFilter((range, index, { source }) => {
-            return source.slice(range.start, range.end) === 'Hello';
+        const ranges = generateRanges('Hello World', applyFilter((range, index, { document }) => {
+            return document.slice(range.start, range.end) === 'Hello';
         })(input));
 
         deepStrictEqual(startEndData(ranges), [[0, 5, undefined]]);

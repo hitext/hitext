@@ -59,7 +59,7 @@ describe('render', () => {
         );
     });
 
-    describe('ranges out of source boundaries', () => {
+    describe('ranges out of document boundaries', () => {
         it('intersect with boundaries', () => {
             strictEqual(
                 render(
@@ -367,7 +367,7 @@ describe('render', () => {
 
             deepStrictEqual(capturedContext, {
                 hook: 'wrap',
-                source: 'Hello\nworld!',
+                document: 'Hello\nworld!',
                 offset: 11,
                 line: 2,
                 column: 6,

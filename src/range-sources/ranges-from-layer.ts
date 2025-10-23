@@ -27,7 +27,7 @@ import { processRanges } from '../ranges.js';
 export function rangesFromLayer<Data = unknown, RenderOptions = unknown>(
     name: string
 ): GenerateRanges<Data, RenderOptions> {
-    return (source, createRange, context) => {
+    return (document, createRange, context) => {
         // Get ranges from the rangesByName map
         const ranges = context?.rangesByName?.[name];
 
@@ -38,7 +38,7 @@ export function rangesFromLayer<Data = unknown, RenderOptions = unknown>(
 
         // Process the ranges from the layer
         processRanges(
-            source,
+            document,
             ranges,
             createRange,
             context

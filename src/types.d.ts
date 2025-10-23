@@ -17,10 +17,10 @@ export interface PipelineNode<RenderOptions, T, R = T, HC = unknown> {
         rangeHooks: RangeHooksDefinition<D, T, R, HC> | null,
         name?: string
     ): PipelineNode<RenderOptions, T, R, HC>;
-    ranges(source: string, options?: RenderOptions): GeneratedRange[];
+    ranges(document: string, options?: RenderOptions): GeneratedRange[];
     rangeHooksMap(): RangeHooksMap<any, T, R, HC>;
     rangeHooksDefinitionMap(): RangeHooksDefinitionMap<any, T, R, HC>;
-    render(source: string, options?: RenderOptions): R;
+    render(document: string, options?: RenderOptions): R;
 }
 
 //
@@ -40,24 +40,24 @@ export type TransformRanges<Data = unknown, RenderOptions = unknown> = (
     input: Ranges<Data, RenderOptions>
 ) => GenerateRanges<Data, RenderOptions>;
 export type GenerateRanges<Data = unknown, RenderOptions = unknown> = (
-    source: string,
+    document: string,
     createRange: CreateRange<Data>,
     context?: GenerateRangesContext<Data, RenderOptions>
 ) => void;
 export type GenerateRangesContext<Data, RenderOptions> = {
-    renderOptions?: RenderOptions,
-    marker?: RangeMarker,
+    renderOptions?: RenderOptions;
+    marker?: RangeMarker;
     ranges?: GeneratedRange<Data>[];
     rangesByMarker?: Record<RangeMarker, GeneratedRange<Data>[]>;
     rangesByName?: Record<string, GeneratedRange<Data>[]>;
     lines?: LineBoundaries;
 }
 export type RangesGenerator<Data, RenderOptions> =
-    (source: string, renderOptions?: RenderOptions) => Ranges<Data, RenderOptions>;
+    (document: string, renderOptions?: RenderOptions) => Ranges<Data, RenderOptions>;
 
 // Range operation context (for filter, map, sort, etc.)
 export interface RangeOperationContext<RenderOptions = any> {
-    source: string;
+    document: string;
     lines: LineBoundaries;
     renderOptions?: RenderOptions;
     ranges: Array<RangeRecord<any>>;
@@ -123,7 +123,7 @@ export type RangeHookWrap<Data, T, R = T> = (
     context: RangeHookContext<Data, T, R>
 ) => T | R | string | null | undefined;
 export type RangeHookText<Data, T, R = T> = (
-    sourceChunk: string,
+    documentChunk: string,
     context: RangeHookContext<Data, T, R>
 ) => T | R | string | null | undefined;
 export type RangeHookReplace<Data, T, R = T> = (
@@ -133,7 +133,7 @@ export type RangeHookReplace<Data, T, R = T> = (
 export type RangeHookContextDump<T> = Omit<RangeHookContext<T>, 'lines' | 'dump' | 'createBuffer'>;
 export type RangeHookContext<Data = unknown, T = unknown, R = T> = {
     hook: RangeCallableHook;
-    source: string;
+    document: string;
     lines: LineBoundaries;
     offset: number;
     line: number;
@@ -167,11 +167,11 @@ export interface RenderBuffer<T, R = T> {
 }
 
 /**
- * Interface for working with line boundaries in a source string.
+ * Interface for working with line boundaries in a document string.
  */
 export interface LineBoundaries {
     /**
-     * Get the line number (1-based) for a given offset in the source.
+     * Get the line number (1-based) for a given offset in the document.
      * If lines parameter is provided:
      *   - Positive value: move forward N lines
      *   - Negative value: move backward N lines
@@ -180,7 +180,7 @@ export interface LineBoundaries {
     getLine(offset: number, lines?: number): number;
 
     /**
-     * Get the column number (1-based) for a given offset in the source.
+     * Get the column number (1-based) for a given offset in the document.
      * If lines parameter is provided:
      *   - Positive value: move forward N lines
      *   - Negative value: move backward N lines
@@ -190,14 +190,14 @@ export interface LineBoundaries {
 
     /**
      * Get the offset for a given line and column (both 1-based).
-     * Returns the offset in the source string.
+     * Returns the offset in the document string.
      * If line is out of bounds, clamps to valid range.
      * If column is out of bounds for the line, clamps to line length.
      */
     getOffset(line: number, column?: number): number;
 
     /**
-     * Get the line start offset for a given offset in the source.
+     * Get the line start offset for a given offset in the document.
      * If lines parameter is provided:
      *   - Positive value: move forward N lines
      *   - Negative value: move backward N lines
@@ -206,7 +206,7 @@ export interface LineBoundaries {
     getLineStart(offset: number, lines?: number): number;
 
     /**
-     * Get the line end offset for a given offset in the source.
+     * Get the line end offset for a given offset in the document.
      * Returns offset after the newline character(s) (includes newline).
      * If lines parameter is provided:
      *   - Positive value: move forward N lines
@@ -216,7 +216,7 @@ export interface LineBoundaries {
     getLineEnd(offset: number, lines?: number): number;
 
     /**
-     * Get the line content end offset for a given offset in the source.
+     * Get the line content end offset for a given offset in the document.
      * Returns offset before the newline character(s) (content only).
      * If lines parameter is provided:
      *   - Positive value: move forward N lines
@@ -271,13 +271,13 @@ export interface LineBoundaries {
     getLineContentText(offset: number, lines?: number): string;
 
     /**
-     * Get the number of the last line in the source (1-based).
+     * Get the number of the last line in the document (1-based).
      * Returns the total line count.
      */
     getLastLine(): number;
 
     /**
-     * Get the total number of lines in the source.
+     * Get the total number of lines in the document.
      * Same as getLastLine() but more semantically named.
      */
     getLinesNumber(): number;

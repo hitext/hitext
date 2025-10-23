@@ -91,7 +91,7 @@ describe('applyDataMap', () => {
         ]);
     });
 
-    it('should access source text via context', () => {
+    it('should access document text via context', () => {
         const input = [
             { start: 0, end: 5, data: {} },
             { start: 6, end: 11, data: {} }
@@ -101,9 +101,9 @@ describe('applyDataMap', () => {
         type NewData = { text: string };
         const ranges = generateRanges(
             'Hello World',
-            applyDataMap<Data, NewData, unknown>((range, index, { source }) => ({
+            applyDataMap<Data, NewData, unknown>((range, index, { document }) => ({
                 ...range.data,
-                text: source.slice(range.start, range.end)
+                text: document.slice(range.start, range.end)
             }))(input)
         );
 

@@ -38,11 +38,11 @@ export function applyFitToWindow<Data, RenderOptions>(
     allowTrimming: boolean = true
 ): TransformRanges<Data, RenderOptions> {
     return (input: Ranges<Data, RenderOptions>) => {
-        return (source, createRange, context) => {
-            const lineBoundaries = context?.lines || createLineBoundaries(source);
+        return (document, createRange, context) => {
+            const lineBoundaries = context?.lines || createLineBoundaries(document);
 
             processRanges(
-                source,
+                document,
                 input,
                 (start, end, data, origin) => {
                     let windowStart = start;

@@ -5,14 +5,14 @@ import type { GeneratedRange } from '../../src/types.js';
 
 describe('rangesFromLayer', () => {
     it('should retrieve ranges from a named layer', () => {
-        const source = 'hello world';
+        const document = 'hello world';
         const existingRanges: GeneratedRange[] = [
             { type: Symbol('test'), start: 0, end: 5, data: 'hello' },
             { type: Symbol('test'), start: 6, end: 11, data: 'world' }
         ];
 
         const ranges = generateRanges(
-            source,
+            document,
             rangesFromLayer('words'),
             { rangesByName: { 'words': existingRanges } }
         );

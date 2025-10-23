@@ -27,8 +27,8 @@ export function createPipelineNode<RenderOptions, T, R = T, HC = undefined>(
 
             return createPipelineNode(createRenderHooks, layers.concat(newLayer));
         },
-        ranges(source, renderOptions) {
-            return generateRangesFromLayers(source, layers, renderOptions, createLineBoundaries(source));
+        ranges(document, renderOptions) {
+            return generateRangesFromLayers(document, layers, renderOptions, createLineBoundaries(document));
         },
         rangeHooksDefinitionMap() {
             return createRangeHooksMapFromLayers(layers);
@@ -36,13 +36,13 @@ export function createPipelineNode<RenderOptions, T, R = T, HC = undefined>(
         rangeHooksMap() {
             return resolveRangeHooksMap(createRangeHooksMapFromLayers(layers), createRenderHooks());
         },
-        render(source, renderOptions) {
-            const lineBoundaries = createLineBoundaries(source);
-            const ranges = generateRangesFromLayers(source, layers, renderOptions, lineBoundaries);
+        render(document, renderOptions) {
+            const lineBoundaries = createLineBoundaries(document);
+            const ranges = generateRangesFromLayers(document, layers, renderOptions, lineBoundaries);
             const rangeHooksMap = createRangeHooksMapFromLayers(layers);
             const renderHooks = createRenderHooks();
 
-            return render(source, ranges, rangeHooksMap, renderHooks, lineBoundaries);
+            return render(document, ranges, rangeHooksMap, renderHooks, lineBoundaries);
         }
     };
 }

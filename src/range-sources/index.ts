@@ -1,4 +1,4 @@
-// Range sources - functions that generate ranges from source text
+// Range sources - functions that generate ranges from document text
 export { rangesForLines } from './ranges-for-lines.js';
 export { rangesForMatch } from './ranges-for-match.js';
 export { rangesForPoint } from './ranges-for-point.js';

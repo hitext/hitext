@@ -29,13 +29,13 @@ export function rangesForLines<RenderOptions = unknown>(
         | 'line-content-end'
     = 'line'
 ): GenerateRanges<number, RenderOptions> {
-    return (source, createRange) => {
+    return (document, createRange) => {
         const newlineRegex = /\r\n|\r|\n/g;
         let lineNum = 1;
         let lineStart = 0;
         let match;
 
-        while ((match = newlineRegex.exec(source))) {
+        while ((match = newlineRegex.exec(document))) {
             const newlineStart = match.index;
             const newlineEnd = match.index + match[0].length;
 
@@ -64,21 +64,21 @@ export function rangesForLines<RenderOptions = unknown>(
             lineStart = newlineEnd;
         }
 
-        // Handle the final line (after the last newline or the entire source if no newlines)
+        // Handle the final line (after the last newline or the entire document if no newlines)
         switch (type) {
             case 'line':
             case 'line-content':
-                createRange(lineStart, source.length, lineNum);
+                createRange(lineStart, document.length, lineNum);
                 break;
             case 'line-start':
                 createRange(lineStart, lineStart, lineNum);
                 break;
             case 'line-end':
             case 'line-content-end':
-                createRange(source.length, source.length, lineNum);
+                createRange(document.length, document.length, lineNum);
                 break;
             case 'newline':
-                // No final range for newline type if source doesn't end with newline
+                // No final range for newline type if document doesn't end with newline
                 break;
         }
     };

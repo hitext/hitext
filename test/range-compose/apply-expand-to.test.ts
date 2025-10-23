@@ -124,7 +124,7 @@ describe('applyExpandTo', () => {
             deepStrictEqual(end, ['line3']);
         });
 
-        it('should handle empty source', () => {
+        it('should handle empty document', () => {
             const expanded = renderRanges('', applyExpandTo('line')([[0, 0]]));
             deepStrictEqual(expanded, ['']);
         });

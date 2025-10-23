@@ -4,7 +4,7 @@ import { rangesWithFallback } from '../range-sources/ranges-with-fallback.js';
 /**
  * Provides fallback ranges when input produces no results (curried transformer).
  *
- * This is useful for ensuring a result when the primary range source might be empty.
+ * This is useful for ensuring a result when the primary range generator might be empty.
  * If the input produces ranges, they are used. Otherwise, fallbacks are tried in order.
  *
  * @param fallbacks - Fallback range sources to try in order if input is empty

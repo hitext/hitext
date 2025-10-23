@@ -63,7 +63,7 @@ describe('LineBoundaries', () => {
             strictEqual(lb.getLineEnd(12), 17); // "line3"
         });
 
-        it('should return source length for last line', () => {
+        it('should return document length for last line', () => {
             const lb = createLineBoundaries('line1\nline2');
             strictEqual(lb.getLineEnd(10), 11); // last line
         });
@@ -164,14 +164,14 @@ describe('LineBoundaries', () => {
 
     describe('lazy evaluation', () => {
         it('should only scan as much as needed', () => {
-            const source = 'a'.repeat(1000) + '\n' + 'b'.repeat(1000) + '\n' + 'c'.repeat(1000);
-            const lb = createLineBoundaries(source);
+            const document = 'a'.repeat(1000) + '\n' + 'b'.repeat(1000) + '\n' + 'c'.repeat(1000);
+            const lb = createLineBoundaries(document);
 
             // Only ask for first line
             const start = lb.getLineStart(500);
             strictEqual(start, 0);
 
-            // Should not have scanned the entire source yet
+            // Should not have scanned the entire document yet
             // (We can't easily test this without exposing internals, but behavior is correct)
         });
 
@@ -206,7 +206,7 @@ describe('LineBoundaries', () => {
             strictEqual(lb.getLineEnd(0), 1);
         });
 
-        it('should handle offset beyond source length', () => {
+        it('should handle offset beyond document length', () => {
             const lb = createLineBoundaries('test');
             strictEqual(lb.getLineStart(100), 0);
             strictEqual(lb.getLineEnd(100), 4);
@@ -397,7 +397,7 @@ describe('LineBoundaries', () => {
             strictEqual(lb.isLineEnd(5), false);  // before \r
         });
 
-        it('should handle empty source', () => {
+        it('should handle empty document', () => {
             const lb = createLineBoundaries('');
             strictEqual(lb.isLineEnd(0), true);   // offset 0 is both start and end
         });
@@ -609,7 +609,7 @@ describe('LineBoundaries', () => {
     });
 
     describe('getMaxLineEnd', () => {
-        it('should return max line end for entire source by default', () => {
+        it('should return max line end for entire document by default', () => {
             const lb = createLineBoundaries('line1\nline2\nline3');
             strictEqual(lb.getMaxLineEnd(), 17); // end of line3
         });
@@ -648,7 +648,7 @@ describe('LineBoundaries', () => {
     });
 
     describe('getMaxLineContentEnd', () => {
-        it('should return max line content end for entire source by default', () => {
+        it('should return max line content end for entire document by default', () => {
             const lb = createLineBoundaries('line1\nline2\nline3');
             strictEqual(lb.getMaxLineContentEnd(), 17); // end of line3 (no newline)
         });
@@ -718,7 +718,7 @@ describe('LineBoundaries', () => {
             strictEqual(lb.getLineDiff(-1, 6), 1);   // clamped line1 to line2
         });
 
-        it('should handle offsets beyond source', () => {
+        it('should handle offsets beyond document', () => {
             const lb = createLineBoundaries('line1\nline2\nline3');
             strictEqual(lb.getLineDiff(100, 200), 0); // both clamp to last line
             strictEqual(lb.getLineDiff(6, 100), 1);   // line2 to last line

@@ -4,11 +4,11 @@ import { rangeWithoutMarker } from '../utils.js';
 
 describe('rangesFromOptions', () => {
     it('should retrieve ranges using callback function', () => {
-        const source = 'hello world';
+        const document = 'hello world';
         const ranges: Array<[number, number, string]> = [[0, 5, 'hello'], [6, 11, 'world']];
 
         const result = generateRanges(
-            source,
+            document,
             rangesFromOptions((opts: { ranges: typeof ranges }) => opts.ranges),
             { renderOptions: { ranges } }
         );
@@ -20,11 +20,11 @@ describe('rangesFromOptions', () => {
     });
 
     it('should retrieve ranges using field name shortcut', () => {
-        const source = 'hello world';
+        const document = 'hello world';
         const ranges: Array<[number, number, string]> = [[0, 5, 'hello'], [6, 11, 'world']];
 
         const result = generateRanges(
-            source,
+            document,
             rangesFromOptions<string, { ranges: typeof ranges }>('ranges'),
             { renderOptions: { ranges } }
         );

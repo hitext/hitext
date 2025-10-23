@@ -4,10 +4,10 @@ import type { GeneratedRange } from '../../src/types.js';
 import { startEndData, regexpMatch } from '../utils.js';
 
 // Overloaded gen function for type inference
-function gen(source: string, pattern: RegExp): Array<GeneratedRange<RegExpExecArray>>;
-function gen(source: string, pattern: string): Array<GeneratedRange<string>>;
-function gen(source: string, pattern: RegExp | string): Array<GeneratedRange<any>> {
-    return generateRanges(source, rangesForMatch(pattern as any));
+function gen(document: string, pattern: RegExp): Array<GeneratedRange<RegExpExecArray>>;
+function gen(document: string, pattern: string): Array<GeneratedRange<string>>;
+function gen(document: string, pattern: RegExp | string): Array<GeneratedRange<any>> {
+    return generateRanges(document, rangesForMatch(pattern as any));
 }
 
 describe('rangesForMatch', () => {

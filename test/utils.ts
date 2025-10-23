@@ -33,21 +33,41 @@ export function regexpMatch(input: string, match: string[] | null, index: number
  * Helper function to extract ranges from regex matches.
  * Returns an array of [start, end] tuples for each match.
  */
-export function getMatchRanges(source: string, regex: RegExp): Array<[number, number]> {
+export function getMatchRanges(document: string, regex: RegExp): Array<[number, number]> {
     const ranges: Array<[number, number]> = [];
-    for (const match of source.matchAll(regex)) {
+    for (const match of document.matchAll(regex)) {
         ranges.push([match.index!, match.index! + match[0].length]);
     }
     return ranges;
 }
 
 /**
- * Helper function to render ranges as an array of substrings from the source.
+ * Helper function to create document boundary point ranges for testing.
+ * Avoids magic numbers like [[0, 0]] or [[length, length]] in tests.
+ *
+ * @example
+ * documentPoint('start')           // [[0, 0]]
+ * documentPoint('end', document)   // [[document.length, document.length]]
+ */
+export function documentPoint(position: 'start', document?: string): Array<[number, number]>;
+export function documentPoint(position: 'end', document: string): Array<[number, number]>;
+export function documentPoint(position: 'start' | 'end', document?: string): Array<[number, number]> {
+    if (position === 'start') {
+        return [[0, 0]];
+    }
+    if (document === undefined) {
+        throw new Error('documentPoint("end") requires document parameter');
+    }
+    return [[document.length, document.length]];
+}
+
+/**
+ * Helper function to render ranges as an array of substrings from the document.
  * This allows us to test range generators directly without using the full pipeline.
  * Preserves the order of ranges as provided.
  */
 export function renderRanges<Data, RenderOptions>(
-    source: string,
+    document: string,
     ranges: Ranges<Data, RenderOptions>,
     renderOptions?: RenderOptions
 ): string[] {
@@ -55,13 +75,13 @@ export function renderRanges<Data, RenderOptions>(
 
     // Generate ranges using a simple collector
     if (typeof ranges === 'function') {
-        ranges(source, (start, end) => {
-            result.push(source.slice(start, end));
+        ranges(document, (start, end) => {
+            result.push(document.slice(start, end));
         }, { renderOptions });
     } else {
         for (const range of ranges) {
             const [start, end] = Array.isArray(range) ? range : [range.start, range.end];
-            result.push(source.slice(start, end));
+            result.push(document.slice(start, end));
         }
     }
 

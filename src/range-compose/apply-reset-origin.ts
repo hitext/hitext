@@ -18,9 +18,9 @@ import { processRanges } from '../ranges.js';
  */
 export function applyResetOrigin<Data, RenderOptions>(): TransformRanges<Data, RenderOptions> {
     return (input: Ranges<Data, RenderOptions>) => {
-        return (source, createRange, context) => {
+        return (document, createRange, context) => {
             processRanges(
-                source,
+                document,
                 input,
                 (start, end, data) => {
                     createRange(start, end, data, undefined);

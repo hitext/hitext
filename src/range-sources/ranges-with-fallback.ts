@@ -20,13 +20,13 @@ import type { GenerateRanges, Ranges } from '../types.js';
 export function rangesWithFallback<Data = unknown, RenderOptions = unknown>(
     ...inputs: Ranges<Data, RenderOptions>[]
 ): GenerateRanges<Data, RenderOptions> {
-    return (source, createRange, context) => {
+    return (document, createRange, context) => {
         // Try each input in order until one produces ranges
         for (const input of inputs) {
             let hasRanges = false;
 
             processRanges(
-                source,
+                document,
                 input,
                 (start, end, data, origin) => {
                     hasRanges = true;

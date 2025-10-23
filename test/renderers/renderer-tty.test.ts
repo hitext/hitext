@@ -242,7 +242,7 @@ describe('TTY renderer', () => {
             strictEqual(result, 'plain text');
         });
 
-        it('should handle ranges outside source boundaries', () => {
+        it('should handle ranges outside document boundaries', () => {
             const result = tty()
                 .addLayer([
                     { start: -5, end: 2 },
@@ -250,7 +250,7 @@ describe('TTY renderer', () => {
                 ], tty.createStyle('red'))
                 .render('abc');
 
-            // Should clip to actual source boundaries
+            // Should clip to actual document boundaries
             strictEqual(result, '\u001b[31mab\u001b[39mc');
         });
 

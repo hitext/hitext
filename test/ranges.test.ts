@@ -54,12 +54,12 @@ describe('Range Generation Helpers', () => {
 
         it('should process ranges from generator function', () => {
             const collected: Array<[number, number, any?]> = [];
-            const generator: GenerateRanges = (source, createRange) => {
-                const words = source.split(/\s+/);
+            const generator: GenerateRanges = (document, createRange) => {
+                const words = document.split(/\s+/);
                 let offset = 0;
 
                 for (const word of words) {
-                    const index = source.indexOf(word, offset);
+                    const index = document.indexOf(word, offset);
                     if (index !== -1) {
                         createRange(index, index + word.length, word);
                         offset = index + word.length;
@@ -147,14 +147,14 @@ describe('Range Generation Helpers', () => {
         });
 
         it('should allow side effects in createRange callback', () => {
-            const source = 'Hello world';
+            const document = 'Hello world';
             const substrings: string[] = [];
 
             processRanges(
-                source,
+                document,
                 [[0, 5], [6, 11]],
                 (start, end) => {
-                    substrings.push(source.slice(start, end));
+                    substrings.push(document.slice(start, end));
                 }
             );
 
@@ -249,12 +249,12 @@ describe('Range Generation Helpers', () => {
         it('should process ranges from generator result', () => {
             const collected: string[] = [];
 
-            function* generateRanges(source: string) {
-                const words = source.split(/\s+/);
+            function* generateRanges(document: string) {
+                const words = document.split(/\s+/);
                 let offset = 0;
 
                 for (const word of words) {
-                    const index = source.indexOf(word, offset);
+                    const index = document.indexOf(word, offset);
                     if (index !== -1) {
                         yield[index, index + word.length, word] as [number, number, string];
                         offset = index + word.length;
@@ -311,12 +311,12 @@ describe('Range Generation Helpers', () => {
 
         it('should generate ranges from generator function', () => {
             const marker = Symbol('test');
-            const generator: GenerateRanges = (source, createRange) => {
-                const words = source.split(/\s+/);
+            const generator: GenerateRanges = (document, createRange) => {
+                const words = document.split(/\s+/);
                 let offset = 0;
 
                 for (const word of words) {
-                    const index = source.indexOf(word, offset);
+                    const index = document.indexOf(word, offset);
                     if (index !== -1) {
                         createRange(index, index + word.length, word);
                         offset = index + word.length;
@@ -522,13 +522,13 @@ describe('Range Generation Helpers', () => {
             }
 
             const marker = Symbol('filtered');
-            const filterByLength: GenerateRanges<string, CustomOptions> = (source, createRange, context) => {
+            const filterByLength: GenerateRanges<string, CustomOptions> = (document, createRange, context) => {
                 const minLength = context?.renderOptions?.minLength || 0;
-                const words = source.match(/\w+/g) || [];
+                const words = document.match(/\w+/g) || [];
                 let offset = 0;
 
                 for (const word of words) {
-                    const index = source.indexOf(word, offset);
+                    const index = document.indexOf(word, offset);
                     if (word.length >= minLength) {
                         createRange(index, index + word.length, word);
                     }

@@ -22,10 +22,10 @@ import { processRanges } from '../ranges.js';
 export function concatRanges<Data, RenderOptions>(
     ...inputs: Array<Ranges<Data, RenderOptions>>
 ): GenerateRanges<Data, RenderOptions> {
-    return (source, createRange, context) => {
+    return (document, createRange, context) => {
         // Process each input directly, combining all ranges in order
         for (const input of inputs) {
-            processRanges(source, input, createRange, context);
+            processRanges(document, input, createRange, context);
         }
     };
 }

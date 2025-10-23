@@ -3,7 +3,7 @@ import { generateRanges, rangesWithFallback } from '../../src/index.js';
 import { rangeWithoutMarker, startEndData } from '../utils.js';
 
 describe('rangesWithFallback', () => {
-    it('should use first source when it produces ranges', () => {
+    it('should use first document when it produces ranges', () => {
         const result = generateRanges(
             'Hello world',
             rangesWithFallback(
@@ -17,7 +17,7 @@ describe('rangesWithFallback', () => {
         ]);
     });
 
-    it('should use fallback when first source is empty', () => {
+    it('should use fallback when first document is empty', () => {
         const result = generateRanges(
             'Hello world',
             rangesWithFallback(
@@ -45,7 +45,7 @@ describe('rangesWithFallback', () => {
         ]);
     });
 
-    it('should return empty when all sources are empty', () => {
+    it('should return empty when all documents are empty', () => {
         const result = generateRanges(
             'Hello world',
             rangesWithFallback([], [], [])
@@ -70,7 +70,7 @@ describe('rangesWithFallback', () => {
         ]);
     });
 
-    it('should preserve data from used source', () => {
+    it('should preserve data from used document', () => {
         const result = generateRanges(
             'Hello world',
             rangesWithFallback(
@@ -99,7 +99,7 @@ describe('rangesWithFallback', () => {
         ]);
     });
 
-    it('should pass through all ranges from used source', () => {
+    it('should pass through all ranges from used document', () => {
         const result = generateRanges(
             'Hello world test',
             rangesWithFallback(

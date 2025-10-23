@@ -15,7 +15,7 @@ import { createLineBoundaries } from '../utils/line-boundaries.js';
  *   - 'line-content-end': End of line content (before newline) containing the range end
  *   - 'line-end': End of line (including newline) containing the range end
  *   - 'document-start': Start of the document (offset 0)
- *   - 'document-end': End of the document (source.length)
+ *   - 'document-end': End of the document (document.length)
  *
  * Note: For multiline ranges, 'line-start' uses the line of range.start,
  * while 'line-end'/'line-content-end' use the line of range.end.
@@ -39,11 +39,11 @@ export function applyCollapseTo<Data, RenderOptions>(
         | 'document-end'
 ): TransformRanges<Data, RenderOptions> {
     return (input) => {
-        return (source, createRange, context) => {
-            const lineBoundaries = context?.lines || createLineBoundaries(source);
+        return (document, createRange, context) => {
+            const lineBoundaries = context?.lines || createLineBoundaries(document);
 
             processRanges(
-                source,
+                document,
                 input,
                 (start, end, data, origin) => {
                     let targetPos: number;
@@ -79,7 +79,7 @@ export function applyCollapseTo<Data, RenderOptions>(
                             break;
 
                         case 'document-end':
-                            targetPos = source.length;
+                            targetPos = document.length;
                             break;
                     }
 

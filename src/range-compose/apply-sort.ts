@@ -28,9 +28,9 @@ export function applySort<Data, RenderOptions>(
     ) => number
 ): TransformRanges<Data, RenderOptions> {
     return (input: Ranges<Data, RenderOptions>) => {
-        return (source, createRange, genContext) => {
+        return (document, createRange, genContext) => {
             const ranges: Array<RangeRecord<Data>> = [];
-            processRanges(source, input, (start, end, data, origin) => {
+            processRanges(document, input, (start, end, data, origin) => {
                 ranges.push({ start, end, data, origin });
             }, genContext as any);
 
@@ -39,8 +39,8 @@ export function applySort<Data, RenderOptions>(
             }
 
             const context: RangeOperationContext<RenderOptions> = {
-                source,
-                lines: genContext?.lines || createLineBoundaries(source),
+                document,
+                lines: genContext?.lines || createLineBoundaries(document),
                 renderOptions: genContext?.renderOptions,
                 ranges
             };

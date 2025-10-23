@@ -9,7 +9,7 @@ import type { GenerateRanges } from '../types.js';
  *
  * @param position - The document boundary position:
  *   - 'document-start': Zero-length range at position 0 (start of document)
- *   - 'document-end': Zero-length range at source.length (end of document)
+ *   - 'document-end': Zero-length range at document.length (end of document)
  *
  * @returns A GenerateRanges function that creates a single zero-length range
  *
@@ -24,8 +24,8 @@ import type { GenerateRanges } from '../types.js';
 export function rangesForPoint<RenderOptions = unknown>(
     position: 'document-start' | 'document-end'
 ): GenerateRanges<null, RenderOptions> {
-    return (source, createRange) => {
-        const point = position === 'document-start' ? 0 : source.length;
+    return (document, createRange) => {
+        const point = position === 'document-start' ? 0 : document.length;
         createRange(point, point, null);
     };
 }

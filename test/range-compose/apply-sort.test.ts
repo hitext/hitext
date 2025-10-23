@@ -77,7 +77,7 @@ describe('applySort', () => {
         deepStrictEqual(ranges.map(r => r.data), ['line1', 'line2', 'line3']);
     });
 
-    it('should access source in comparator', () => {
+    it('should access document in comparator', () => {
         const input = [
             { start: 0, end: 3, data: 'num' },
             { start: 4, end: 9, data: 'word' },
@@ -85,7 +85,7 @@ describe('applySort', () => {
         ];
         const ranges = generateRanges(
             '123 hello 456',
-            applySort((a, b, { source: src }) => {
+            applySort((a, b, { document: src }) => {
                 const isNumA = /^\d+$/.test(src.slice(a.start, a.end));
                 const isNumB = /^\d+$/.test(src.slice(b.start, b.end));
                 return isNumA && !isNumB ? -1 : !isNumA && isNumB ? 1 : 0;

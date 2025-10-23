@@ -24,11 +24,11 @@ This document is the SOURCE OF TRUTH for development of the project. Outdated do
 
 ### Architecture
 
-**Core Flow:** Source Text → Layers (Ranges + Hooks) → Render Pipeline → Output
+**Core Flow:** Document Text → Layers (Ranges + Hooks) → Render Pipeline → Output
 
 **Pipeline Creation:**
 ```
-createRenderPipeline(renderer) → .addLayer(ranges, hooks, name?) → .render(source, options?)
+createRenderPipeline(renderer) → .addLayer(ranges, hooks, name?) → .render(document, options?)
 ```
 
 **Internal Flow:**
@@ -63,7 +63,7 @@ createRenderPipeline(renderer) → .addLayer(ranges, hooks, name?) → .render(s
 - **Range Derivative** - Range created from another range
 
 **Text:**
-- **Document** - Input text for pipeline (currently `source` in code)
+- **Document** - Input text for pipeline (the `document` parameter in render functions)
 - **Lines** - LineBoundaries instance - a set of helpers attached to document (getLine, getColumn, getOffset, getLineStart, getLineEnd, etc.)
 - **Line** - Full line text including trailing newlines
 - **Line Content** - Line text excluding trailing newlines
@@ -77,9 +77,9 @@ createRenderPipeline(renderer) → .addLayer(ranges, hooks, name?) → .render(s
 
 **Hooks:**
 - **Range Hooks** - Render functions applied to each range segment: `open`, `close`, `wrap`, `text`, `replace`, `break` flag
-- **Hook Context** - Data passed to hooks: `source`, `offset`, `line`, `column`, `start`, `end`, `range`, `data`, `lines` (LineBoundaries)
+- **Hook Context** - Data passed to hooks: `document`, `offset`, `line`, `column`, `start`, `end`, `range`, `data`, `lines` (LineBoundaries)
 - **Generation Context** - Data passed to generators: `renderOptions`, `marker`, `ranges`, `rangesByMarker`, `rangesByName`, `lines` (LineBoundaries)
-- **Operation Context** - Data passed to predicates: `source`, `lines` (LineBoundaries), `renderOptions`, `ranges`
+- **Operation Context** - Data passed to predicates: `document`, `lines` (LineBoundaries), `renderOptions`, `ranges`
 
 ### Project Structure
 

@@ -9,7 +9,7 @@ import { createLineBoundaries } from '../utils/line-boundaries.js';
  * The predicate receives:
  * - `range` - The range object with start, end, data, and origin
  * - `index` - Zero-based index of the range in the input sequence
- * - `context` - Operation context with source, lines, renderOptions, and all ranges
+ * - `context` - Operation context with document, lines, renderOptions, and all ranges
  *
  * @param predicate - Function that tests each range
  * @returns A transformer function that accepts ranges and returns filtered ranges
@@ -30,10 +30,10 @@ export function applyFilter<Data, RenderOptions>(
     ) => boolean
 ): TransformRanges<Data, RenderOptions> {
     return (input: Ranges<Data, RenderOptions>) => {
-        return (source, createRange, genContext) => {
+        return (document, createRange, genContext) => {
             // Collect all ranges upfront
             const ranges: Array<RangeRecord<Data>> = [];
-            processRanges(source, input, (start, end, data, origin) => {
+            processRanges(document, input, (start, end, data, origin) => {
                 ranges.push({ start, end, data, origin });
             }, genContext);
 
@@ -44,8 +44,8 @@ export function applyFilter<Data, RenderOptions>(
 
             // Create stable context (reused for all predicate calls)
             const context: RangeOperationContext<RenderOptions> = {
-                source,
-                lines: genContext?.lines || createLineBoundaries(source),
+                document,
+                lines: genContext?.lines || createLineBoundaries(document),
                 renderOptions: genContext?.renderOptions,
                 ranges
             };

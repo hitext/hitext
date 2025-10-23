@@ -13,7 +13,7 @@ import type {
 } from './types.js';
 
 export function render<T, R = T, HC = unknown>(
-    source: string,
+    document: string,
     ranges: GeneratedRange[],
     rangeHooksDefinitionMap: RangeHooksDefinitionMap<any, T, R, HC> | null = null,
     renderHooks: Partial<RenderHooks<T, R, HC>> = {},
@@ -23,7 +23,7 @@ export function render<T, R = T, HC = unknown>(
     const createBuffer = functionOrValue(renderHooks.createBuffer, () => new StringBuffer() as unknown as RenderBuffer<T, R>);
     const renderOpenHook = functionOrValue(renderHooks.open, null);
     const renderCloseHook = functionOrValue(renderHooks.close, null);
-    const renderTextHook = functionOrValue(renderHooks.text, (sourceChunk: string) => sourceChunk);
+    const renderTextHook = functionOrValue(renderHooks.text, (documentChunk: string) => documentChunk);
 
     // Helper to append only non-empty content
     const appendToBuffer = (child: any) => {
@@ -47,14 +47,14 @@ export function render<T, R = T, HC = unknown>(
     const rangeHookContext: RangeHookContext<any, T, R> = defineProperties(createNoProtoObject(), {
         hook: { get: () => currentRangeHook },
         lines: { get: getLineBoundaries },
-        source: { value: source },
+        document: { value: document },
         offset: { get: () => renderedOffset },
         line: { get: () => getLineBoundaries().getLine(renderedOffset) },
         column: { get: () => getLineBoundaries().getColumn(renderedOffset) },
         start: { get: () => segmentStart },
         end: { get: computeSegmentEnd },
         rangeIndex: { get: getRangeIndex },
-        rangeText: { get: () => source.slice(currentRange.start, currentRange.end) },
+        rangeText: { get: () => document.slice(currentRange.start, currentRange.end) },
         range: { get: () => currentRange },
         data: { get: () => currentRange.data },
         createBuffer: { value: createBuffer },
@@ -80,7 +80,7 @@ export function render<T, R = T, HC = unknown>(
     let currentRange: GeneratedRange = {
         type: Symbol('root'),
         start: 0,
-        end: source.length,
+        end: document.length,
         data: undefined
     };
 
@@ -152,12 +152,12 @@ export function render<T, R = T, HC = unknown>(
         }
     }
 
-    closeRangeSegments(source.length);
+    closeRangeSegments(document.length);
 
-    // Close ranges that end out of source boundaries
+    // Close ranges that end out of document boundaries
     while (rangeStackOpenIndex > 0) {
         rangeStackOpenIndex--;
-        closeRangeSegment(rangeStack[rangeStackOpenIndex], source.length);
+        closeRangeSegment(rangeStack[rangeStackOpenIndex], document.length);
     }
 
     // Finish rendering - call renderer close hook
@@ -171,7 +171,7 @@ export function render<T, R = T, HC = unknown>(
     //
 
     function getLineBoundaries() {
-        return lineBoundaries || (lineBoundaries = createLineBoundaries(source));
+        return lineBoundaries || (lineBoundaries = createLineBoundaries(document));
     }
 
     function getRangeIndex(): number {
@@ -295,7 +295,7 @@ export function render<T, R = T, HC = unknown>(
         }
 
         // Append to current buffer
-        const substring = source.slice(renderedOffset, offset);
+        const substring = document.slice(renderedOffset, offset);
         currentRangeHook = 'text';
         appendToBuffer(textHook(substring, rangeHookContext));
 

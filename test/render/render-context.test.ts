@@ -3,7 +3,7 @@ import { render } from '../../src/index.js';
 import type { GeneratedRange, RangeHookContext } from '../../src/types.js';
 
 describe('render range hooks context', () => {
-    const source = 'Hello, World!';
+    const document = 'Hello, World!';
     interface TestData {
         idx: number;
         test?: TestData;
@@ -22,7 +22,7 @@ describe('render range hooks context', () => {
     });
 
     it('range data', () => {
-        const actual = render(source, ranges, {
+        const actual = render(document, ranges, {
             test: {
                 open({ data }: RangeHookContext<TestData>) {
                     return '[' + (data.test === data ? 'ok' : 'fail') + ']';
@@ -40,7 +40,7 @@ describe('render range hooks context', () => {
     });
 
     it('range start/end', () => {
-        const actual = render(source, ranges, {
+        const actual = render(document, ranges, {
             test: {
                 open({ data, offset, range }: RangeHookContext<TestData>) {
                     return '[' + (range.start === offset ? 'start' : 'start-continue') + '-' + data.idx + ']';
@@ -58,16 +58,16 @@ describe('render range hooks context', () => {
     });
 
     it('location', () => {
-        const source = '1\n' +
+        const document = '1\n' +
         '2\r3\r\n' +
         '4';
-        const ranges = source.split('').map((c, idx) => ({
+        const ranges = document.split('').map((c, idx) => ({
             type: 'test' as const,
             start: idx,
             end: idx + 1,
             data: {}
         }));
-        const actual = render(source, ranges, {
+        const actual = render(document, ranges, {
             test: {
                 open({ offset, line, column }: RangeHookContext<Record<string, never>>) {
                     return '[' + [offset, line, column].join(':') + ']';
@@ -88,14 +88,14 @@ describe('render range hooks context', () => {
 
     describe('rangeIndex', () => {
         it('should provide correct rangeIndex for simple ranges', () => {
-            const source = 'Hello, World!';
+            const document = 'Hello, World!';
             const ranges = [
                 { type: 'test' as const, start: 1, end: 8, data: 'a' },
                 { type: 'test' as const, start: 5, end: 12, data: 'b' }
             ];
 
             const segments: Array<{ hook: string; rangeIndex: number; start: number; end: number; data: string }> = [];
-            render(source, ranges, {
+            render(document, ranges, {
                 test: {
                     open({ rangeIndex, start, end, data }) {
                         segments.push({ hook: 'open ', rangeIndex, start, end, data });
@@ -125,8 +125,8 @@ describe('render range hooks context', () => {
     });
 
     describe('segment start/end', () => {
-        const renderWithBoundaries = (source: string, ranges: GeneratedRange[]) => {
-            return render(source, ranges, {
+        const renderWithBoundaries = (document: string, ranges: GeneratedRange[]) => {
+            return render(document, ranges, {
                 test: {
                     open: ({ start, end, data }: RangeHookContext<any>) => `<${data.id}:${start}:${end}>\n`,
                     close: ({ start, end, data }: RangeHookContext<any>) => `</${data.id}:${start}:${end}>\n`,
@@ -139,12 +139,12 @@ describe('render range hooks context', () => {
         };
 
         it('should provide correct segment boundaries for simple range', () => {
-            const source = 'Hello, World!';
+            const document = 'Hello, World!';
             const ranges = [
                 { type: 'test' as const, start: 1, end: 8, data: { id: 'a' } }
             ];
 
-            const result = renderWithBoundaries(source, ranges);
+            const result = renderWithBoundaries(document, ranges);
 
             strictEqual(result,
                 'H<a:1:8>\n' +
@@ -156,13 +156,13 @@ describe('render range hooks context', () => {
         });
 
         it('should provide correct segment boundaries for nested ranges', () => {
-            const source = 'Hello, World!';
+            const document = 'Hello, World!';
             const ranges = [
                 { type: 'test' as const, start: 1, end: 8, data: { id: 'a' } },
                 { type: 'test' as const, start: 3, end: 4, data: { id: 'b' } }
             ];
 
-            const result = renderWithBoundaries(source, ranges);
+            const result = renderWithBoundaries(document, ranges);
 
             strictEqual(result,
                 'H<a:1:8>\n' +
@@ -179,13 +179,13 @@ describe('render range hooks context', () => {
         });
 
         it('should provide correct segment boundaries for interrupted range', () => {
-            const source = 'Hello, World!';
+            const document = 'Hello, World!';
             const ranges = [
                 { type: 'test' as const, start: 1, end: 8, data: { id: 'a' } },
                 { type: 'test' as const, start: 5, end: 10, data: { id: 'b' } }
             ];
 
-            const result = renderWithBoundaries(source, ranges);
+            const result = renderWithBoundaries(document, ranges);
 
             strictEqual(result,
                 'H<a:1:5>\n' +
@@ -205,14 +205,14 @@ describe('render range hooks context', () => {
         });
 
         it('should provide correct segment boundaries for complex nested and interrupted ranges', () => {
-            const source = 'Hello, World!';
+            const document = 'Hello, World!';
             const ranges = [
                 { type: 'test' as const, start: 1, end: 8, data: { id: 'a' } },
                 { type: 'test' as const, start: 5, end: 10, data: { id: 'b' } },
                 { type: 'test' as const, start: 3, end: 4, data: { id: 'c' } }
             ];
 
-            const result = renderWithBoundaries(source, ranges);
+            const result = renderWithBoundaries(document, ranges);
 
             strictEqual(result,
                 'H<a:1:5>\n' +
@@ -237,14 +237,14 @@ describe('render range hooks context', () => {
         });
 
         it('should handle multiple nested ranges', () => {
-            const source = '0123456789';
+            const document = '0123456789';
             const ranges = [
                 { type: 'test' as const, start: 0, end: 10, data: { id: 'a' } },
                 { type: 'test' as const, start: 2, end: 4, data: { id: 'b' } },
                 { type: 'test' as const, start: 6, end: 8, data: { id: 'c' } }
             ];
 
-            const result = renderWithBoundaries(source, ranges);
+            const result = renderWithBoundaries(document, ranges);
 
             strictEqual(result,
                 '<a:0:10>\n' +
@@ -265,12 +265,12 @@ describe('render range hooks context', () => {
         });
 
         it('should handle ranges without content hook', () => {
-            const source = 'Hello';
+            const document = 'Hello';
             const ranges = [
                 { type: 'test' as const, start: 1, end: 4, data: { id: 'a' } }
             ];
 
-            const result = render(source, ranges, {
+            const result = render(document, ranges, {
                 test: {
                     open: ({ start, end, data }: RangeHookContext<any>) => `<${data.id}:${start}:${end}>\n`,
                     close: ({ start, end, data }: RangeHookContext<any>) => `</${data.id}:${start}:${end}>\n`,
@@ -287,14 +287,14 @@ describe('render range hooks context', () => {
         });
 
         it('should compute correct segment end for inner range when outer range is interrupted', () => {
-            const source = '0123456789ABCDEF';
+            const document = '0123456789ABCDEF';
             const ranges = [
                 { type: 'test' as const, start: 0, end: 10, data: { id: 'outer' } },     // Outer: 0-10
                 { type: 'test' as const, start: 2, end: 8, data: { id: 'inner' } },      // Inner: 2-8 (nested)
                 { type: 'test' as const, start: 5, end: 16, data: { id: 'interrupt' } }  // Interrupts outer at 5
             ];
 
-            const result = renderWithBoundaries(source, ranges);
+            const result = renderWithBoundaries(document, ranges);
 
             // The inner range [2,8] is nested inside outer[0,10].
             // When interrupt[5,16] starts, it interrupts outer, which causes inner to also be interrupted.
@@ -327,7 +327,7 @@ describe('render range hooks context', () => {
 
     describe('createBuffer', () => {
         it('should provide createBuffer method in context', () => {
-            const source = 'Hello';
+            const document = 'Hello';
             const ranges = [
                 { type: 'test' as const, start: 1, end: 4, data: null }
             ];
@@ -335,7 +335,7 @@ describe('render range hooks context', () => {
             let createBufferExists = false;
             let bufferType = 'unknown';
 
-            render(source, ranges, {
+            render(document, ranges, {
                 test: {
                     open({ createBuffer }: RangeHookContext<null>) {
                         createBufferExists = typeof createBuffer === 'function';
@@ -354,13 +354,13 @@ describe('render range hooks context', () => {
         });
 
         it('should allow building complex content with buffer in open hook', () => {
-            const source = 'Hello, World!';
+            const document = 'Hello, World!';
             const ranges = [
                 { type: 'test' as const, start: 0, end: 5, data: { prefix: '[', suffix: ']' } },
                 { type: 'test' as const, start: 7, end: 12, data: { prefix: '(', suffix: ')' } }
             ];
 
-            const result = render(source, ranges, {
+            const result = render(document, ranges, {
                 test: {
                     open({ createBuffer, data }: RangeHookContext<{ prefix: string; suffix: string }>) {
                         const buffer = createBuffer();
@@ -383,12 +383,12 @@ describe('render range hooks context', () => {
         });
 
         it('should allow building content with buffer in wrap hook', () => {
-            const source = 'Hello';
+            const document = 'Hello';
             const ranges = [
                 { type: 'test' as const, start: 0, end: 5, data: null }
             ];
 
-            const result = render(source, ranges, {
+            const result = render(document, ranges, {
                 test: {
                     wrap(content, { createBuffer }: RangeHookContext<null>) {
                         const buffer = createBuffer();
@@ -404,12 +404,12 @@ describe('render range hooks context', () => {
         });
 
         it('should allow building content with buffer in replace hook', () => {
-            const source = 'Hello, World!';
+            const document = 'Hello, World!';
             const ranges = [
                 { type: 'test' as const, start: 5, end: 7, data: null }
             ];
 
-            const result = render(source, ranges, {
+            const result = render(document, ranges, {
                 test: {
                     replace({ createBuffer, rangeText }: RangeHookContext<null>) {
                         const buffer = createBuffer();
@@ -425,7 +425,7 @@ describe('render range hooks context', () => {
         });
 
         it('should work with custom renderer buffer types', () => {
-            const source = 'test';
+            const document = 'test';
             const ranges = [
                 { type: 'test' as const, start: 0, end: 4, data: null }
             ];
@@ -443,7 +443,7 @@ describe('render range hooks context', () => {
                 }
             }
 
-            const result = render(source, ranges, {
+            const result = render(document, ranges, {
                 test: {
                     open({ createBuffer }: RangeHookContext<null, string, string>) {
                         const buffer = createBuffer();
@@ -460,13 +460,13 @@ describe('render range hooks context', () => {
         });
 
         it('should handle nested buffer creation in different hooks', () => {
-            const source = 'ABC';
+            const document = 'ABC';
             const ranges = [
                 { type: 'test' as const, start: 0, end: 3, data: { id: 'outer' } },
                 { type: 'test' as const, start: 1, end: 2, data: { id: 'inner' } }
             ];
 
-            const result = render(source, ranges, {
+            const result = render(document, ranges, {
                 test: {
                     open({ createBuffer, data }: RangeHookContext<{ id: string }>) {
                         const buffer = createBuffer();
@@ -489,14 +489,14 @@ describe('render range hooks context', () => {
         });
 
         it('should support building multi-part content conditionally', () => {
-            const source = 'one two three';
+            const document = 'one two three';
             const ranges = [
                 { type: 'test' as const, start: 0, end: 3, data: { highlight: true } },
                 { type: 'test' as const, start: 4, end: 7, data: { highlight: false } },
                 { type: 'test' as const, start: 8, end: 13, data: { highlight: true } }
             ];
 
-            const result = render(source, ranges, {
+            const result = render(document, ranges, {
                 test: {
                     wrap(content, { createBuffer, data }: RangeHookContext<{ highlight: boolean }>) {
                         if (!data.highlight) {
@@ -516,12 +516,12 @@ describe('render range hooks context', () => {
         });
 
         it('should allow empty buffer usage', () => {
-            const source = 'test';
+            const document = 'test';
             const ranges = [
                 { type: 'test' as const, start: 0, end: 4, data: null }
             ];
 
-            const result = render(source, ranges, {
+            const result = render(document, ranges, {
                 test: {
                     open({ createBuffer }: RangeHookContext<null>) {
                         const buffer = createBuffer();
@@ -535,12 +535,12 @@ describe('render range hooks context', () => {
         });
 
         it('should handle buffer operations with special characters', () => {
-            const source = 'test';
+            const document = 'test';
             const ranges = [
                 { type: 'test' as const, start: 0, end: 4, data: null }
             ];
 
-            const result = render(source, ranges, {
+            const result = render(document, ranges, {
                 test: {
                     wrap(content, { createBuffer }: RangeHookContext<null>) {
                         const buffer = createBuffer();

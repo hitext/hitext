@@ -12,9 +12,9 @@ import { createLineBoundaries } from '../utils/line-boundaries.js';
  *   - 'line-start': Expand start to line start, keep original end
  *   - 'line-end': Keep original start, expand end to line end (including newline)
  *   - 'line-content-end': Keep original start, expand end to line content end (excluding newline)
- *   - 'document': Expand to entire document (0 to source.length)
+ *   - 'document': Expand to entire document (0 to document.length)
  *   - 'document-start': Expand start to document start (0), keep original end
- *   - 'document-end': Keep original start, expand end to document end (source.length)
+ *   - 'document-end': Keep original start, expand end to document end (document.length)
  *
  * @param lines - Number of context lines to include, or tuple [before, after] (default: 0)
  *   Note: Only applies to line-based positions, ignored for document positions
@@ -46,26 +46,26 @@ export function applyExpandTo<Data, RenderOptions>(
     lines: number | [before: number, after: number] = 0
 ): TransformRanges<Data, RenderOptions> {
     return (input: Ranges<Data, RenderOptions>) => {
-        return (source, createRange, context) => {
-            const lineBoundaries = context?.lines || createLineBoundaries(source);
+        return (document, createRange, context) => {
+            const lineBoundaries = context?.lines || createLineBoundaries(document);
 
             // Parse lines parameter
             const [linesBefore, linesAfter] = Array.isArray(lines)
                 ? lines
                 : [lines, lines];
 
-            processRanges(source, input, (start, end, data, origin) => {
+            processRanges(document, input, (start, end, data, origin) => {
                 let expandedStart: number = start;
                 let expandedEnd: number = end;
 
                 // Handle document positions
                 if (position === 'document') {
                     expandedStart = 0;
-                    expandedEnd = source.length;
+                    expandedEnd = document.length;
                 } else if (position === 'document-start') {
                     expandedStart = 0;
                 } else if (position === 'document-end') {
-                    expandedEnd = source.length;
+                    expandedEnd = document.length;
                 } else {
                     // Handle line-based positions
                     if (position === 'line' ||

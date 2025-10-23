@@ -40,7 +40,7 @@ describe('applyFallback', () => {
         ]);
     });
 
-    it('should return empty when all sources are empty', () => {
+    it('should return empty when all documents are empty', () => {
         const result = generateRanges(
             'Hello world',
             applyFallback([], [], [])([])

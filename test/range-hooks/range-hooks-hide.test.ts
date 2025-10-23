@@ -4,16 +4,16 @@ import type { RangeHookContext, RangeHookContextDump, RangeHooks } from '../../s
 
 // Helper to create minimal context for testing hooks
 function createContext(
-    source: string,
+    document: string,
     start: number,
     end: number,
     forStart = true
 ): RangeHookContext<null, string, string> {
-    const lineBoundaries = createLineBoundaries(source);
+    const lineBoundaries = createLineBoundaries(document);
     const offset = forStart ? start : end;
     return {
         hook: 'open',
-        source,
+        document,
         start,
         end,
         offset,
@@ -22,7 +22,7 @@ function createContext(
         column: lineBoundaries.getColumn(offset),
         lines: lineBoundaries,
         rangeIndex: -1,
-        rangeText: source.slice(start, end),
+        rangeText: document.slice(start, end),
         range: {
             type: 'test',
             start,
@@ -41,18 +41,18 @@ function createContext(
 // Helper to test individual hook and show input/output
 function testHook(
     hookFn: ((context: RangeHookContext<null, string, string>) => unknown) | null | undefined,
-    source: string,
+    document: string,
     start: number,
     end: number,
     useEndOffset = false
 ) {
-    const context = createContext(source, start, end, !useEndOffset);
+    const context = createContext(document, start, end, !useEndOffset);
     const hookResult = (hookFn?.(context) ?? null) as string | null;
 
     return {
-        before: source.slice(0, start),
-        rangeText: source.slice(start, end),
-        after: source.slice(end),
+        before: document.slice(0, start),
+        rangeText: document.slice(start, end),
+        after: document.slice(end),
         hookResult
     };
 }
@@ -60,7 +60,7 @@ function testHook(
 // Helper to apply hooks and see the resulting output
 function applyReplacement(
     hooks: Partial<RangeHooks<unknown, string>>,
-    source: string,
+    document: string,
     start: number,
     end: number
 ) {
@@ -68,25 +68,25 @@ function applyReplacement(
     // - open/replace: use start offset for line/column
     // - wrap/close: use end offset for line/column
 
-    const contextForStart = createContext(source, start, end, true);
-    const contextForEnd = createContext(source, start, end, false);
+    const contextForStart = createContext(document, start, end, true);
+    const contextForEnd = createContext(document, start, end, false);
 
     const open = hooks.open?.(contextForStart) ?? null;
     const replace = hooks.replace?.(contextForStart) ?? null;
     const close = hooks.close?.(contextForEnd) ?? null;
 
     // Simulate actual rendering behavior: close -> replace -> open
-    const result = source.slice(0, start) +
+    const result = document.slice(0, start) +
         (close ?? '') +
         (replace ?? '') +
         (open ?? '') +
-        source.slice(end);
+        document.slice(end);
 
     return {
         close,
         replace,
         open,
-        rangeText: source.slice(start, end),
+        rangeText: document.slice(start, end),
         result
     };
 }
@@ -94,10 +94,10 @@ function applyReplacement(
 describe('rangeHooksHide', () => {
     describe('replace hook', () => {
         it('should replace range spanning 2+ lines starting at line start', () => {
-            const source = 'line1\nline2\nline3\n';
+            const document = 'line1\nline2\nline3\n';
             const hooks = rangeHooksHide();
 
-            const output = testHook(hooks.replace, source, 6, 18);
+            const output = testHook(hooks.replace, document, 6, 18);
 
             deepStrictEqual(output, {
                 before: 'line1\n',
@@ -108,10 +108,10 @@ describe('rangeHooksHide', () => {
         });
 
         it('should replace range spanning 2+ lines NOT at line start', () => {
-            const source = '  line1\n  line2\n  line3\n';
+            const document = '  line1\n  line2\n  line3\n';
             const hooks = rangeHooksHide();
 
-            const output = testHook(hooks.replace, source, 2, 25);
+            const output = testHook(hooks.replace, document, 2, 25);
 
             deepStrictEqual(output, {
                 before: '  ',
@@ -122,10 +122,10 @@ describe('rangeHooksHide', () => {
         });
 
         it('should replace range at document start with marker and trailing newline', () => {
-            const source = 'line1\nline2\nline3\n';
+            const document = 'line1\nline2\nline3\n';
             const hooks = rangeHooksHide();
 
-            const output = testHook(hooks.replace, source, 0, 6);
+            const output = testHook(hooks.replace, document, 0, 6);
 
             deepStrictEqual(output, {
                 before: '',
@@ -136,10 +136,10 @@ describe('rangeHooksHide', () => {
         });
 
         it('should replace range at document end', () => {
-            const source = 'line1\nline2\nline3';
+            const document = 'line1\nline2\nline3';
             const hooks = rangeHooksHide();
 
-            const output = testHook(hooks.replace, source, 12, 17);
+            const output = testHook(hooks.replace, document, 12, 17);
 
             deepStrictEqual(output, {
                 before: 'line1\nline2\n',
@@ -150,10 +150,10 @@ describe('rangeHooksHide', () => {
         });
 
         it('should replace entire line at document end', () => {
-            const source = 'line1\nHIDDEN';
+            const document = 'line1\nHIDDEN';
             const hooks = rangeHooksHide();
 
-            const output = testHook(hooks.replace, source, 6, 12);
+            const output = testHook(hooks.replace, document, 6, 12);
 
             deepStrictEqual(output, {
                 before: 'line1\n',
@@ -164,10 +164,10 @@ describe('rangeHooksHide', () => {
         });
 
         it('should return marker for partial line (single-line partial range)', () => {
-            const source = 'prefix hidden suffix';
+            const document = 'prefix hidden suffix';
             const hooks = rangeHooksHide();
 
-            const output = testHook(hooks.replace, source, 7, 13);
+            const output = testHook(hooks.replace, document, 7, 13);
 
             deepStrictEqual(output, {
                 before: 'prefix ',
@@ -178,10 +178,10 @@ describe('rangeHooksHide', () => {
         });
 
         it('should use custom skippedLines marker', () => {
-            const source = 'line1\nline2\nline3\n';
+            const document = 'line1\nline2\nline3\n';
             const hooks = rangeHooksHide({ skippedLines: '-- snip --' });
 
-            const output = testHook(hooks.replace, source, 0, 6);
+            const output = testHook(hooks.replace, document, 0, 6);
 
             deepStrictEqual(output, {
                 before: '',
@@ -194,10 +194,10 @@ describe('rangeHooksHide', () => {
 
     describe('open hook', () => {
         it('should return null for single-line partial range (handled by replace hook)', () => {
-            const source = 'prefix hidden suffix';
+            const document = 'prefix hidden suffix';
             const hooks = rangeHooksHide({ ellipsis: '<<' });
 
-            const output = testHook(hooks.open, source, 7, 13);
+            const output = testHook(hooks.open, document, 7, 13);
 
             deepStrictEqual(output, {
                 before: 'prefix ',
@@ -208,10 +208,10 @@ describe('rangeHooksHide', () => {
         });
 
         it('should return null at document end', () => {
-            const source = 'line1\nline2';
+            const document = 'line1\nline2';
             const hooks = rangeHooksHide();
 
-            const output = testHook(hooks.open, source, 6, 11);
+            const output = testHook(hooks.open, document, 6, 11);
 
             deepStrictEqual(output, {
                 before: 'line1\n',
@@ -222,10 +222,10 @@ describe('rangeHooksHide', () => {
         });
 
         it('should return null when range ends at line content end', () => {
-            const source = 'line1\nHIDDEN\nline3';
+            const document = 'line1\nHIDDEN\nline3';
             const hooks = rangeHooksHide();
 
-            const output = testHook(hooks.open, source, 6, 12);
+            const output = testHook(hooks.open, document, 6, 12);
 
             deepStrictEqual(output, {
                 before: 'line1\n',
@@ -236,10 +236,10 @@ describe('rangeHooksHide', () => {
         });
 
         it('should return marker for multi-line partial range', () => {
-            const source = 'some multi lines text\ngoes here and there';
+            const document = 'some multi lines text\ngoes here and there';
             const hooks = rangeHooksHide({ ellipsis: '<<' });
 
-            const output = testHook(hooks.open, source, 17, 31);
+            const output = testHook(hooks.open, document, 17, 31);
 
             deepStrictEqual(output, {
                 before: 'some multi lines ',
@@ -250,11 +250,11 @@ describe('rangeHooksHide', () => {
         });
 
         it('should handle CRLF line endings correctly (edge case: end within CRLF)', () => {
-            const source = 'line1\r\nHIDDEN\r\nline3';
+            const document = 'line1\r\nHIDDEN\r\nline3';
             const hooks = rangeHooksHide({ ellipsis: '<<' });
 
             // Test when range ends in middle of line content (before content end)
-            const output1 = testHook(hooks.open, source, 7, 11);
+            const output1 = testHook(hooks.open, document, 7, 11);
             deepStrictEqual(output1, {
                 before: 'line1\r\n',
                 rangeText: 'HIDD',
@@ -263,7 +263,7 @@ describe('rangeHooksHide', () => {
             });
 
             // Test when range ends at line content end (at \r)
-            const output2 = testHook(hooks.open, source, 7, 13);
+            const output2 = testHook(hooks.open, document, 7, 13);
             deepStrictEqual(output2, {
                 before: 'line1\r\n',
                 rangeText: 'HIDDEN',
@@ -272,7 +272,7 @@ describe('rangeHooksHide', () => {
             });
 
             // Test when range ends after \r but before \n (edge case within CRLF)
-            const output3 = testHook(hooks.open, source, 7, 14);
+            const output3 = testHook(hooks.open, document, 7, 14);
             deepStrictEqual(output3, {
                 before: 'line1\r\n',
                 rangeText: 'HIDDEN\r',
@@ -281,7 +281,7 @@ describe('rangeHooksHide', () => {
             });
 
             // Test multi-line range ending in middle of line content
-            const output4 = testHook(hooks.open, source, 3, 11);
+            const output4 = testHook(hooks.open, document, 3, 11);
             deepStrictEqual(output4, {
                 before: 'lin',
                 rangeText: 'e1\r\nHIDD',
@@ -292,7 +292,7 @@ describe('rangeHooksHide', () => {
             // Test multi-line range ending at \n in CRLF (THE BUG TEST!)
             // Old logic would incorrectly return '<<' because isLineContentEnd(14) = false
             // New logic correctly returns null because 14 >= lineContentEnd (13)
-            const output5 = testHook(hooks.open, source, 3, 14);
+            const output5 = testHook(hooks.open, document, 3, 14);
             deepStrictEqual(output5, {
                 before: 'lin',
                 rangeText: 'e1\r\nHIDDEN\r',
@@ -304,10 +304,10 @@ describe('rangeHooksHide', () => {
 
     describe('close hook', () => {
         it('should return null for single-line partial range (handled by replace hook)', () => {
-            const source = 'prefix hidden suffix';
+            const document = 'prefix hidden suffix';
             const hooks = rangeHooksHide({ ellipsis: '>>' });
 
-            const output = testHook(hooks.close, source, 7, 13, true);
+            const output = testHook(hooks.close, document, 7, 13, true);
 
             deepStrictEqual(output, {
                 before: 'prefix ',
@@ -318,10 +318,10 @@ describe('rangeHooksHide', () => {
         });
 
         it('should return null at document start', () => {
-            const source = 'hidden rest';
+            const document = 'hidden rest';
             const hooks = rangeHooksHide();
 
-            const output = testHook(hooks.close, source, 0, 6, true);
+            const output = testHook(hooks.close, document, 0, 6, true);
 
             deepStrictEqual(output, {
                 before: '',
@@ -332,10 +332,10 @@ describe('rangeHooksHide', () => {
         });
 
         it('should return null when range starts at line start', () => {
-            const source = 'line1\nHIDDEN\nline3\n';
+            const document = 'line1\nHIDDEN\nline3\n';
             const hooks = rangeHooksHide();
 
-            const output = testHook(hooks.close, source, 6, 12, true);
+            const output = testHook(hooks.close, document, 6, 12, true);
 
             deepStrictEqual(output, {
                 before: 'line1\n',
@@ -346,10 +346,10 @@ describe('rangeHooksHide', () => {
         });
 
         it('should return marker for multi-line partial range', () => {
-            const source = 'some multi lines text\ngoes here and there';
+            const document = 'some multi lines text\ngoes here and there';
             const hooks = rangeHooksHide({ ellipsis: '>>' });
 
-            const output = testHook(hooks.close, source, 17, 31, true);
+            const output = testHook(hooks.close, document, 17, 31, true);
 
             deepStrictEqual(output, {
                 before: 'some multi lines ',
@@ -363,10 +363,10 @@ describe('rangeHooksHide', () => {
     describe('combined scenarios', () => {
         it('should handle single line partial range (both open and close)', () => {
             // Case 1: some [text] goes here -> some ... goes here
-            const source = 'some text goes here';
+            const document = 'some text goes here';
             const hooks = rangeHooksHide<string>();
 
-            const output = applyReplacement(hooks, source, 5, 9);
+            const output = applyReplacement(hooks, document, 5, 9);
 
             deepStrictEqual(output, {
                 close: null,
@@ -379,10 +379,10 @@ describe('rangeHooksHide', () => {
 
         it('should handle multi-line partial range at both ends', () => {
             // Case 2: some multi lines [text\ngoes here] and there
-            const source = 'some multi lines text\ngoes here and there';
+            const document = 'some multi lines text\ngoes here and there';
             const hooks = rangeHooksHide<string>();
 
-            const output = applyReplacement(hooks, source, 17, 31);
+            const output = applyReplacement(hooks, document, 17, 31);
 
             deepStrictEqual(output, {
                 close: '…',
@@ -395,10 +395,10 @@ describe('rangeHooksHide', () => {
 
         it('should handle multi-line range with full lines in middle', () => {
             // Case 3: some multi lines [text\nmiddle line\ngoes here] and there
-            const source = 'some multi lines text\nmiddle line\ngoes here and there';
+            const document = 'some multi lines text\nmiddle line\ngoes here and there';
             const hooks = rangeHooksHide<string>();
 
-            const output = applyReplacement(hooks, source, 17, 43);
+            const output = applyReplacement(hooks, document, 17, 43);
 
             deepStrictEqual(output, {
                 close: '…',
@@ -411,10 +411,10 @@ describe('rangeHooksHide', () => {
 
         it('should handle multi-line range with full lines in middle', () => {
             // Case 3: some multi lines [text\nmiddle line\ngoes here] and there
-            const source = 'some multi lines text\nmiddle line1\r\nmiddle line2\nmiddle line3\ngoes here and there';
+            const document = 'some multi lines text\nmiddle line1\r\nmiddle line2\nmiddle line3\ngoes here and there';
             const hooks = rangeHooksHide<string>();
 
-            const output = applyReplacement(hooks, source, 17, 71);
+            const output = applyReplacement(hooks, document, 17, 71);
 
             deepStrictEqual(output, {
                 close: '…',
@@ -426,10 +426,10 @@ describe('rangeHooksHide', () => {
         });
 
         it('should handle entire line replacement with no trimming', () => {
-            const source = 'line1\nHIDDEN\nline3';
+            const document = 'line1\nHIDDEN\nline3';
             const hooks = rangeHooksHide<string>();
 
-            const output = applyReplacement(hooks, source, 6, 12);
+            const output = applyReplacement(hooks, document, 6, 12);
 
             deepStrictEqual(output, {
                 close: null,

@@ -14,8 +14,8 @@ See [Range Functions Reference](range-functions-reference.md) for the complete A
 ## Core Concepts
 
 **Range structure:**
-- `start` - Starting offset in source text
-- `end` - Ending offset in source text  
+- `start` - Starting offset in document text
+- `end` - Ending offset in document text  
 - `data` - Optional metadata (match results, diagnostics, custom info)
 - `origin` - Optional transformation lineage tracking (see Origin Tracking below)
 
@@ -35,7 +35,7 @@ See [Range Functions Reference](range-functions-reference.md) for the complete A
 
 **Context objects:**
 - `GenerateRangesContext` - Available in range source/transformer implementation: `{renderOptions, marker, ranges, rangesByMarker, rangesByName, lines}`
-- `RangeOperationContext` - Available in predicate callbacks (filter, map, sort): `{source, lines, renderOptions, ranges}`
+- `RangeOperationContext` - Available in predicate callbacks (filter, map, sort): `{document, lines, renderOptions, ranges}`
 - Both provide access to `lines` (LineBoundaries) for on-demand metric computation
 
 ---
@@ -84,15 +84,15 @@ Transformers that maintain 1-to-1 input-output mapping should stream ranges with
 
 ```typescript
 // ✅ Correct: Stream through processRanges wrapper
-return (source, createRange, context) => {
-    processRanges(source, input, (start, end, data, origin) => {
+return (document, createRange, context) => {
+    processRanges(document, input, (start, end, data, origin) => {
         createRange(newStart, newEnd, data, origin || { start, end, data });
     }, context);
 };
 
 // ❌ Wrong: Collect all ranges in memory
 const ranges: Array<RangeRecord<Data>> = [];
-processRanges(source, input, (start, end, data, origin) => {
+processRanges(document, input, (start, end, data, origin) => {
     ranges.push({ start, end, data, origin });
 }, context);
 ranges.forEach(range => createRange(...));
@@ -123,7 +123,7 @@ Functions accepting predicates follow consistent parameter patterns:
 Where:
 - `range` - Full range object `{start, end, data, origin}`
 - `index` - Zero-based position
-- `context` - `{source, lines, renderOptions, ranges}`
+- `context` - `{document, lines, renderOptions, ranges}`
 
 **Examples:**
 ```typescript
@@ -277,8 +277,8 @@ describe('functionName', () => {
     
     it('should handle basic case', () => {
         // Using generateRanges - assert exact start/end positions
-        const source = 'Hello World';
-        const ranges = generateRanges(source, fn());
+        const document = 'Hello World';
+        const ranges = generateRanges(document, fn());
         deepStrictEqual(startEnd(ranges), [
             [0, 5],
             [10, 15]
@@ -287,8 +287,8 @@ describe('functionName', () => {
     
     it('should transform correctly', () => {
         // Using renderRanges - assert by rendered text (more descriptive)
-        const source = 'Hello World';
-        const output = renderRanges(source, fn());
+        const document = 'Hello World';
+        const output = renderRanges(document, fn());
         deepStrictEqual(output, [
             'Hello',
             'World'
@@ -319,7 +319,7 @@ describe('functionName', () => {
 ```typescript
 // Sources directly return GenerateRanges function
 export function rangesForSomething(param: Type): GenerateRanges<Data, RenderOptions> {
-    return (source, createRange, context) => {
+    return (document, createRange, context) => {
         // Generate ranges by calling createRange(start, end, data, origin)
     };
 }
@@ -330,7 +330,7 @@ export function rangesForSomething(param: Type): GenerateRanges<Data, RenderOpti
 // Transformers return a function that accepts input and returns GenerateRanges
 export function applyTransform(param: Type): TransformRanges {
     return (input: Ranges) => {
-        return (source, createRange, context) => {
+        return (document, createRange, context) => {
             // Transform input ranges, calling createRange for each output
         };
     };

@@ -21,8 +21,8 @@ import { generateRanges } from '../ranges.js';
  */
 export function applyMerge<Data, RenderOptions>(): TransformRanges<Data, RenderOptions> {
     return (input: Ranges<Data, RenderOptions>) => {
-        return (source, createRange, context) => {
-            const sortedRanges = generateRanges(source, input, context)
+        return (document, createRange, context) => {
+            const sortedRanges = generateRanges(document, input, context)
                 .sort((a, b) => a.start - b.start || a.end - b.end);
 
             let firstIndex = 0;
