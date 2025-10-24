@@ -16,31 +16,36 @@ Range Sources:
 
 | Function | Type | Description | Origin Behavior |
 |----------|------|-------------|-----------------|
-| [`rangesForMatch`](#rangesformatchpattern) | Source | Pattern matching | None (new ranges) |
+| [`rangesCompose`](#rangescomposerangeinput-transformers) | Composer | Pipeline composition | Per transformer |
+| [`rangesConcat`](#rangesconcatinputs) | Combiner | Combine sources | Preserves existing |
 | [`rangesForLines`](#rangesforlinestype) | Source | Line boundaries | None (new ranges) |
+| [`rangesForMatch`](#rangesformatchpattern) | Source | Pattern matching | None (new ranges) |
 | [`rangesFrom`](#rangesfrominput) | Source | Raw data conversion & document keywords | None (new ranges) |
 | [`rangesFromLayer`](#rangesfromlayername) | Source | Layer reference | Preserves existing |
 | [`rangesFromOptions`](#rangesfromoptionskey) | Source | User options | Preserves existing |
-| [`rangesConcat`](#rangesconcatinputs) | Combiner | Combine sources | Preserves existing |
 | [`rangesWithFallback`](#rangeswithfallbackinputs) | Combiner | First non-empty | Preserves existing |
-| [`rangesCompose`](#rangescomposerangeinput-transformers) | Composer | Pipeline composition | Per transformer |
 
 Range Transformers:
 
 | Function | Transform Type | Description | Modifies Data | Origin | Implementation |
 |----------|----------------|-------------|---------------|--------|----------------|
+| [`applyAppend`](#applyappendsources) | N-to-N | Append sources | No | Preserves | Wrapper |
+| [`applyAugment`](#applyaugmentcallback) | 1-to-N | Add derivatives | No | Creates new | Temp array* |
 | [`applyCollapseTo`](#applycollapsetoposition) | 1-to-1 | Zero-width markers | No | Inherits | Streaming |
-| [`applyExpandTo`](#applyexpandtoposition-lines) | 1-to-1 | Expand boundaries | No | Inherits | Streaming |
-| [`applyMerge`](#applymerge) | N-to-1 | Merge overlapping | No | Array of merged | Temp array |
-| [`applyInvert`](#applyinvertexact) | N-to-M | Negate ranges | No | None | Temp array |
-| [`applyFilter`](#applyfilterpredicate) | N-to-N | Conditional selection | No | Inherits | Temp array* |
-| [`applyPick`](#applypickselector) | N-to-1 | Single selection | No | Inherits | Temp array* |
-| [`applySort`](#applysortcomparator) | N-to-N | Custom ordering | No | Inherits | Temp array* |
 | [`applyDataMap`](#applydatamapmapper) | 1-to-1 | Data transformation | Yes | Cleared | Temp array* |
-| [`applyFitToWindow`](#applyfittowindowsize-allowtrimming) | 1-to-1 | Horizontal viewport | No | Inherits | Streaming |
-| [`applyPadLines`](#applypadlineslines-size) | 1-to-N | Add padding | No | Inherits | Temp array |
-| [`applyResetOrigin`](#applyresetorigin) | 1-to-1 | Clear origins | No | Cleared | Streaming |
+| [`applyExpandTo`](#applyexpandtoposition-lines) | 1-to-1 | Expand boundaries | No | Inherits | Streaming |
 | [`applyFallback`](#applyfallbackfallbacks) | N-to-N | Provide fallback | No | From source | Wrapper |
+| [`applyFilter`](#applyfilterpredicate) | N-to-N | Conditional selection | No | Inherits | Temp array* |
+| [`applyFitToWindow`](#applyfittowindowsize-allowtrimming) | 1-to-1 | Horizontal viewport | No | Inherits | Streaming |
+| [`applyFork`](#applyforktransformers) | N-to-N | Fork sub-pipeline | No | Preserves | Wrapper |
+| [`applyInvert`](#applyinvertexact) | N-to-M | Negate ranges | No | None | Temp array |
+| [`applyMap`](#applymapcallback) | 1-to-N | Transform ranges | No | Creates new | Temp array* |
+| [`applyMerge`](#applymerge) | N-to-1 | Merge overlapping | No | Array of merged | Temp array |
+| [`applyPadLines`](#applypadlineslines-size) | 1-to-N | Add padding | No | Inherits | Temp array |
+| [`applyPick`](#applypickselector) | N-to-1 | Single selection | No | Inherits | Temp array* |
+| [`applyResetOrigin`](#applyresetorigin) | 1-to-1 | Clear origins | No | Cleared | Streaming |
+| [`applySort`](#applysortcomparator) | N-to-N | Custom ordering | No | Inherits | Temp array* |
+| [`applyTake`](#applytaken) | N-to-N | Take first/last N | No | Inherits | Temp array |
 
 **Implementation notes:**
 - **Streaming** - Processes ranges one-by-one without collecting in memory (1-to-1 transforms)
@@ -66,32 +71,65 @@ Range Transformers:
 
 ## Range Sources
 
-### `rangesForMatch(pattern)`
+### `rangesCompose(rangeInput, ...transformers)`
 
-Find all occurrences matching a string or regular expression.
+Compose a range generator with multiple transformers (left-to-right).
 
 ```typescript
-rangesForMatch(pattern: RegExp): GenerateRanges<RegExpExecArray, RenderOptions>
-rangesForMatch(pattern: string): GenerateRanges<string, RenderOptions>
+rangesCompose<Data, RenderOptions>(
+    rangeInput: Ranges<Data, RenderOptions>,
+    ...transformers: Array<(input: Ranges) => GenerateRanges>
+): GenerateRanges<Data, RenderOptions>
 ```
 
 **Parameters:**
-- `pattern` - RegExp (with `g` flag) or string to match
-
-**Data:** Full `RegExpExecArray` (includes capture groups) for RegExp, matched string for string literal
+- `rangeInput` - Initial range generator
+- `transformers` - Transformation functions to apply in sequence
 
 **Use cases:**
-- Syntax highlighting
-- Finding diagnostic markers
-- Extracting structured patterns
+- Building transformation pipelines
+- Combining multiple transformations
+- Creating reusable compositions
 
 **Example:**
 ```typescript
-// Find function declarations with capture groups
-rangesForMatch(/function\s+(\w+)/gi)
+// Multi-step pipeline
+rangesCompose(
+    rangesFromLayer('diagnostics'),
+    applyFilter(range => range.data.severity === 'error'),
+    applyExpandTo('line', 2),
+    applyMerge(),
+    applyFitToWindow(1000)
+)
+```
 
-// Simple string matching
-rangesForMatch('TODO')
+---
+### `rangesConcat(...inputs)`
+
+Combine multiple range sources into a flat list without merging.
+
+```typescript
+rangesConcat<Data, RenderOptions>(
+    ...inputs: Array<Ranges<Data, RenderOptions>>
+): GenerateRanges<Data, RenderOptions>
+```
+
+**Parameters:**
+- `inputs` - One or more range sources to combine
+
+**Use cases:**
+- Multi-pattern matching
+- Combining different source types
+- Layer aggregation
+
+**Example:**
+```typescript
+// Collect multiple severity levels
+rangesConcat(
+    rangesForMatch(/ERROR/g),
+    rangesForMatch(/WARNING/g),
+    rangesFromLayer('diagnostics')
+)
 ```
 
 ---
@@ -130,6 +168,36 @@ rangesForLines('line-start')
 
 // Highlight full lines
 rangesForLines('line')
+```
+
+---
+
+### `rangesForMatch(pattern)`
+
+Find all occurrences matching a string or regular expression.
+
+```typescript
+rangesForMatch(pattern: RegExp): GenerateRanges<RegExpExecArray, RenderOptions>
+rangesForMatch(pattern: string): GenerateRanges<string, RenderOptions>
+```
+
+**Parameters:**
+- `pattern` - RegExp (with `g` flag) or string to match
+
+**Data:** Full `RegExpExecArray` (includes capture groups) for RegExp, matched string for string literal
+
+**Use cases:**
+- Syntax highlighting
+- Finding diagnostic markers
+- Extracting structured patterns
+
+**Example:**
+```typescript
+// Find function declarations with capture groups
+rangesForMatch(/function\s+(\w+)/gi)
+
+// Simple string matching
+rangesForMatch('TODO')
 ```
 
 ---
@@ -238,36 +306,6 @@ rangesFromOptions(({ pattern }) => pattern && rangesForMatch(pattern))
 
 ---
 
-### `rangesConcat(...inputs)`
-
-Combine multiple range sources into a flat list without merging.
-
-```typescript
-rangesConcat<Data, RenderOptions>(
-    ...inputs: Array<Ranges<Data, RenderOptions>>
-): GenerateRanges<Data, RenderOptions>
-```
-
-**Parameters:**
-- `inputs` - One or more range sources to combine
-
-**Use cases:**
-- Multi-pattern matching
-- Combining different source types
-- Layer aggregation
-
-**Example:**
-```typescript
-// Collect multiple severity levels
-rangesConcat(
-    rangesForMatch(/ERROR/g),
-    rangesForMatch(/WARNING/g),
-    rangesFromLayer('diagnostics')
-)
-```
-
----
-
 ### `rangesWithFallback(...inputs)`
 
 Try multiple range sources in order, return first non-empty result.
@@ -298,41 +336,82 @@ rangesWithFallback(
 
 ---
 
-### `rangesCompose(rangeInput, ...transformers)`
+## Range Transformers
 
-Compose a range generator with multiple transformers (left-to-right).
+### `applyAppend(...sources)`
+
+Append independent range sources mid-pipeline.
 
 ```typescript
-rangesCompose<Data, RenderOptions>(
-    rangeInput: Ranges<Data, RenderOptions>,
-    ...transformers: Array<(input: Ranges) => GenerateRanges>
-): GenerateRanges<Data, RenderOptions>
+applyAppend<Data, RenderOptions>(
+    ...sources: Array<Ranges<Data, RenderOptions>>
+): TransformRanges<Data, RenderOptions>
 ```
 
 **Parameters:**
-- `rangeInput` - Initial range generator
-- `transformers` - Transformation functions to apply in sequence
+- `sources` - Range sources to append (iterables, generators, keywords)
+
+**Origin:** Preserves existing origins from all sources
 
 **Use cases:**
-- Building transformation pipelines
-- Combining multiple transformations
-- Creating reusable compositions
+- Add document boundary markers
+- Add line numbers for all lines
+- Combine pipeline output with independent ranges
 
 **Example:**
 ```typescript
-// Multi-step pipeline
+// Pass through matched errors, append document boundaries
 rangesCompose(
-    rangesFromLayer('diagnostics'),
-    applyFilter(range => range.data.severity === 'error'),
-    applyExpandTo('line', 2),
-    applyMerge(),
-    applyFitToWindow(1000)
+    rangesForMatch(/error/g),
+    applyAppend(
+        rangesFrom('document-start'),
+        rangesFrom('document-end')
+    )
 )
 ```
 
 ---
 
-## Range Transformers
+### `applyAugment(callback)`
+
+Pass through original ranges unchanged, add derived ranges.
+
+```typescript
+applyAugment<Data, RenderOptions, NewData = Data>(
+    callback: (
+        range: RangeRecord<Data>,
+        createRange: CreateRange<NewData>,
+        context: RangeOperationContext<Data, RenderOptions>
+    ) => void
+): TransformRanges<Data | NewData, RenderOptions>
+```
+
+**Parameters:**
+- `callback` - Function that creates additional ranges via `createRange(start, end, data?)`
+  - `range` - Current input range (passed through unchanged)
+  - `createRange` - Function to create derivative ranges
+  - `context` - Operation context with `{ document, lines, renderOptions, ranges, index }`
+
+**Origin:** Original range keeps its origin unchanged, derivatives get automatic origin tracking
+
+**Use cases:**
+- Add line-start markers for diagnostics
+- Add margin decorations while preserving original ranges
+- Create visual guides alongside content ranges
+
+**Example:**
+```typescript
+// Pass through errors, add line-start marker for each
+rangesCompose(
+    rangesFromOptions('diagnostics'),
+    applyAugment((range, createRange, { lines }) => {
+        const lineStart = lines.getLineStart(range.start);
+        createRange(lineStart, lineStart, { type: 'error-marker' });
+    })
+)
+```
+
+---
 
 ### `applyCollapseTo(position)`
 
@@ -369,235 +448,6 @@ applyCollapseTo(
 rangesCompose(
     rangesForMatch(/error/g),
     applyCollapseTo('start')
-)
-```
-
----
-
-### `applyExpandTo(position, lines?)`
-
-Expand ranges to broader boundaries with optional context lines.
-
-```typescript
-applyExpandTo(
-    position: 'line' | 'line-content' | 'line-start' | 'line-end' | 'line-content-end' | 
-              'document' | 'document-start' | 'document-end',
-    lines?: number | [before: number, after: number]
-): TransformRanges
-```
-
-**Parameters:**
-- `position` - Target boundary type (see `applyCollapseTo` for position descriptions)
-- `lines` - Context lines to include:
-  - Number: same count before and after (e.g., `2` = 2 before, 2 after)
-  - Tuple: `[before, after]` for asymmetric context (e.g., `[1, 3]`)
-
-**Origin:** Inherits from input range (direct connection)
-
-**Use cases:**
-- Context highlighting
-- Code block expansion
-- Snippet extraction with context
-
-**Example:**
-```typescript
-// Expand to full lines with 2 lines context
-rangesCompose(
-    rangesForMatch(/error/g),
-    applyExpandTo('line', 2)
-)
-
-// Asymmetric context: show function body
-rangesCompose(
-    rangesForMatch(/^function/gm),
-    applyExpandTo('line', [0, 5])
-)
-```
-
----
-
-### `applyMerge()`
-
-Merge overlapping or adjacent ranges into continuous regions. **Always preserves merged ranges in `origin` field as an array.**
-
-```typescript
-applyMerge(): TransformRanges
-```
-
-**Origin:** Array of merged ranges (enables access to individual items)
-
-**Use cases:**
-- Combining overlapping highlights
-- Deduplicating ranges
-- Continuous region extraction
-- Generating summaries from merged items
-
-**Example:**
-```typescript
-// Merge with access to individual headers via origin
-rangesCompose(
-    rangesForMatch(/^#{1,6}\s+(.+)$/gm),
-    applyDataMap(match => ({
-        level: match[1].length,
-        text: match[2]
-    })),
-    applyCollapseTo('document-start'),
-    applyMerge()  // origin contains all headers
-)
-// In render: range.origin.map(({ data }) => ...)
-```
-
----
-
-### `applyInvert(exact?)`
-
-Invert ranges - returns everything NOT in input ranges. **Output ranges have no origin** (no direct connection to input).
-
-```typescript
-applyInvert(exact?: boolean): TransformRanges
-```
-
-**Parameters:**
-- `exact` - Boundary behavior:
-  - `true` - Bound to `[0, document.length]`
-  - `false` (default) - Extend to `[0, document.length + 1]`
-
-**Origin:** None (no connection between input and output)
-
-**Use cases:**
-- Creating viewport gaps
-- Collapsible content
-- Negative highlighting
-
-**Example:**
-```typescript
-// Create gaps between headers for collapsing
-rangesCompose(
-    rangesForMatch(/^#{1,6}\s/gm),
-    applyExpandTo('line'),
-    applyInvert()
-)
-```
-
----
-
-### `applyFilter(predicate)`
-
-Filter ranges using a predicate function.
-
-```typescript
-applyFilter(
-    predicate: (range, index, context) => boolean
-): TransformRanges
-```
-
-**Parameters:**
-- `predicate` - Function receiving:
-  - `range` - Full range object `{start, end, data, origin}`
-  - `index` - Zero-based position in sequence
-  - `context` - `{document, lines, renderOptions, ranges}`
-
-**Origin:** Inherits from input range (direct connection)
-
-**Use cases:**
-- Conditional highlighting
-- Severity filtering
-- Position-based selection
-
-**Example:**
-```typescript
-// Filter single-line ranges only
-rangesCompose(
-    rangesForMatch(/\w+/g),
-    applyFilter((range, i, { lines }) =>
-        lines.getLine(range.start) === lines.getLine(range.end)
-    )
-)
-
-// Filter by data property
-rangesCompose(
-    diagnostics,
-    applyFilter(range => range.data.severity === 'error')
-)
-```
-
----
-
-### `applyPick(selector)`
-
-Select a single range from input.
-
-```typescript
-applyPick(
-    selector: 'first' | 'last' | ((range, index, context) => boolean)
-): TransformRanges
-```
-
-**Parameters:**
-- `selector` - Selection strategy:
-  - `'first'` - First range in sequence
-  - `'last'` - Last range in sequence
-  - Function - First range matching predicate (same signature as `applyFilter`)
-
-**Origin:** Inherits from input range (direct connection)
-
-**Use cases:**
-- Focus on first/last occurrence
-- Selecting primary diagnostic
-- Jump-to-definition
-
-**Example:**
-```typescript
-// Show only first error
-rangesCompose(
-    rangesForMatch(/error/g),
-    applyPick('first'),
-    applyExpandTo('line')
-)
-
-// Pick first error diagnostic
-rangesCompose(
-    diagnostics,
-    applyPick(range => range.data.severity === 'error')
-)
-```
-
----
-
-### `applySort(comparator?)`
-
-Sort ranges by custom criteria.
-
-```typescript
-applySort(
-    comparator?: (rangeA, rangeB, context) => number
-): TransformRanges
-```
-
-**Parameters:**
-- `comparator` - Comparison function (optional):
-  - Receives `rangeA`, `rangeB`, `context`
-  - Returns negative (A before B), zero (equal), or positive (B before A)
-  - Default: sort by start ascending, then end descending
-
-**Origin:** Inherits from input range (direct connection)
-
-**Use cases:**
-- Rendering order control
-- Priority sorting
-- Chronological ordering
-
-**Example:**
-```typescript
-// Default sort
-rangesCompose(ranges, applySort())
-
-// Sort by line number
-rangesCompose(
-    ranges,
-    applySort((a, b, { lines }) =>
-        lines.getLine(a.start) - lines.getLine(b.start)
-    )
 )
 ```
 
@@ -649,109 +499,43 @@ rangesCompose(
 
 ---
 
-### `applyFitToWindow(size?, allowTrimming?)`
+### `applyExpandTo(position, lines?)`
 
-Fit ranges within a size constraint (viewport).
+Expand ranges to broader boundaries with optional context lines.
 
 ```typescript
-applyFitToWindow(
-    size?: number,
-    allowTrimming?: boolean
+applyExpandTo(
+    position: 'line' | 'line-content' | 'line-start' | 'line-end' | 'line-content-end' | 
+              'document' | 'document-start' | 'document-end',
+    lines?: number | [before: number, after: number]
 ): TransformRanges
 ```
 
 **Parameters:**
-- `size` - Maximum window width in characters (default: `80`)
-- `allowTrimming` - Allow trimming ranges to fit (default: `true`)
+- `position` - Target boundary type (see `applyCollapseTo` for position descriptions)
+- `lines` - Context lines to include:
+  - Number: same count before and after (e.g., `2` = 2 before, 2 after)
+  - Tuple: `[before, after]` for asymmetric context (e.g., `[1, 3]`)
 
 **Origin:** Inherits from input range (direct connection)
 
 **Use cases:**
-- Preview generation
-- Horizontal viewport fitting
-- Performance optimization
+- Context highlighting
+- Code block expansion
+- Snippet extraction with context
 
 **Example:**
 ```typescript
-// Fit into 80-char window (default)
+// Expand to full lines with 2 lines context
 rangesCompose(
     rangesForMatch(/error/g),
-    applyFitToWindow()
+    applyExpandTo('line', 2)
 )
 
-// Custom size with no trimming
+// Asymmetric context: show function body
 rangesCompose(
-    rangesForMatch(/error/g),
-    applyFitToWindow(120, false)
-)
-```
-
----
-
-### `applyPadLines(lines, size)`
-
-Add padding ranges around lines.
-
-```typescript
-applyPadLines(
-    lines: number | [before: number, after: number],
-    size: number
-): TransformRanges
-```
-
-**Parameters:**
-- `lines` - Padding line count:
-  - Number: lines after only (e.g., `2` = 0 before, 2 after)
-  - Tuple: `[before, after]` for explicit control (e.g., `[1, 2]`)
-- `size` - Target width for each padding line in characters
-
-**Origin:** Inherits from input range (direct connection)
-
-**Use cases:**
-- Smart spacing
-- Visual separation
-- Context preservation
-
-**Example:**
-```typescript
-// Add 2 lines after each range
-rangesCompose(
-    rangesForLines('line-content'),
-    applyPadLines(2, 50)
-)
-
-// Add 1 before and 2 after
-rangesCompose(
-    rangesForLines('line-content'),
-    applyPadLines([1, 2], 50)
-)
-```
-
----
-
-### `applyResetOrigin()`
-
-Clear origin tracking from ranges.
-
-```typescript
-applyResetOrigin(): TransformRanges
-```
-
-**Origin:** Cleared (`undefined`)
-
-**Use cases:**
-- Clean up transformation history
-- Prevent origin bloat
-- Fresh transformation chains
-
-**Example:**
-```typescript
-// Clear origins after complex transformations
-rangesCompose(
-    ranges,
-    applyExpandTo('line'),
-    applyMerge(),
-    applyResetOrigin()
+    rangesForMatch(/^function/gm),
+    applyExpandTo('line', [0, 5])
 )
 ```
 
@@ -797,3 +581,427 @@ rangesCompose(
     )
 )
 ```
+### `applyFilter(predicate)`
+
+Filter ranges using a predicate function.
+
+```typescript
+applyFilter(
+    predicate: (range, index, context) => boolean
+): TransformRanges
+```
+
+**Parameters:**
+- `predicate` - Function receiving:
+  - `range` - Full range object `{start, end, data, origin}`
+  - `index` - Zero-based position in sequence
+  - `context` - `{document, lines, renderOptions, ranges}`
+
+**Origin:** Inherits from input range (direct connection)
+
+**Use cases:**
+- Conditional highlighting
+- Severity filtering
+- Position-based selection
+
+**Example:**
+```typescript
+// Filter single-line ranges only
+rangesCompose(
+    rangesForMatch(/\w+/g),
+    applyFilter((range, i, { lines }) =>
+        lines.getLine(range.start) === lines.getLine(range.end)
+    )
+)
+
+// Filter by data property
+rangesCompose(
+    diagnostics,
+    applyFilter(range => range.data.severity === 'error')
+)
+```
+
+---
+
+### `applyFitToWindow(size?, allowTrimming?)`
+
+Fit ranges within a size constraint (viewport).
+
+```typescript
+applyFitToWindow(
+    size?: number,
+    allowTrimming?: boolean
+): TransformRanges
+```
+
+**Parameters:**
+- `size` - Maximum window width in characters (default: `80`)
+- `allowTrimming` - Allow trimming ranges to fit (default: `true`)
+
+**Origin:** Inherits from input range (direct connection)
+
+**Use cases:**
+- Preview generation
+- Horizontal viewport fitting
+- Performance optimization
+
+**Example:**
+```typescript
+// Fit into 80-char window (default)
+rangesCompose(
+    rangesForMatch(/error/g),
+    applyFitToWindow()
+)
+
+// Custom size with no trimming
+rangesCompose(
+    rangesForMatch(/error/g),
+    applyFitToWindow(120, false)
+)
+```
+
+---
+
+### `applyFork(...transformers)`
+
+Fork the pipeline: pass through originals, apply sub-pipeline, append transformed copies.
+
+```typescript
+applyFork<Data, RenderOptions>(
+    ...transformers: Array<TransformRanges<Data, RenderOptions>>
+): TransformRanges<Data, RenderOptions>
+```
+
+**Parameters:**
+- `transformers` - Sub-pipeline transformers to apply to input ranges
+
+**Origin:** Preserves existing origins from all sources (originals unchanged, transformed copies follow their transformer semantics)
+
+**Use cases:**
+- Add derivative ranges alongside originals (markers, icons, decorations)
+- Show content + metadata (diagnostics + gutter icons)
+- Parallel transformations (matches + line indicators)
+- Pipeline branching for multi-purpose output
+
+**Example:**
+```typescript
+// Show error matches + line-start markers
+rangesCompose(
+    rangesForMatch(/error/g),
+    applyFork(
+        applyCollapseTo('line-start'),
+        applyDataMap(() => ({ type: 'marker' }))
+    )
+)
+```
+
+---
+
+### `applyInvert(exact?)`
+
+Invert ranges - returns everything NOT in input ranges. **Output ranges have no origin** (no direct connection to input).
+
+```typescript
+applyInvert(exact?: boolean): TransformRanges
+```
+
+**Parameters:**
+- `exact` - Boundary behavior:
+  - `true` - Bound to `[0, document.length]`
+  - `false` (default) - Extend to `[0, document.length + 1]`
+
+**Origin:** None (no connection between input and output)
+
+**Use cases:**
+- Creating viewport gaps
+- Collapsible content
+- Negative highlighting
+
+**Example:**
+```typescript
+// Create gaps between headers for collapsing
+rangesCompose(
+    rangesForMatch(/^#{1,6}\s/gm),
+    applyExpandTo('line'),
+    applyInvert()
+)
+```
+
+---
+
+### `applyMap(callback)`
+
+Core 1-to-N primitive for range transformation. Creates derivative ranges with automatic origin tracking.
+
+```typescript
+applyMap<Data, RenderOptions, NewData = Data>(
+    callback: (
+        range: RangeRecord<Data>,
+        createRange: CreateRange<NewData>,
+        context: RangeOperationContext<Data, RenderOptions>
+    ) => void
+): TransformRanges<NewData, RenderOptions>
+```
+
+**Parameters:**
+- `callback` - Function that creates output ranges via `createRange(start, end, data?)`
+  - `range` - Current input range
+  - `createRange` - Function to create derivative ranges
+  - `context` - Operation context with `{ document, lines, renderOptions, ranges, index }`
+
+**Origin:** Automatically tracks to input range (preserves transformation lineage)
+
+**Use cases:**
+- Split matched lines into words
+- Extract regex capture groups
+- Transform one range into multiple derivatives
+- Custom range decomposition
+
+**Example:**
+```typescript
+// Split lines into words
+rangesCompose(
+    rangesForMatch(/(?:(\w+) )?(ERROR|WARNING|INFO)/g),
+    applyMap((range, createRange, { document }) => {
+        const prefix = range.data[1]; // optional prefix
+        let labelStart = range.start;
+        if (prefix !== undefined) {
+            createRange(range.start, range.start + prefix.length, 'prefix');  // opening prefix
+            labelStart += prefix.length + 1; // +1 for space
+        }
+        createRange(labelStart, range.end, range.data[2]); // label
+   })
+)
+```
+
+---
+
+### `applyMerge()`
+
+Merge overlapping or adjacent ranges into continuous regions. **Always preserves merged ranges in `origin` field as an array.**
+
+```typescript
+applyMerge(): TransformRanges
+```
+
+**Origin:** Array of merged ranges (enables access to individual items)
+
+**Use cases:**
+- Combining overlapping highlights
+- Deduplicating ranges
+- Continuous region extraction
+- Generating summaries from merged items
+
+**Example:**
+```typescript
+// Merge with access to individual headers via origin
+rangesCompose(
+    rangesForMatch(/^#{1,6}\s+(.+)$/gm),
+    applyDataMap(match => ({
+        level: match[1].length,
+        text: match[2]
+    })),
+    applyCollapseTo('document-start'),
+    applyMerge()  // origin contains all headers
+)
+// In render: range.origin.map(({ data }) => ...)
+```
+
+---
+
+### `applyPadLines(lines, size)`
+
+Add padding ranges around lines.
+
+```typescript
+applyPadLines(
+    lines: number | [before: number, after: number],
+    size: number
+): TransformRanges
+```
+
+**Parameters:**
+- `lines` - Padding line count:
+  - Number: lines after only (e.g., `2` = 0 before, 2 after)
+  - Tuple: `[before, after]` for explicit control (e.g., `[1, 2]`)
+- `size` - Target width for each padding line in characters
+
+**Origin:** Inherits from input range (direct connection)
+
+**Use cases:**
+- Smart spacing
+- Visual separation
+- Context preservation
+
+**Example:**
+```typescript
+// Add 2 lines after each range
+rangesCompose(
+    rangesForLines('line-content'),
+    applyPadLines(2, 50)
+)
+
+// Add 1 before and 2 after
+rangesCompose(
+    rangesForLines('line-content'),
+    applyPadLines([1, 2], 50)
+)
+```
+
+---
+
+### `applyPick(selector)`
+
+Select a single range from input.
+
+```typescript
+applyPick(
+    selector: 'first' | 'last' | ((range, index, context) => boolean)
+): TransformRanges
+```
+
+**Parameters:**
+- `selector` - Selection strategy:
+  - `'first'` - First range in sequence
+  - `'last'` - Last range in sequence
+  - Function - First range matching predicate (same signature as `applyFilter`)
+
+**Origin:** Inherits from input range (direct connection)
+
+**Use cases:**
+- Focus on first/last occurrence
+- Selecting primary diagnostic
+- Jump-to-definition
+
+**Example:**
+```typescript
+// Show only first error
+rangesCompose(
+    rangesForMatch(/error/g),
+    applyPick('first'),
+    applyExpandTo('line')
+)
+
+// Pick first error diagnostic
+rangesCompose(
+    diagnostics,
+    applyPick(range => range.data.severity === 'error')
+)
+```
+
+---
+
+### `applyResetOrigin()`
+
+Clear origin tracking from ranges.
+
+```typescript
+applyResetOrigin(): TransformRanges
+```
+
+**Origin:** Cleared (`undefined`)
+
+**Use cases:**
+- Clean up transformation history
+- Prevent origin bloat
+- Fresh transformation chains
+
+**Example:**
+```typescript
+// Clear origins after complex transformations
+rangesCompose(
+    ranges,
+    applyExpandTo('line'),
+    applyMerge(),
+    applyResetOrigin()
+)
+```
+
+---
+
+### `applySort(comparator?)`
+
+Sort ranges by custom criteria.
+
+```typescript
+applySort(
+    comparator?: (rangeA, rangeB, context) => number
+): TransformRanges
+```
+
+**Parameters:**
+- `comparator` - Comparison function (optional):
+  - Receives `rangeA`, `rangeB`, `context`
+  - Returns negative (A before B), zero (equal), or positive (B before A)
+  - Default: sort by start ascending, then end descending
+
+**Origin:** Inherits from input range (direct connection)
+
+**Use cases:**
+- Rendering order control
+- Priority sorting
+- Chronological ordering
+
+**Example:**
+```typescript
+// Default sort
+rangesCompose(ranges, applySort())
+
+// Sort by line number
+rangesCompose(
+    ranges,
+    applySort((a, b, { lines }) =>
+        lines.getLine(a.start) - lines.getLine(b.start)
+    )
+)
+```
+
+---
+
+### `applyTake(n)`
+
+Take first or last N ranges (pagination/limiting).
+
+```typescript
+applyTake(
+    n: number | 'first' | 'last'
+): TransformRanges
+```
+
+**Parameters:**
+- `n` - Number of ranges to take:
+  - Positive number - Take first N ranges
+  - Negative number - Take last N ranges
+  - `'first'` - Take first range only (equivalent to `1`)
+  - `'last'` - Take last range only (equivalent to `-1`)
+
+**Origin:** Inherits from input ranges (direct connection)
+
+**Use cases:**
+- Pagination (first/last page of results)
+- Limiting output (top 10 matches)
+- Quick preview (first match only)
+- Focus on recent items (last 5 diagnostics)
+
+**Example:**
+```typescript
+// Take first 10 matches
+rangesCompose(
+    rangesForMatch(/error/g),
+    applyTake(10)
+)
+
+// Take last 5 diagnostics
+rangesCompose(
+    rangesFromOptions('diagnostics'),
+    applyTake(-5)
+)
+
+// Take last match only
+rangesCompose(
+    rangesForMatch(/TODO/g),
+    applyTake('last')
+)
+```
+
+---
