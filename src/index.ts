@@ -43,6 +43,7 @@ export {
     applyFallback,
     applyFilter,
     applyFitToWindow,
+    applyFork,
     applyInvert,
     applyMap,
     applyMerge,

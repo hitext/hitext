@@ -6,6 +6,7 @@ export { applyExpandTo } from './apply-expand-to.js';
 export { applyFallback } from './apply-fallback.js';
 export { applyFilter } from './apply-filter.js';
 export { applyFitToWindow } from './apply-fit-to-window.js';
+export { applyFork } from './apply-fork.js';
 export { applyInvert } from './apply-invert.js';
 export { applyMap } from './apply-map.js';
 export { applyMerge } from './apply-merge.js';
