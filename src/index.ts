@@ -23,14 +23,14 @@ export {
 
 // Range sources: generators and combiners
 export {
+    rangesCompose,
+    rangesConcat,
     rangesForLines,
     rangesForMatch,
     rangesFrom,
     rangesFromLayer,
     rangesFromOptions,
-    rangesWithFallback,
-    rangesConcat,
-    rangesCompose
+    rangesWithFallback
 } from './range-sources/index.js';
 
 // Range transformers: curried functions for composition
@@ -49,7 +49,8 @@ export {
     applyPadLines,
     applyPick,
     applyResetOrigin,
-    applySort
+    applySort,
+    applyTake
 } from './range-compose/index.js';
 
 export {
