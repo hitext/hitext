@@ -11,7 +11,6 @@ export { applyInvert } from './apply-invert.js';
 export { applyMap } from './apply-map.js';
 export { applyMerge } from './apply-merge.js';
 export { applyPadLines } from './apply-pad-lines.js';
-export { applyPick } from './apply-pick.js';
 export { applyResetOrigin } from './apply-reset-origin.js';
 export { applySort } from './apply-sort.js';
 export { applyTake } from './apply-take.js';

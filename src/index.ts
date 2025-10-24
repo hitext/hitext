@@ -48,7 +48,6 @@ export {
     applyMap,
     applyMerge,
     applyPadLines,
-    applyPick,
     applyResetOrigin,
     applySort,
     applyTake

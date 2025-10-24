@@ -42,10 +42,9 @@ Range Transformers:
 | [`applyMap`](#applymapcallback) | 1-to-N | Transform ranges | No | Creates new | Temp array* |
 | [`applyMerge`](#applymerge) | N-to-1 | Merge overlapping | No | Array of merged | Temp array |
 | [`applyPadLines`](#applypadlineslines-size) | 1-to-N | Add padding | No | Inherits | Temp array |
-| [`applyPick`](#applypickselector) | N-to-1 | Single selection | No | Inherits | Temp array* |
 | [`applyResetOrigin`](#applyresetorigin) | 1-to-1 | Clear origins | No | Cleared | Streaming |
 | [`applySort`](#applysortcomparator) | N-to-N | Custom ordering | No | Inherits | Temp array* |
-| [`applyTake`](#applytaken) | N-to-N | Take first/last N | No | Inherits | Temp array |
+| [`applyTake`](#applytaken-predicate) | N-to-N | Take first/last N + filter | No | Inherits | Temp array |
 
 **Implementation notes:**
 - **Streaming** - Processes ranges one-by-one without collecting in memory (1-to-1 transforms)
@@ -850,47 +849,6 @@ rangesCompose(
 
 ---
 
-### `applyPick(selector)`
-
-Select a single range from input.
-
-```typescript
-applyPick(
-    selector: 'first' | 'last' | ((range, index, context) => boolean)
-): TransformRanges
-```
-
-**Parameters:**
-- `selector` - Selection strategy:
-  - `'first'` - First range in sequence
-  - `'last'` - Last range in sequence
-  - Function - First range matching predicate (same signature as `applyFilter`)
-
-**Origin:** Inherits from input range (direct connection)
-
-**Use cases:**
-- Focus on first/last occurrence
-- Selecting primary diagnostic
-- Jump-to-definition
-
-**Example:**
-```typescript
-// Show only first error
-rangesCompose(
-    rangesForMatch(/error/g),
-    applyPick('first'),
-    applyExpandTo('line')
-)
-
-// Pick first error diagnostic
-rangesCompose(
-    diagnostics,
-    applyPick(range => range.data.severity === 'error')
-)
-```
-
----
-
 ### `applyResetOrigin()`
 
 Clear origin tracking from ranges.
@@ -958,30 +916,35 @@ rangesCompose(
 
 ---
 
-### `applyTake(n)`
+### `applyTake(n, predicate?)`
 
-Take first or last N ranges (pagination/limiting).
+Take first or last N ranges with optional filtering. Combines positional limiting with filtering
+for efficient selection - evaluates ranges in order and stops when limit is reached.
 
 ```typescript
 applyTake(
-    n: number | 'first' | 'last'
+    n: number | 'first' | 'last',
+    predicate?: (range, opContext) => boolean
 ): TransformRanges
 ```
 
 **Parameters:**
 - `n` - Number of ranges to take:
-  - Positive number - Take first N ranges
-  - Negative number - Take last N ranges
-  - `'first'` - Take first range only (equivalent to `1`)
-  - `'last'` - Take last range only (equivalent to `-1`)
+  - Positive number - Take first N ranges (that match predicate if provided)
+  - Negative number - Take last N ranges (that match predicate if provided)
+  - `'first'` - Take first range (equivalent to `1`)
+  - `'last'` - Take last range (equivalent to `-1`)
+- `predicate` - Optional filter function (same signature as `applyFilter`):
+  - `range` - Full range object
+  - `opContext` - Context with `{ document, lines, renderOptions, ranges, index }`
 
 **Origin:** Inherits from input ranges (direct connection)
 
 **Use cases:**
 - Pagination (first/last page of results)
-- Limiting output (top 10 matches)
+- Limiting output with filtering (top 10 errors, not just any 10 ranges)
 - Quick preview (first match only)
-- Focus on recent items (last 5 diagnostics)
+- Efficient selection (stops early when limit reached)
 
 **Example:**
 ```typescript
@@ -991,16 +954,16 @@ rangesCompose(
     applyTake(10)
 )
 
-// Take last 5 diagnostics
+// Take last 5 matches
 rangesCompose(
-    rangesFromOptions('diagnostics'),
+    rangesForMatch(/error/g),
     applyTake(-5)
 )
 
-// Take last match only
+// First error
 rangesCompose(
-    rangesForMatch(/TODO/g),
-    applyTake('last')
+    ...,
+    applyTake('first', range => range.data.severity === 'error')
 )
 ```
 
