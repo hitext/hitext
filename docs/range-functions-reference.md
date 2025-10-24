@@ -18,8 +18,7 @@ Range Sources:
 |----------|------|-------------|-----------------|
 | [`rangesForMatch`](#rangesformatchpattern) | Source | Pattern matching | None (new ranges) |
 | [`rangesForLines`](#rangesforlinestype) | Source | Line boundaries | None (new ranges) |
-| [`rangesForPoint`](#rangesforpointposition) | Source | Document points | None (new ranges) |
-| [`rangesFrom`](#rangesfrominput) | Source | Raw data conversion | None (new ranges) |
+| [`rangesFrom`](#rangesfrominput) | Source | Raw data conversion & document keywords | None (new ranges) |
 | [`rangesFromLayer`](#rangesfromlayername) | Source | Layer reference | Preserves existing |
 | [`rangesFromOptions`](#rangesfromoptionskey) | Source | User options | Preserves existing |
 | [`rangesConcat`](#rangesconcatinputs) | Combiner | Combine sources | Preserves existing |
@@ -135,49 +134,30 @@ rangesForLines('line')
 
 ---
 
-### `rangesForPoint(position)`
-
-Generate zero-width ranges at document boundaries.
-
-```typescript
-rangesForPoint(position: 'document-start' | 'document-end'): GenerateRanges<null, RenderOptions>
-```
-
-**Parameters:**
-- `position` - Document boundary:
-  - `'document-start'` - Position 0
-  - `'document-end'` - Position `document.length`
-
-**Data:** `null`
-
-**Use cases:**
-- Document-level insertion points
-- Wrapping content
-- Default fallback positions
-- Header/footer insertion
-
-**Example:**
-```typescript
-// Insert header at document start
-rangesForPoint('document-start')
-```
-
----
-
 ### `rangesFrom(input)`
 
-Convert raw range data into `GenerateRanges` function.
+Convert raw range data or document keywords into `GenerateRanges` function.
 
 ```typescript
 rangesFrom<Data>(
-    input: RangeIterable<Data> | RangesGenerator<Data, RenderOptions>
+    input: 'document' | 'document-start' | 'document-end' | 
+           RangeIterable<Data> | 
+           RangesGenerator<Data, RenderOptions>
 ): GenerateRanges<Data, RenderOptions>
 ```
 
 **Parameters:**
-- `input` - Iterable of tuples `[start, end, data?]` or objects `{start, end, data?}`, OR a generator function `(document, renderOptions?) => Ranges`
+- `input` - One of:
+  - `'document'` - Full document range `[0, document.length]`
+  - `'document-start'` - Zero-length range at position 0
+  - `'document-end'` - Zero-length range at `document.length`
+  - Iterable of tuples `[start, end, data?]` or objects `{start, end, data?}`
+  - Generator function `(document, renderOptions?) => Ranges`
+
+**Data:** `undefined` for document keywords, otherwise preserves input data
 
 **Use cases:**
+- Document-level operations (wrap entire content, document boundaries)
 - Integrating external tools (linters, parsers)
 - Converting custom formats
 - Testing with fixtures
@@ -185,6 +165,12 @@ rangesFrom<Data>(
 
 **Example:**
 ```typescript
+// Full document range
+rangesFrom('document')
+
+// Document boundary insertion point
+rangesFrom('document-start')
+
 // From external linter
 const diagnostics = await linter.lint(document);
 rangesFrom(diagnostics)
@@ -306,7 +292,7 @@ rangesWithFallback<Data, RenderOptions>(
 rangesWithFallback(
     rangesFromOptions('userInsertPoint'),
     rangesForMatch(/<!-- TOC -->/),
-    rangesForPoint('document-start')
+    rangesFrom('document-start')
 )
 ```
 

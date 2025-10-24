@@ -3,6 +3,23 @@ import { generateRanges, rangesFrom } from '../../src/index.js';
 import { renderRanges, startEndData } from '../utils.js';
 
 describe('rangesFrom', () => {
+    describe('document keywords', () => {
+        it("'document' should create range for entire document", () => {
+            const ranges = generateRanges('Hello world', rangesFrom('document'));
+            deepStrictEqual(startEndData(ranges), [[0, 11, undefined]]);
+        });
+
+        it("'document-start' should create zero-length range at position 0", () => {
+            const ranges = generateRanges('Hello world', rangesFrom('document-start'));
+            deepStrictEqual(startEndData(ranges), [[0, 0, undefined]]);
+        });
+
+        it("'document-end' should create zero-length range at end of content", () => {
+            const ranges = generateRanges('Hello world', rangesFrom('document-end'));
+            deepStrictEqual(startEndData(ranges), [[11, 11, undefined]]);
+        });
+    });
+
     it('should work with generator function', () => {
         const result = generateRanges(
             'Hello world',

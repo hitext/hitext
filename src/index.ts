@@ -25,7 +25,6 @@ export {
 export {
     rangesForLines,
     rangesForMatch,
-    rangesForPoint,
     rangesFrom,
     rangesFromLayer,
     rangesFromOptions,
