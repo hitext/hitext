@@ -60,7 +60,7 @@ describe('applyFilter', () => {
             { start: 3, end: 4, data: 3 }
         ];
 
-        const ranges = generateRanges('abcd', applyFilter((range, index) => index % 2 === 0)(input));
+        const ranges = generateRanges('abcd', applyFilter((range, { index }) => index % 2 === 0)(input));
 
         deepStrictEqual(startEndData(ranges), [[0, 1, 0], [2, 3, 2]]);
     });
@@ -71,7 +71,7 @@ describe('applyFilter', () => {
             { start: 6, end: 11 }
         ];
 
-        const ranges = generateRanges('Hello World', applyFilter((range, index, { document }) => {
+        const ranges = generateRanges('Hello World', applyFilter((range, { document }) => {
             return document.slice(range.start, range.end) === 'Hello';
         })(input));
 
@@ -85,7 +85,7 @@ describe('applyFilter', () => {
             { start: 12, end: 17, data: 'line3' }
         ];
 
-        const ranges = generateRanges('line1\nline2\nline3', applyFilter((range, index, { lines }) => {
+        const ranges = generateRanges('line1\nline2\nline3', applyFilter((range, { lines }) => {
             return lines.getLine(range.start) === 2;
         })(input));
 
@@ -105,7 +105,7 @@ describe('applyFilter', () => {
 
         const ranges = generateRanges(
             'hello world test',
-            applyFilter<{ visible: boolean }, RenderOpts>((range, index, { renderOptions }) => {
+            applyFilter<{ visible: boolean }, RenderOpts>((range, { renderOptions }) => {
                 if (renderOptions?.showHidden) {
                     return true;
                 }

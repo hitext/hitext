@@ -1,6 +1,5 @@
 import type { Ranges, RangeRecord, RangeOperationContext, TransformRanges } from '../types.js';
-import { processRanges } from '../ranges.js';
-import { createLineBoundaries } from '../utils/line-boundaries.js';
+import { processRangesWithContext } from '../utils/range-operation-context.js';
 
 /**
  * Sorts ranges using a comparator function (curried transformer).
@@ -24,36 +23,22 @@ export function applySort<Data, RenderOptions>(
     comparator?: (
         rangeA: RangeRecord<Data>,
         rangeB: RangeRecord<Data>,
-        context: RangeOperationContext<RenderOptions>
+        opContext: RangeOperationContext<RenderOptions>
     ) => number
 ): TransformRanges<Data, RenderOptions> {
     return (input: Ranges<Data, RenderOptions>) => {
-        return (document, createRange, genContext) => {
-            const ranges: Array<RangeRecord<Data>> = [];
-            processRanges(document, input, (start, end, data, origin) => {
-                ranges.push({ start, end, data, origin });
-            }, genContext as any);
+        return (document, createRange, context) => {
+            processRangesWithContext(document, input, context, (ranges, opContext) => {
+                const sortFn = comparator
+                    ? (a: RangeRecord<Data>, b: RangeRecord<Data>) => comparator(a, b, opContext)
+                    : (a: RangeRecord<Data>, b: RangeRecord<Data>) => a.start - b.start || b.end - a.end;
 
-            if (ranges.length === 0) {
-                return;
-            }
+                ranges.sort(sortFn);
 
-            const context: RangeOperationContext<RenderOptions> = {
-                document,
-                lines: genContext?.lines || createLineBoundaries(document),
-                renderOptions: genContext?.renderOptions,
-                ranges
-            };
-
-            const sortFn = comparator
-                ? (a: RangeRecord<Data>, b: RangeRecord<Data>) => comparator(a, b, context)
-                : (a: RangeRecord<Data>, b: RangeRecord<Data>) => a.start - b.start || b.end - a.end;
-
-            ranges.sort(sortFn);
-
-            for (const range of ranges) {
-                createRange(range.start, range.end, range.data, range.origin);
-            }
+                for (const range of ranges) {
+                    createRange(range.start, range.end, range.data, range.origin);
+                }
+            });
         };
     };
 }

@@ -57,7 +57,7 @@ describe('applyPick()', () => {
             { start: 6, end: 11, data: 'b' },
             { start: 12, end: 17, data: 'c' }
         ];
-        const ranges = generateRanges('Hello world', applyPick((range, index) => index === 1)(input));
+        const ranges = generateRanges('Hello world', applyPick((range, { index }) => index === 1)(input));
         deepStrictEqual(startEndData(ranges), [[6, 11, 'b']]);
     });
 
@@ -77,7 +77,7 @@ describe('applyPick()', () => {
         ];
         const ranges = generateRanges(
             'hello world',
-            applyPick((range, index, context) => {
+            applyPick((range, context) => {
                 return context.document.substring(range.start, range.end) === 'world';
             })(input)
         );
@@ -92,7 +92,7 @@ describe('applyPick()', () => {
         ];
         const ranges = generateRanges(
             'aaaaa\nbbbbb\nccccc',
-            applyPick((range, index, { lines }) => lines.getLine(range.start) === 2)(input)
+            applyPick((range, { lines }) => lines.getLine(range.start) === 2)(input)
         );
         deepStrictEqual(startEndData(ranges), [[6, 11, 'line1']]);
     });

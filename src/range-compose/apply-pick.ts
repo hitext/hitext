@@ -1,6 +1,5 @@
 import type { Ranges, RangeRecord, RangeOperationContext, TransformRanges } from '../types.js';
-import { processRanges } from '../ranges.js';
-import { createLineBoundaries } from '../utils/line-boundaries.js';
+import { processRangesWithContext } from '../utils/range-operation-context.js';
 
 /**
  * Picks a single range from the input based on a selector (curried transformer).
@@ -23,46 +22,33 @@ import { createLineBoundaries } from '../utils/line-boundaries.js';
 export function applyPick<Data, RenderOptions>(
     selector: 'first' | 'last' | ((
         range: RangeRecord<Data>,
-        index: number,
-        context: RangeOperationContext<RenderOptions>
+        opContext: RangeOperationContext<RenderOptions>
     ) => boolean)
 ): TransformRanges<Data, RenderOptions> {
     return (input: Ranges<Data, RenderOptions>) => {
-        return (document, createRange, genContext) => {
-            const ranges: Array<RangeRecord<Data>> = [];
-            processRanges(document, input, (start, end, data, origin) => {
-                ranges.push({ start, end, data, origin });
-            }, genContext as any);
+        return (document, createRange, context) => {
+            processRangesWithContext(document, input, context, (ranges, opContext) => {
+                let picked: RangeRecord<Data> | null = null;
 
-            if (ranges.length === 0) {
-                return;
-            }
+                if (selector === 'first') {
+                    picked = ranges[0];
+                } else if (selector === 'last') {
+                    picked = ranges[ranges.length - 1];
+                } else {
+                    for (let i = 0; i < ranges.length; i++) {
+                        opContext.index = i;
 
-            let picked: RangeRecord<Data> | null = null;
-
-            if (selector === 'first') {
-                picked = ranges[0];
-            } else if (selector === 'last') {
-                picked = ranges[ranges.length - 1];
-            } else {
-                const context: RangeOperationContext<RenderOptions> = {
-                    document,
-                    lines: genContext?.lines || createLineBoundaries(document),
-                    renderOptions: genContext?.renderOptions,
-                    ranges
-                };
-
-                for (let index = 0; index < ranges.length; index++) {
-                    if (selector(ranges[index], index, context)) {
-                        picked = ranges[index];
-                        break;
+                        if (selector(ranges[i], opContext)) {
+                            picked = ranges[i];
+                            break;
+                        }
                     }
                 }
-            }
 
-            if (picked) {
-                createRange(picked.start, picked.end, picked.data, picked.origin);
-            }
+                if (picked) {
+                    createRange(picked.start, picked.end, picked.data, picked.origin);
+                }
+            });
         };
     };
 }

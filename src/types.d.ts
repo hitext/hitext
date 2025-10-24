@@ -61,6 +61,7 @@ export interface RangeOperationContext<RenderOptions = any> {
     lines: LineBoundaries;
     renderOptions?: RenderOptions;
     ranges: Array<RangeRecord<any>>;
+    index: number;
 }
 
 // generated

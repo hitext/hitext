@@ -82,7 +82,7 @@ describe('applyDataMap', () => {
             { start: 2, end: 3, data: 'c' }
         ];
 
-        const ranges = generateRanges('abc', applyDataMap((range, index) => ({ char: range.data, index }))(input));
+        const ranges = generateRanges('abc', applyDataMap((range, { index }) => ({ char: range.data, index }))(input));
 
         deepStrictEqual(startEndData(ranges), [
             [0, 1, { char: 'a', index: 0 }],
@@ -101,7 +101,7 @@ describe('applyDataMap', () => {
         type NewData = { text: string };
         const ranges = generateRanges(
             'Hello World',
-            applyDataMap<Data, NewData, unknown>((range, index, { document }) => ({
+            applyDataMap<Data, NewData, unknown>((range, { document }) => ({
                 ...range.data,
                 text: document.slice(range.start, range.end)
             }))(input)
@@ -124,7 +124,7 @@ describe('applyDataMap', () => {
         type NewData = { text: string; line: number; column: number };
         const ranges = generateRanges(
             'line1\nline2\nline3',
-            applyDataMap<Data, NewData, unknown>((range, index, { lines }) => ({
+            applyDataMap<Data, NewData, unknown>((range, { lines }) => ({
                 text: range.data?.text || '',
                 line: lines.getLine(range.start),
                 column: lines.getColumn(range.start)
@@ -149,7 +149,7 @@ describe('applyDataMap', () => {
         type NewData = { value: number; total: number };
         const ranges = generateRanges(
             'hello world test',
-            applyDataMap<Data, NewData, unknown>((range, index, { ranges }) => {
+            applyDataMap<Data, NewData, unknown>((range, { ranges }) => {
                 const total = ranges.reduce((sum: number, r) => sum + (r.data?.value || 0), 0);
                 return { value: range.data?.value || 0, total };
             })(input)
@@ -174,7 +174,7 @@ describe('applyDataMap', () => {
 
         const ranges = generateRanges(
             'hello world',
-            applyDataMap<any, any, RenderOpts>((range, index, { renderOptions }) => ({
+            applyDataMap<any, any, RenderOpts>((range, { renderOptions }) => ({
                 ...range.data,
                 theme: renderOptions?.theme || 'default'
             }))(input),
