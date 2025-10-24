@@ -5,6 +5,7 @@ export { applyInvert } from './apply-invert.js';
 export { applyMerge } from './apply-merge.js';
 export { applyFilter } from './apply-filter.js';
 export { applyDataMap } from './apply-data-map.js';
+export { applyMap } from './apply-map.js';
 export { applySort } from './apply-sort.js';
 export { applyPick } from './apply-pick.js';
 export { applyPadLines } from './apply-pad-lines.js';

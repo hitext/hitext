@@ -42,6 +42,7 @@ export {
     applyFilter,
     applyFitToWindow,
     applyInvert,
+    applyMap,
     applyMerge,
     applyPadLines,
     applyPick,
