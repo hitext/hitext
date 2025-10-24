@@ -35,6 +35,7 @@ export {
 
 // Range transformers: curried functions for composition
 export {
+    applyAppend,
     applyAugment,
     applyCollapseTo,
     applyDataMap,
