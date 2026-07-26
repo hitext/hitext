@@ -37,7 +37,7 @@ This makes a configured prefix reusable. Several views can share tokenization or
 
 ## Layer names and markers
 
-Every layer has a unique `marker` used internally to associate generated ranges with resolved hooks. The marker becomes the generated range's `type`:
+Every layer created through `addLayer()` has a unique symbol `marker` used internally to associate generated ranges with resolved hooks. The marker becomes the generated range's `type`:
 
 ```js
 const [range] = pipeline.ranges(document);
@@ -51,7 +51,9 @@ A layer also has a string `name`. Supply a meaningful name when later layers nee
 pipeline.addLayer(errorRanges, errorHooks, 'errors');
 ```
 
-If a name is omitted, HiText assigns `layer0`, `layer1`, and so on. Markers provide identity even when names are reused, but duplicate names are ambiguous for `rangesFromLayer()`. Use unique names for dependencies.
+If a name is omitted, `addLayer()` assigns `layer0`, `layer1`, and so on. Markers provide identity even when names are reused, but duplicate names are ambiguous for `rangesFromLayer()`. Use unique names for dependencies.
+
+Low-level callers of `createPipelineNode()` provide complete `PipelineLayer` records themselves. In that API, `name` remains optional and marker uniqueness is the caller's responsibility.
 
 ## Ordered dependencies
 
@@ -154,7 +156,7 @@ This evaluates all layers and normalizes their output without resolving hooks or
 const definitions = pipeline.rangeHooksDefinitionMap();
 ```
 
-Definitions are keyed by layer marker and preserve the form passed to `addLayer()`: a partial object, `wrap` shorthand, renderer factory, or nullish value.
+Definitions are keyed by layer marker and preserve the form passed to `addLayer()`: a partial object, `wrap` shorthand, range hook factory, or nullish value.
 
 ### Resolved hooks
 
@@ -170,7 +172,7 @@ This resolves shortcuts and renderer-specific factories into normalized hook obj
 const output = pipeline.render(document, renderOptions);
 ```
 
-`render()` generates ranges, resolves hooks for a fresh renderer context, segments intersections, executes hooks, and emits the root buffer.
+`render()` generates ranges, resolves hooks for a fresh renderer context, segments intersections, executes hooks, and returns the root buffer's emitted result.
 
 ## Analytical layers
 

@@ -4,6 +4,12 @@ HiText 2.0 is a complete redesign of the library. It keeps the original problem 
 
 This is not a syntax-compatible upgrade from the 1.x beta API. See [Migration from HiText 1.x](migration-from-1.x.md) for the practical mapping.
 
+## Release status
+
+HiText 2.0 is currently unreleased. The npm package still identifies itself as `1.0.0-beta.1` and exposes the legacy API; this document describes the development branch that will become 2.0.
+
+The planned package provides ESM and CommonJS entry points, TypeScript declarations, and requires Node.js 14.14 or newer. The DOM renderer additionally requires a browser `document` or a compatible `Document` supplied through its options. The final 2.0 version, publication channel, release date, changelog entry, and installation command must be updated when release artifacts are published.
+
 ## Why a redesign
 
 Work on TypeScript definitions exposed a structural problem in the previous chain and factory API. It was flexible at runtime, but important relationships were implicit: a decorator combined analysis and printer behavior, chains changed shape dynamically, and types had no clear place to express the data flowing between operations.
@@ -120,7 +126,7 @@ Crossing ranges are segmented before they reach tree-shaped output. Range identi
 Range hooks make output behavior explicit:
 
 - `open` and `close` emit around a segment;
-- `wrap` receives a segment's completed child buffer;
+- `wrap` receives the result emitted by a segment's child buffer;
 - `text` transforms source chunks;
 - `replace` consumes source text and emits synthetic output;
 - `break` strengthens interruption at a boundary.
@@ -155,7 +161,7 @@ The new architecture gives TypeScript stable concepts to describe:
 - layer and pipeline products;
 - hook contexts and renderer output;
 - buffer child and result types;
-- renderer-specific factory context.
+- renderer-specific range hook factory context.
 
 Different layers may carry different data types without forcing the complete pipeline into one universal payload. The remaining inference limits, especially named layer lookup, are documented rather than hidden behind type-level machinery.
 

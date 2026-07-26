@@ -9,6 +9,9 @@ See [Range Functions Guidelines](range-functions-guidelines.md) for implementati
 - [Quick Reference](#quick-reference)
 - [Range Sources](#range-sources)
 - [Range Transformers](#range-transformers)
+- [Semantics Matrix](#semantics-matrix)
+- [Range Operation Context](#range-operation-context)
+- [Shared Edge Cases](#shared-edge-cases)
 
 ## Quick Reference
 
@@ -20,7 +23,7 @@ Range Sources:
 | [`rangesConcat`](#rangesconcatinputs) | Combiner | Combine sources | Preserves existing |
 | [`rangesForLines`](#rangesforlinestype) | Source | Line boundaries | None (new ranges) |
 | [`rangesForMatch`](#rangesformatchpattern) | Source | Pattern matching | None (new ranges) |
-| [`rangesFrom`](#rangesfrominput) | Source | Raw data conversion & document keywords | None (new ranges) |
+| [`rangesFrom`](#rangesfrominput) | Source | Raw data conversion & document keywords | Preserves supplied origin |
 | [`rangesFromLayer`](#rangesfromlayername) | Source | Layer reference | Preserves existing |
 | [`rangesFromOptions`](#rangesfromoptionsrangeinput) | Source | User options | Preserves existing |
 | [`rangesWithFallback`](#rangeswithfallbackinputs) | Combiner | First non-empty | Preserves existing |
@@ -30,25 +33,25 @@ Range Transformers:
 | Function | Transform Type | Description | Modifies Data | Origin | Implementation |
 |----------|----------------|-------------|---------------|--------|----------------|
 | [`applyAppend`](#applyappendsources) | N-to-N | Append sources | No | Preserves | Wrapper |
-| [`applyAugment`](#applyaugmentcallback) | 1-to-N | Add derivatives | No | Creates new | Temp array* |
-| [`applyCollapseTo`](#applycollapsetoposition) | 1-to-1 | Zero-width markers | No | Inherits | Streaming |
+| [`applyAugment`](#applyaugmentcallback) | 1-to-N | Add derivatives | No | Originals preserve; derivatives derive | Temp array* |
+| [`applyCollapseTo`](#applycollapsetoposition) | 1-to-1 | Zero-width markers | No | Derives | Streaming |
 | [`applyDataMap`](#applydatamapmapper) | 1-to-1 | Data transformation | Yes | Cleared | Temp array* |
-| [`applyExpandTo`](#applyexpandtoposition-lines) | 1-to-1 | Expand boundaries | No | Inherits | Streaming |
+| [`applyExpandTo`](#applyexpandtoposition-lines) | 1-to-1 | Expand boundaries | No | Derives | Streaming |
 | [`applyFallback`](#applyfallbackfallbacks) | N-to-N | Provide fallback | No | From source | Wrapper |
-| [`applyFilter`](#applyfilterpredicate) | N-to-N | Conditional selection | No | Inherits | Temp array* |
-| [`applyFitToWindow`](#applyfittowindowsize-allowtrimming) | 1-to-1 | Horizontal viewport | No | Inherits | Streaming |
+| [`applyFilter`](#applyfilterpredicate) | N-to-N | Conditional selection | No | Preserves | Temp array* |
+| [`applyFitToWindow`](#applyfittowindowsize-allowtrimming) | 1-to-1 | Horizontal viewport | No | Operation-specific | Streaming |
 | [`applyFork`](#applyforktransformers) | N-to-N | Fork sub-pipeline | No | Preserves | Wrapper |
 | [`applyInvert`](#applyinvertexact) | N-to-M | Negate ranges | No | None | Temp array |
 | [`applyMap`](#applymapcallback) | 1-to-N | Transform ranges | No | Creates new | Temp array* |
-| [`applyMerge`](#applymerge) | N-to-1 | Merge overlapping | No | Array of merged | Temp array |
-| [`applyPadLines`](#applypadlineslines-size) | 1-to-N | Add padding | No | Inherits | Temp array |
+| [`applyMerge`](#applymerge) | N-to-M | Merge overlapping groups | Yes: clears | Aggregates inputs | Temp array |
+| [`applyPadLines`](#applypadlineslines-size) | 1-to-N | Add line padding | Yes: number | Current input | Temp array |
 | [`applyResetOrigin`](#applyresetorigin) | 1-to-1 | Clear origins | No | Cleared | Streaming |
-| [`applySort`](#applysortcomparator) | N-to-N | Custom ordering | No | Inherits | Temp array* |
-| [`applyTake`](#applytaken-predicate) | N-to-N | Take first/last N + filter | No | Inherits | Temp array |
+| [`applySort`](#applysortcomparator) | N-to-N | Custom ordering | No | Preserves | Temp array* |
+| [`applyTake`](#applytaken-predicate) | N-to-N | Take first/last N + filter | No | Preserves | Temp array |
 
 **Implementation notes:**
 - **Streaming** - Processes ranges one-by-one without collecting in memory (1-to-1 transforms)
-- **Temp array*** - Required for predicate callbacks to provide stable `context.ranges` parameter
+- **Temp array*** - Required for range-operation callbacks to provide stable `context.ranges`
 - **Temp array** - Required for complex logic (merging, inverting, windowing, padding)
 - **Wrapper** - Delegates to other range functions (composition helper)
 
@@ -60,8 +63,11 @@ Range Transformers:
 - **N-to-M** - Complete transformation (inversion)
 
 **Origin behavior:**
-- **Inherits** - Passes through existing origin, or creates new from input range
-- **Array of merged** - Creates array of all merged ranges (enables access to individuals)
+- **Preserves** - Copies the existing origin unchanged and does not establish a new one
+- **Derives** - Preserves existing lineage or establishes the current input as origin
+- **Aggregates inputs** - Creates an array containing the input records in the merged group
+- **Current input** - Uses the complete current input record, which may itself contain origin
+- **Operation-specific** - Depends on whether the operation changes visible geometry; see the function section
 - **None** - No relationship between input and output (inversions)
 - **Cleared** - Sets to `undefined` (data transformations create new semantic meaning)
 - **Preserves existing** - Keeps whatever origin was in source ranges
@@ -72,7 +78,7 @@ Range Transformers:
 
 ### `rangesCompose(rangeInput, ...transformers)`
 
-Compose a range generator with multiple transformers (left-to-right).
+Compose an initial range source with multiple transformers (left-to-right).
 
 ```typescript
 rangesCompose<Data, RenderOptions>(
@@ -82,7 +88,7 @@ rangesCompose<Data, RenderOptions>(
 ```
 
 **Parameters:**
-- `rangeInput` - Initial range generator
+- `rangeInput` - Initial range source (iterable or generator)
 - `transformers` - Transformation functions to apply in sequence
 
 **Use cases:**
@@ -138,7 +144,7 @@ rangesConcat(
 Generate ranges for line boundaries in various formats.
 
 ```typescript
-rangesForLines(
+rangesForLines<RenderOptions = unknown>(
     type?: 'line' | 'line-content' | 'newline' | 'line-start' | 'line-end' | 'line-content-end'
 ): GenerateRanges<number, RenderOptions>
 ```
@@ -152,7 +158,9 @@ rangesForLines(
   - `'line-end'` - Zero-width markers at line ends (after newline)
   - `'line-content-end'` - Zero-width markers at line content end (before newline)
 
-**Data:** Line number (1-indexed)
+**Data:** Line number (one-based)
+
+The final logical line is always emitted for every type except `'newline'`. A document ending in a newline therefore has an additional empty final line. For `'line-end'` and `'line-content-end'`, the previous line endpoint and the empty final line point can share `document.length` while carrying different line numbers.
 
 **Use cases:**
 - Line numbering
@@ -176,12 +184,14 @@ rangesForLines('line')
 Find all occurrences matching a string or regular expression.
 
 ```typescript
-rangesForMatch(pattern: RegExp): GenerateRanges<RegExpExecArray, RenderOptions>
-rangesForMatch(pattern: string): GenerateRanges<string, RenderOptions>
+rangesForMatch<RenderOptions>(pattern: RegExp):
+    GenerateRanges<RegExpExecArray, RenderOptions>
+rangesForMatch<RenderOptions>(pattern: string):
+    GenerateRanges<string, RenderOptions>
 ```
 
 **Parameters:**
-- `pattern` - RegExp (with `g` flag) or string to match
+- `pattern` - RegExp or non-empty string to match. A global RegExp emits all matches; a non-global RegExp emits only the first.
 
 **Data:** Full `RegExpExecArray` (includes capture groups) for RegExp, matched string for string literal
 
@@ -199,6 +209,10 @@ rangesForMatch(/function\s+(\w+)/gi)
 rangesForMatch('TODO')
 ```
 
+**Current limitation:** Repeated matching must advance. An empty string or a global RegExp that repeatedly produces zero-width matches can fail to advance. Avoid patterns such as `''` or `/^/gm` until zero-width matching is handled by the implementation. A non-global zero-width RegExp is safe because it emits at most one point.
+
+The generator reuses the supplied RegExp object and does not reset `lastIndex`. This is normally unobservable for completed global searches, but stateful non-global patterns such as sticky regexes can begin a later render from their retained `lastIndex`. Supply a fresh RegExp or reset it before reuse when that state matters.
+
 ---
 
 ### `rangesFrom(input)`
@@ -206,7 +220,7 @@ rangesForMatch('TODO')
 Convert raw range data or document keywords into `GenerateRanges` function.
 
 ```typescript
-rangesFrom<Data>(
+rangesFrom<Data = unknown, RenderOptions = unknown>(
     input: 'document' | 'document-start' | 'document-end' | 
            RangeIterable<Data> | 
            RangesGenerator<Data, RenderOptions>
@@ -256,7 +270,9 @@ rangesFrom((document) => document.length > 100 ? [[0, 100]] : [])
 Reference ranges from another pipeline layer by name.
 
 ```typescript
-rangesFromLayer<Data>(name: string): GenerateRanges<Data, RenderOptions>
+rangesFromLayer<Data = unknown, RenderOptions = unknown>(
+    name: string
+): GenerateRanges<Data, RenderOptions>
 ```
 
 **Parameters:**
@@ -280,7 +296,7 @@ rangesFromLayer('diagnostics')
 Get ranges from render options (user-configurable).
 
 ```typescript
-rangesFromOptions<Data>(
+rangesFromOptions<Data = unknown, RenderOptions = unknown>(
     rangeInput: ((renderOptions: RenderOptions) => Ranges<Data, RenderOptions> | null | undefined) | keyof RenderOptions
 ): GenerateRanges<Data, RenderOptions>
 ```
@@ -291,7 +307,7 @@ rangesFromOptions<Data>(
 **Use cases:**
 - User-configurable highlighting
 - Editor selections
-- Custom range inputs
+- Custom range sources supplied at render time
 - Conditional range generation
 
 **Example:**
@@ -348,7 +364,7 @@ applyAppend<Data, RenderOptions>(
 ```
 
 **Parameters:**
-- `sources` - Range sources to append (iterables, generators, keywords)
+- `sources` - Range sources to append (iterables or generators). Wrap document keywords with `rangesFrom()` first.
 
 **Origin:** Preserves existing origins from all sources
 
@@ -377,10 +393,10 @@ Pass through original ranges unchanged, add derived ranges.
 
 ```typescript
 applyAugment<Data, RenderOptions>(
-        augmenter: (
+    augmenter: (
         range: RangeRecord<Data>,
-                createRange: (start: number, end: number, data?: Data) => void,
-                opContext: RangeOperationContext<RenderOptions>
+        createRange: (start: number, end: number, data?: Data) => void,
+        opContext: RangeOperationContext<RenderOptions>
     ) => void
 ): TransformRanges<Data, RenderOptions>
 ```
@@ -419,11 +435,11 @@ rangesCompose(
 Collapse ranges to zero-width markers at specific positions.
 
 ```typescript
-applyCollapseTo(
+applyCollapseTo<Data, RenderOptions>(
     position: 'start' | 'end' | 
               'line-start' | 'line-end' | 'line-content-end' |
               'document-start' | 'document-end'
-): TransformRanges
+): TransformRanges<Data, RenderOptions>
 ```
 
 **Parameters:**
@@ -436,7 +452,7 @@ applyCollapseTo(
   - `'document-start'` - Start of document (0)
   - `'document-end'` - End of document (`document.length`)
 
-**Origin:** Inherits from input range (direct connection)
+**Origin:** Derives from the input range, preserving an existing origin when present
 
 **Use cases:**
 - Creating insertion points
@@ -508,11 +524,11 @@ rangesCompose(
 Expand ranges to broader boundaries with optional context lines.
 
 ```typescript
-applyExpandTo(
+applyExpandTo<Data, RenderOptions>(
     position: 'line' | 'line-content' | 'line-start' | 'line-end' | 'line-content-end' | 
               'document' | 'document-start' | 'document-end',
     lines?: number | [before: number, after: number]
-): TransformRanges
+): TransformRanges<Data, RenderOptions>
 ```
 
 **Parameters:**
@@ -520,8 +536,12 @@ applyExpandTo(
 - `lines` - Context lines to include:
   - Number: same count before and after (e.g., `2` = 2 before, 2 after)
   - Tuple: `[before, after]` for asymmetric context (e.g., `[1, 3]`)
+    - `'line'` and `'line-content'` use both values
+    - `'line-start'` uses only `before`
+    - `'line-end'` and `'line-content-end'` use only `after`
+    - Document positions ignore `lines`
 
-**Origin:** Inherits from input range (direct connection)
+**Origin:** Derives from the input range, preserving an existing origin when present
 
 **Use cases:**
 - Context highlighting
@@ -603,7 +623,7 @@ applyFilter<Data, RenderOptions>(
   - `range` - Full range object `{start, end, data, origin}`
     - `opContext` - `{document, lines, renderOptions, ranges, index}`
 
-**Origin:** Inherits from input range (direct connection)
+**Origin:** Preserves the existing origin unchanged
 
 **Use cases:**
 - Conditional highlighting
@@ -634,17 +654,17 @@ rangesCompose(
 Fit ranges within a size constraint (viewport).
 
 ```typescript
-applyFitToWindow(
+applyFitToWindow<Data, RenderOptions>(
     size?: number,
     allowTrimming?: boolean
-): TransformRanges
+): TransformRanges<Data, RenderOptions>
 ```
 
 **Parameters:**
 - `size` - Maximum window width in characters (default: `80`)
-- `allowTrimming` - Allow trimming ranges to fit (default: `true`)
+- `allowTrimming` - Allow an oversized single-line range to be trimmed from the right (default: `true`). Multiline input is always reduced to its first line.
 
-**Origin:** Inherits from input range (direct connection)
+**Origin:** For single-line input, preserves or establishes lineage for ordinary expansion. Trimming an oversized single-line range wraps the prior lineage in a record describing the visible slice, which can produce nested origin. Multiline reduction establishes lineage from the reduced first-line interval rather than retaining the complete multiline geometry.
 
 **Use cases:**
 - Preview generation
@@ -670,7 +690,7 @@ rangesCompose(
 
 ### `applyFork(...transformers)`
 
-Fork the pipeline: pass through originals, apply sub-pipeline, append transformed copies.
+Pass through original ranges, then append one transformed branch produced by a sub-pipeline.
 
 ```typescript
 applyFork<Data, RenderOptions>(
@@ -679,24 +699,24 @@ applyFork<Data, RenderOptions>(
 ```
 
 **Parameters:**
-- `transformers` - Sub-pipeline transformers to apply to input ranges
+- `transformers` - Transformers applied left-to-right to the same sub-pipeline; only the final transformed result is appended
 
 **Origin:** Preserves existing origins from all sources (originals unchanged, transformed copies follow their transformer semantics)
+
+All transformers in the sub-pipeline must preserve the same declared `Data` type. Use `applyMap()` or `applyDataMap()` outside `applyFork()` when a derivative needs a different data type.
 
 **Use cases:**
 - Add derivative ranges alongside originals (markers, icons, decorations)
 - Show content + metadata (diagnostics + gutter icons)
-- Parallel transformations (matches + line indicators)
-- Pipeline branching for multi-purpose output
+- A sequential derivative pipeline alongside the originals
 
 **Example:**
 ```typescript
-// Show error matches + line-start markers
+// Keep error matches and append line-start points with the same data
 rangesCompose(
     rangesForMatch(/error/g),
     applyFork(
-        applyCollapseTo('line-start'),
-        applyDataMap(() => ({ type: 'marker' }))
+        applyCollapseTo('line-start')
     )
 )
 ```
@@ -708,7 +728,9 @@ rangesCompose(
 Invert ranges - returns everything NOT in input ranges. **Output ranges have no origin** (no direct connection to input).
 
 ```typescript
-applyInvert(exact?: boolean): TransformRanges
+applyInvert<Data, RenderOptions>(
+    exact?: boolean
+): TransformRanges<Data, RenderOptions>
 ```
 
 **Parameters:**
@@ -788,13 +810,15 @@ rangesCompose(
 
 ### `applyMerge()`
 
-Merge overlapping or adjacent ranges into continuous regions. **Always preserves merged ranges in `origin` field as an array.**
+Merge overlapping or adjacent ranges into continuous regions. Every output has `data: undefined` and preserves the input records in `origin` as an array, including a one-element array for an isolated input range.
 
 ```typescript
-applyMerge(): TransformRanges
+applyMerge<Data, RenderOptions>(): TransformRanges<Data, RenderOptions>
 ```
 
-**Origin:** Array of merged ranges (enables access to individual items)
+**Data:** Always `undefined`; read contributing data through `origin`
+
+**Origin:** Array of input records in the merged group
 
 **Use cases:**
 - Combining overlapping highlights
@@ -807,9 +831,9 @@ applyMerge(): TransformRanges
 // Merge with access to individual headers via origin
 rangesCompose(
     rangesForMatch(/^#{1,6}\s+(.+)$/gm),
-    applyDataMap(match => ({
-        level: match[1].length,
-        text: match[2]
+    applyDataMap(range => ({
+        level: range.data[1].length,
+        text: range.data[2]
     })),
     applyCollapseTo('document-start'),
     applyMerge()  // origin contains all headers
@@ -824,10 +848,11 @@ rangesCompose(
 Add padding ranges around lines.
 
 ```typescript
-applyPadLines(
+applyPadLines<Data, RenderOptions>(
     lines: number | [before: number, after: number],
     size: number
-): TransformRanges
+): (input: Ranges<Data, RenderOptions>) =>
+    GenerateRanges<number, RenderOptions>
 ```
 
 **Parameters:**
@@ -836,7 +861,11 @@ applyPadLines(
   - Tuple: `[before, after]` for explicit control (e.g., `[1, 2]`)
 - `size` - Target width for each padding line in characters
 
-**Origin:** Inherits from input range (direct connection)
+**Data:** Number of padding units needed to reach `size`: `size - emittedLineWidth`
+
+**Origin:** The complete current input record. If that record already has origin, the resulting lineage is nested.
+
+Line offsets are clamped by `LineBoundaries`. Requests before the first line or after the final line can therefore emit duplicate edge-line ranges.
 
 **Use cases:**
 - Smart spacing
@@ -865,7 +894,8 @@ rangesCompose(
 Clear origin tracking from ranges.
 
 ```typescript
-applyResetOrigin(): TransformRanges
+applyResetOrigin<Data, RenderOptions>():
+    TransformRanges<Data, RenderOptions>
 ```
 
 **Origin:** Cleared (`undefined`)
@@ -908,7 +938,7 @@ applySort<Data, RenderOptions>(
   - Returns negative (A before B), zero (equal), or positive (B before A)
   - Default: sort by start ascending, then end descending
 
-**Origin:** Inherits from input range (direct connection)
+**Origin:** Preserves the existing origin unchanged
 
 **Use cases:**
 - Rendering order control
@@ -934,13 +964,16 @@ rangesCompose(
 ### `applyTake(n, predicate?)`
 
 Take first or last N ranges with optional filtering. Combines positional limiting with filtering
-for efficient selection - evaluates ranges in order and stops when limit is reached.
+after collecting the complete input. With a predicate, callback evaluation stops when the requested number of matches is reached; source generation has already completed.
 
 ```typescript
-applyTake(
+applyTake<Data, RenderOptions>(
     n: number | 'first' | 'last',
-    predicate?: (range, opContext) => boolean
-): TransformRanges
+    predicate?: (
+        range: RangeRecord<Data>,
+        opContext: RangeOperationContext<RenderOptions>
+    ) => boolean
+): TransformRanges<Data, RenderOptions>
 ```
 
 **Parameters:**
@@ -953,13 +986,13 @@ applyTake(
   - `range` - Full range object
   - `opContext` - Context with `{ document, lines, renderOptions, ranges, index }`
 
-**Origin:** Inherits from input ranges (direct connection)
+**Origin:** Preserves the existing origin of selected ranges unchanged
 
 **Use cases:**
 - Pagination (first/last page of results)
 - Limiting output with filtering (top 10 errors, not just any 10 ranges)
 - Quick preview (first match only)
-- Efficient selection (stops early when limit reached)
+- Limit predicate evaluation after the requested number of matches is reached
 
 **Example:**
 ```typescript
@@ -983,3 +1016,68 @@ rangesCompose(
 ```
 
 ---
+
+## Semantics Matrix
+
+| Function | Input and output geometry | Data | Origin | Ordering | Cardinality | Collects input? |
+|---|---|---|---|---|---|---|
+| `rangesCompose` | Per configured transformer | Per configured transformer | Per configured transformer | Per configured transformer | Per configured transformer | Per configured transformer |
+| `rangesConcat` | Concatenates source geometry | Preserves | Preserves | Source order, then each source's order | N-to-N | No |
+| `rangesForLines` | Line intervals or boundary points | One-based line number | None | Document order | One per logical line, except `newline` | No |
+| `rangesForMatch` | Match intervals | Match value or `RegExpExecArray` | None | Match order | Zero-to-many | No |
+| `rangesFrom` | Adapts supplied geometry | Preserves | Preserves | Input order | N-to-N | No |
+| `rangesFromLayer` | Copies an earlier layer's geometry | Preserves | Preserves | Earlier layer order | N-to-N | No |
+| `rangesFromOptions` | Adapts option-selected source | Per selected source | Per selected source | Per selected source | Per selected source | Per selected source |
+| `rangesWithFallback` | First non-empty source | Per selected source | Per selected source | Per selected source | N-to-N | No; attempts sources sequentially |
+| `applyAppend` | Original geometry plus appended sources | Preserves | Preserves | Original, then appended source order | N-to-N | No, beyond nested sources |
+| `applyAugment` | Original plus emitted derivatives | Same data type | Originals preserve; derivatives derive | Each original, then its derivatives | One-to-many | Yes |
+| `applyCollapseTo` | Collapses each interval to a point | Preserves | Derives | Input order | One-to-one | No |
+| `applyDataMap` | Preserves geometry | Replaces | Clears | Input order | One-to-one | Yes |
+| `applyExpandTo` | Expands selected boundaries | Preserves | Derives | Input order | One-to-one | No |
+| `applyFallback` | Input or first non-empty fallback | Per selected source | Per selected source | Per selected source | N-to-N | Buffers attempted sources |
+| `applyFilter` | Selects existing geometry | Preserves | Preserves | Input order | N-to-N | Yes |
+| `applyFitToWindow` | Expands or trims within first line | Preserves | Operation-specific | Input order | One-to-one | No |
+| `applyFork` | Original plus final sub-pipeline result | Same declared type | Per sub-pipeline | Originals, then transformed result | N-to-N | Evaluates input twice |
+| `applyInvert` | Produces gaps around merged input | `undefined` | None | Document order | N-to-M | Yes |
+| `applyMap` | Callback-defined derivative geometry | Callback-defined | Derives | Input and emission order | One-to-many | Yes |
+| `applyMerge` | Unions overlapping or adjacent ranges | Clears | Aggregates input records | Start order of merged groups | N-to-M | Yes |
+| `applyPadLines` | Emits clamped line-content ranges | Padding number | Current input record | Input order, then line offset | One-to-many | Yes |
+| `applyResetOrigin` | Preserves geometry | Preserves | Clears | Input order | One-to-one | No |
+| `applySort` | Preserves geometry | Preserves | Preserves | Comparator or start/end default | N-to-N | Yes |
+| `applyTake` | Selects existing geometry | Preserves | Preserves | Selected input order | N-to-N | Yes |
+
+“Collects input” describes each function's own implementation. Nested sources or transformers may still collect independently.
+
+## Range Operation Context
+
+Range-operation callbacks receive:
+
+```ts
+interface RangeOperationContext<RenderOptions = unknown> {
+    document: string;
+    lines: LineBoundaries;
+    renderOptions?: RenderOptions;
+    ranges: Array<RangeRecord<any>>;
+    index: number;
+}
+```
+
+- `ranges` is the complete input collected before callback execution.
+- `index` is a mutable zero-based input position set for per-range callbacks.
+- A sort comparator receives the same context object, but `index` is not updated for comparator calls and should not be used there.
+- `applySort()` sorts the array also exposed as `context.ranges`; callbacks should treat it as operation-owned state and not mutate it.
+- Collection means these operations are not streaming, even when their callback emits ranges through `createRange()`.
+
+## Shared Edge Cases
+
+Unless a function section states otherwise:
+
+- Empty input produces empty output. Fallback functions are the explicit exception.
+- Point ranges (`start === end`) are valid and remain points unless geometry changes them.
+- Range sources and transformers do not generally clamp finite coordinates to the document.
+- Unsorted input is preserved by pass-through operations; sorting, merging, inversion, and other whole-set operations apply their documented ordering.
+- Duplicate ranges are preserved unless an operation such as merge combines their geometry.
+- Line-based functions use `LineBoundaries` and preserve `\n`, `\r\n`, and `\r` distinctions.
+- Invalid or out-of-document ranges may remain visible through `pipeline.ranges()`; render traversal separately filters reversed and non-finite ranges.
+
+Function-specific behavior for empty matches, final empty lines, extended inversion boundaries, clamped line padding, and multiline horizontal windows is documented in the corresponding section.

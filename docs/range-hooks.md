@@ -6,7 +6,7 @@ Range hooks describe how a generated range participates in rendering. A layer at
 pipeline.addLayer(ranges, rangeHooks, name);
 ```
 
-The definition can be a partial hooks object, a `wrap` shortcut, a renderer-specific factory, or `null`.
+The definition can be a partial hooks object, a `wrap` shortcut, a renderer-specific range hook factory, or `null`.
 
 ## Definition forms
 
@@ -69,11 +69,11 @@ Callable hooks receive a context with these fields:
 
 Crossing ranges can split one range into multiple segments, so each hook may be called more than once for a generated range. Do not assume that one source range always produces one open/close pair.
 
-`open` and `close` append directly to the current parent buffer. They are useful for text renderers and for renderer factories that maintain state, such as the TTY style stack.
+`open` and `close` append directly to the current parent buffer. They are useful for text renderers and for range hook factories that cooperate with renderer state, such as the TTY style stack.
 
 ## `wrap`
 
-`wrap(content, context)` receives the emitted content of a segment's child buffer:
+`wrap(content, context)` receives the result emitted by a segment's child buffer:
 
 ```js
 {
@@ -146,6 +146,34 @@ pipeline.addLayer(
 
 Without `break`, a surrounding range can span a replacement and continue afterward. With `break`, active ranges are closed at the new range boundary and reopened as needed after it. This is useful when a generated output boundary must not remain inside a surrounding annotation.
 
+```js
+const surrounding = [[0, 11]];
+const replacement = [[4, 7]];
+
+string()
+    .addLayer(surrounding, {
+        open: () => '<a>',
+        close: () => '</a>'
+    })
+    .addLayer(replacement, { replace: () => 'X' })
+    .render('AAA BBB CCC');
+// <a>AAA X CCC</a>
+
+string()
+    .addLayer(surrounding, {
+        open: () => '<a>',
+        close: () => '</a>'
+    })
+    .addLayer(replacement, {
+        replace: () => 'X',
+        break: true
+    })
+    .render('AAA BBB CCC');
+// <a>AAA </a>X<a> CCC</a>
+```
+
+See [Range Ordering](rendering-model.md#range-ordering) for how `break`, replacement, geometry, and layer order interact at equal boundaries.
+
 ## Hiding content
 
 `rangeHooksHide()` returns hooks for omission-aware hiding. Unlike a fixed empty replacement, it can preserve line structure according to its options and the hidden range's position.
@@ -164,7 +192,11 @@ A range hook factory defers hook creation until the pipeline resolves hooks for 
 
 ```ts
 type RangeHooksFactory<Data, T, R, HC> = {
-    createRangeHooks(context: HC): Partial<RangeHooks<Data, T, R>> | null;
+    createRangeHooks(context: HC):
+        | Partial<RangeHooks<Data, T, R>>
+        | RangeHooksShortcut<Data, T, R>
+        | null
+        | undefined;
 };
 ```
 
@@ -172,4 +204,4 @@ TTY style helpers use this mechanism because they need access to the renderer's 
 
 ## Side effects
 
-Hooks execute during traversal and may run multiple times because of segmentation. Prefer deriving output from hook arguments. When state is necessary, key it by `rangeIndex` or implement it as part of a renderer factory that explicitly manages lifecycle state.
+Hooks execute during traversal and may run multiple times because of segmentation. Prefer deriving output from hook arguments. When state is necessary, key it by `rangeIndex` or implement it through a range hook factory that explicitly cooperates with renderer lifecycle state.

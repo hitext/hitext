@@ -18,6 +18,107 @@ Migration is best approached by identifying range generation, rendering behavior
 
 The change is architectural, not a table of method renames.
 
+The 1.x snippets below are based on the published beta README and the legacy integration still used by Discovery.js.
+
+## Before and after: basic decoration
+
+HiText 1.x selected printer behavior through a decorator-specific printer object:
+
+```js
+const hitext = require('hitext');
+
+const matchPrinter = {
+    html: {
+        open: () => '<span class="match">',
+        close: () => '</span>'
+    }
+};
+
+const output = hitext()
+    .use(hitext.gen.matches('world'), matchPrinter)
+    .print('Hello world!', 'html');
+```
+
+HiText 2.0 starts with the renderer and binds the source and range hooks in a layer:
+
+```js
+import { html, rangesForMatch } from 'hitext';
+
+const output = html()
+    .addLayer(
+        rangesForMatch('world'),
+        content => `<span class="match">${content}</span>`
+    )
+    .render('Hello world!');
+```
+
+## Before and after: reusable pipelines
+
+In 1.x, `.use()` and `.printer()` assembled a preset:
+
+```js
+const preset = hitext
+    .use(tokenDecorator)
+    .use(spotlightRanges, spotlightPrinter)
+    .printer('html');
+
+const output = preset(document);
+```
+
+In 2.0, immutable pipeline prefixes provide reuse:
+
+```js
+const base = html().addLayer(tokenRanges, tokenHooks, 'tokens');
+const withSpotlight = base.addLayer(spotlightRanges, spotlightHooks);
+
+const plainTokens = base.render(document);
+const spotlighted = withSpotlight.render(document);
+```
+
+## Before and after: renderer extensions
+
+The 1.x TTY printer received helpers through a printer factory:
+
+```js
+hitext
+    .use(ranges, {
+        tty: ({ createStyle }) => createStyle('bgWhite', 'red')
+    })
+    .printer('tty');
+```
+
+In 2.0, renderer-specific range hook factories are explicit public definitions:
+
+```js
+import { tty } from 'hitext';
+
+const pipeline = tty().addLayer(
+    ranges,
+    tty.createStyle('bgWhite', 'red')
+);
+```
+
+## Before and after: derived excerpts
+
+1.x decorators could share a document, but the API had no direct equivalent of named generated-range dependencies and curried range transformations. Excerpt selection usually had to be computed outside the pipeline.
+
+In 2.0, the dependency is part of the pipeline:
+
+```js
+const excerpts = html()
+    .addLayer(matches, matchHooks, 'matches')
+    .addLayer(
+        rangesCompose(
+            rangesFromLayer('matches'),
+            applyExpandTo('line', 1),
+            applyInvert()
+        ),
+        rangeHooksHide()
+    );
+```
+
+This is a new composition pattern, not a renamed 1.x method.
+
 ## Create the renderer first
 
 The 1.x API selected a printer while constructing `hitext(...)`. In 2.0, a renderer creates the pipeline:
@@ -42,7 +143,7 @@ const pipeline = html().addLayer(
 );
 ```
 
-The range source can be static input, a generator, a built-in source, or a composition of transformers. The hooks can be a `wrap` shortcut, a partial hooks object, or a renderer-specific factory.
+The range source can be static input, a generator, a built-in source, or a composition of transformers. The hooks can be a `wrap` shortcut, a partial hooks object, or a renderer-specific range hook factory.
 
 This separation is intentional: the same range source can be transformed or reused without packaging it into a decorator object.
 
@@ -169,5 +270,18 @@ Do not carry these 1.x assumptions into migrated code:
 - Rendering behavior is not selected from a global printer set.
 - One range does not necessarily produce one hook call; crossings create segments.
 - Hook output is not necessarily a string.
+
+## Upgrade checklist
+
+1. Pin the existing 1.x beta while migration is in progress.
+2. Choose the 2.0 renderer factory for each output path.
+3. Split every decorator into a range source and range hook definition.
+4. Replace `.use()` chains with immutable `addLayer()` calls and keep returned pipelines.
+5. Replace callable pipelines or `.print()` with `.render()`.
+6. Replace printer sets with ordinary hooks or renderer-specific range hook factories.
+7. Move cross-decorator analysis to named layers and range transformers.
+8. Test generated geometry with `pipeline.ranges()` separately from output.
+9. Add crossing, replacement, and zero-width cases where the old pipeline assumed one hook call per range.
+10. Review [HiText 2.0 Release Notes](release-notes-2.0.md) for compatibility and release status.
 
 Start with [Getting Started](getting-started.md), then use [Core Concepts](core-concepts.md) for the new computation model and [Range Functions Reference](range-functions-reference.md) for direct replacements of common range-generation logic.

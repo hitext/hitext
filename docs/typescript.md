@@ -76,7 +76,7 @@ type ViewOptions = {
 const headerRange: GenerateRanges<undefined, ViewOptions> = (
     document,
     createRange,
-    { renderOptions }
+    { renderOptions } = {}
 ) => {
     if (renderOptions?.includeHeader) {
         createRange(0, document.indexOf('\n') + 1);
@@ -190,7 +190,7 @@ const structured = createRenderPipeline<unknown, Child, Result>(() => ({
 }));
 ```
 
-`T` describes values accepted as individual children. `R` describes the emitted aggregate. A `wrap` hook receives `T | R` and can return a child or aggregate accepted by the parent buffer.
+`T` describes values accepted as individual children. `R` describes the emitted aggregate. The current public `RangeHookWrap` declaration types `content` as `T | R`, although the render engine calls `emit()` first and passes an `R` value at runtime. A `wrap` hook can return a child or aggregate accepted by the parent buffer.
 
 ## Previous layer data
 
@@ -205,6 +205,31 @@ Layer names are runtime identifiers. TypeScript does not derive a name-to-data m
 ## Inference boundaries
 
 HiText keeps each layer's data generic local, but a pipeline can contain heterogeneous layers. Introspection methods therefore return broad generated-range and hook-map types. Narrow data at the layer, source, transformer, or hook where its contract is known rather than casting the complete pipeline to one data type.
+
+`rangesCompose()` currently preserves the data type of its initial source in its declared return type, even when `applyDataMap()` or `applyMap()` changes the runtime data. When a composed result changes data type, apply the transformer directly and annotate the result:
+
+```ts
+type Heading = {
+    level: number;
+    text: string;
+};
+
+const headingMatches = rangesForMatch<ViewOptions>(
+    /^(#{1,6})\s+(.+)$/gm
+);
+
+const headings: GenerateRanges<Heading, ViewOptions> =
+    applyDataMap<RegExpExecArray, Heading, ViewOptions>(range => {
+        const match = range.data!;
+
+        return {
+            level: match[1].length,
+            text: match[2]
+        };
+    })(headingMatches);
+```
+
+This is a declaration-level inference boundary; runtime data is transformed normally. Hooks consuming an unannotated `rangesCompose()` result may otherwise retain the initial source data type.
 
 ## Why 2.0 changed the API
 

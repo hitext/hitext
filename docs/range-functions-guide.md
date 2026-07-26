@@ -140,7 +140,7 @@ Data is retained, so an insertion hook can render a suggestion derived from the 
 
 ### Fit horizontally
 
-`applyFitToWindow(size, allowTrimming?)` expands a range within its line up to a character width. Long ranges are trimmed from the right unless trimming is disabled:
+`applyFitToWindow(size, allowTrimming?)` expands a range within its line up to a character width. Oversized single-line ranges are trimmed from the right unless trimming is disabled. Multiline input is always reduced to its first line:
 
 ```js
 rangesCompose(
@@ -153,7 +153,7 @@ It is a horizontal line viewport, not a `{ before, after }` context API.
 
 ### Merge and invert
 
-`applyMerge()` unions overlapping or adjacent selection geometry and records the merged inputs in `origin`. `applyInvert()` returns gaps around a non-empty input:
+`applyMerge()` unions overlapping or adjacent selection geometry, clears top-level data, and records the contributing input records in `origin`. `applyInvert()` returns gaps around a non-empty input:
 
 ```js
 rangesCompose(
@@ -221,7 +221,7 @@ rangesCompose(
 )
 ```
 
-Every range emitted by `applyMap()` receives the input range or its existing root origin.
+Every range emitted by `applyMap()` receives the current input range as origin, or preserves that input's existing origin when present.
 
 `applyAugment()` is similar but also passes every original range through unchanged. Use it when derivatives supplement rather than replace the input set.
 
@@ -250,7 +250,7 @@ rangesWithFallback(
 
 The transformer form `applyFallback()` uses the current composition result first, then configured fallback sources.
 
-`applyAppend()` adds independent sources to a transformed stream. `applyFork()` passes original ranges through and appends one or more transformed branches.
+`applyAppend()` adds independent sources to a transformed stream. `applyFork()` passes original ranges through and appends one transformed branch after applying its configured same-data-type transformers left-to-right. Use a separate layer or direct data-changing transformer when the derivative needs a different data type.
 
 ## Build projections
 

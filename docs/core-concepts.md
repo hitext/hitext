@@ -46,7 +46,7 @@ type RangeRecord<Data> = {
 };
 ```
 
-Range input can use record or tuple form:
+A range value can use record or tuple form:
 
 ```js
 { start: 0, end: 5, data: { kind: 'keyword' } }
@@ -55,7 +55,7 @@ Range input can use record or tuple form:
 
 A range with `start === end` is a point. Point ranges are useful for insertions such as line numbers, labels, and generated blocks.
 
-During generation, HiText normalizes range input into generated records. A generated range also has a `type` marker that associates it with the hooks of its layer.
+During generation, HiText normalizes range values into generated records. A generated range also has a `type` carrying the layer marker that associates it with the layer's hooks.
 
 ## Stand-off annotations
 
@@ -71,7 +71,7 @@ Both providers describe the original document. HiText resolves the crossing inte
 
 ## Range sources
 
-A layer accepts either an iterable of range input or a generator function:
+A layer accepts a range source: either an iterable of range values or a generator function:
 
 ```js
 const staticRanges = [[0, 5], [12, 17]];
@@ -120,7 +120,7 @@ range source + range hooks + optional name
 const nextPipeline = pipeline.addLayer(ranges, hooks, name);
 ```
 
-The layer receives a unique marker. Generated ranges use that marker to resolve the layer's hooks during rendering.
+A layer created through `addLayer()` receives a unique symbol marker. Generated ranges use that marker to resolve the layer's hooks during rendering. Low-level `PipelineLayer` records may supply another `RangeMarker` and are responsible for its identity.
 
 Names make previous layer results addressable through `rangesFromLayer(name)`. Layers are evaluated in order, so dependencies can point only to layers that have already been added.
 
@@ -204,7 +204,7 @@ String, DOM, and JSX outputs use the same traversal. They differ in their buffer
 
 Decoration preserves the complete source text and changes its representation. Highlighting is a decoration.
 
-Projection changes which source regions are materialized. A projection may hide, replace, aggregate, or insert content while retaining other annotations in their original coordinates.
+Projection builds a derived output view. It may select, omit, replace, reorder, or aggregate document content and may insert synthetic content, while annotations retain document-relative coordinates.
 
 ```text
 interesting ranges

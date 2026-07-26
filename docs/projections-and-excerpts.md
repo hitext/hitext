@@ -1,6 +1,6 @@
 # Projections and Excerpts
 
-A projection renders a selected view of a document while preserving annotations in source coordinates. Search snippets, code folds, redacted output, diagnostic excerpts, and compact reports are all projections.
+A projection is a derived output view that may select, omit, replace, reorder, or aggregate document content and may insert synthetic content, while annotations retain document-relative coordinates. Search snippets, code folds, redacted output, diagnostic excerpts, and compact reports are all projections.
 
 The key property is that selection and annotation are resolved in one pipeline. HiText does not render markup first and cut it afterward.
 
@@ -97,7 +97,7 @@ const snippets = html()
     );
 ```
 
-The transformer expands short matches toward an 80-character line window, redistributing unused space when it reaches a line boundary. A long match is trimmed from the right unless the second argument is `false`.
+The transformer expands short matches toward an 80-character line window, redistributing unused space when it reaches a line boundary. An oversized single-line match is trimmed from the right unless the second argument is `false`. Multiline input is always reduced to its first line, and its generated origin reflects that reduced first-line interval rather than the complete multiline input.
 
 It does not accept separate `{ before, after }` values and does not cross line boundaries. Use a custom transformer when a projection needs asymmetric character context.
 
@@ -141,7 +141,7 @@ The helper distinguishes:
 - complete skipped lines, with suitable leading or trailing newlines;
 - document prefix and suffix omissions.
 
-It sets `break: true` so omission boundaries interrupt surrounding ranges consistently. Marker callbacks can return the active renderer's child or result type, not only strings.
+It sets `break: true` so omission boundaries interrupt surrounding ranges consistently. The `ellipsis` and `skippedLines` omission callbacks can return the active renderer's child or result type, not only strings.
 
 ## Code folding
 

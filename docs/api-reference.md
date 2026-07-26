@@ -88,21 +88,38 @@ Generates normalized ranges for every layer without rendering. Each generated ra
 
 ### `pipeline.rangeHooksDefinitionMap()`
 
+```ts
+pipeline.rangeHooksDefinitionMap():
+    RangeHooksDefinitionMap<any, T, R, HC>
+```
+
 Returns definitions keyed by layer marker. Values may still be shortcuts or renderer-specific factories.
 
 ### `pipeline.rangeHooksMap()`
+
+```ts
+pipeline.rangeHooksMap(): RangeHooksMap<any, T, R>
+```
 
 Resolves definitions against a new renderer hooks instance and returns normalized `RangeHooks` keyed by layer marker.
 
 ### `pipeline.layers`
 
-The ordered layer records used by the pipeline. Treat the array and its records as introspection data; construct changed pipelines with `addLayer()`.
+```ts
+pipeline.layers: PipelineLayer<RenderOptions, any, T, R, HC>[]
+```
+
+The ordered runtime layer records used by the pipeline. Treat the array and its records as introspection data; construct changed pipelines with `addLayer()`.
 
 ### `pipeline.createRenderHooks`
 
-The renderer factory used to resolve hooks and render output. This is primarily useful for low-level integrations.
+```ts
+pipeline.createRenderHooks: CreateRenderHooks<T, R, HC>
+```
 
-## Range input
+The renderer-hooks factory used to resolve hooks and render output. This is primarily useful for low-level integrations.
+
+## Range values and sources
 
 ```ts
 type RangeTuple<Data = unknown> = [
@@ -124,7 +141,7 @@ type Ranges<Data, RenderOptions> =
     | GenerateRanges<Data, RenderOptions>;
 ```
 
-Offsets are zero-based and `end` is exclusive. Zero-width ranges have equal start and end offsets.
+A `RangeTuple` or `RangeRecord` is one range value. `Ranges` is a range source: either an iterable of range values or a generator. Offsets are zero-based and `end` is exclusive. Zero-width ranges have equal start and end offsets.
 
 ## Range generators
 
@@ -149,6 +166,20 @@ Generation context contains:
 | `lines` | `LineBoundaries` for the document |
 
 The `GenerateRangesContext` type also permits an optional `ranges` field for low-level callers. Pipeline generation does not populate it; previous layer products are available through `rangesByMarker` and `rangesByName`.
+
+## Range operation context
+
+```ts
+interface RangeOperationContext<RenderOptions = any> {
+    document: string;
+    lines: LineBoundaries;
+    renderOptions?: RenderOptions;
+    ranges: Array<RangeRecord<any>>;
+    index: number;
+}
+```
+
+Range-operation callbacks receive the complete collected input through `ranges`. Per-range operations update `index` to the current zero-based input position. Sort comparators should not rely on `index`, since it is not updated for comparator calls.
 
 ## Range sources
 
@@ -229,39 +260,158 @@ context.range.start/end  complete generated range
 
 `createLineBoundaries(document)` returns one-based line/column helpers over a string:
 
-- `getLine()`, `getColumn()`, and `getOffset()` convert coordinates.
-- `getLineStart()`, `getLineEnd()`, and `getLineContentEnd()` find boundaries.
-- `getLineText()` and `getLineContentText()` read complete or newline-free text.
-- `isLineStart()`, `isLineEnd()`, and `isLineContentEnd()` test boundaries.
-- `getNewlineText()` preserves `\n`, `\r\n`, or `\r`.
-- `getLastLine()`, `getLinesNumber()`, and maximum-end helpers summarize lines.
-- `getLineDiff()` and `isSameLine()` compare offsets.
+```ts
+createLineBoundaries(document: string): LineBoundaries
+
+interface LineBoundaries {
+    getLine(offset: number, lines?: number): number;
+    getColumn(offset: number, lines?: number): number;
+    getOffset(line: number, column?: number): number;
+
+    getLineStart(offset: number, lines?: number): number;
+    getLineEnd(offset: number, lines?: number): number;
+    getLineContentEnd(offset: number, lines?: number): number;
+
+    isLineStart(offset: number): boolean;
+    isLineEnd(offset: number): boolean;
+    isLineContentEnd(offset: number): boolean;
+
+    getNewlineText(offset: number, lines?: number): string;
+    getLineText(offset: number, lines?: number): string;
+    getLineContentText(offset: number, lines?: number): string;
+
+    getLastLine(): number;
+    getLinesNumber(): number;
+    getMaxLineEnd(fromLine?: number, toLine?: number): number;
+    getMaxLineContentEnd(fromLine?: number, toLine?: number): number;
+
+    getLineDiff(offset1: number, offset2: number): number;
+    isSameLine(offset1: number, offset2: number): boolean;
+}
+```
+
+Offset arguments use document-relative UTF-16 coordinates. Line and column values are one-based. Methods accepting `lines` move by a signed line count and clamp to available lines. Newline-aware methods preserve `\n`, `\r\n`, or `\r`.
 
 ## Buffers
 
 Public buffer implementations and factories:
 
-- `StringBuffer`, `createStringBuffer`
-- `ArrayBuffer`, `createArrayBuffer`
-- `DOMBuffer`, `createDOMBuffer`
+```ts
+new StringBuffer(): RenderBuffer<string, string>
+createStringBuffer(): StringBuffer
 
-All implement `append(child)` and `emit()`.
+new ArrayBuffer<T>(): RenderBuffer<T, NestedArray<T>>
+createArrayBuffer<T>(): ArrayBuffer<T>
+
+new DOMBuffer(document?: Document):
+    RenderBuffer<Node, DocumentFragment>
+createDOMBuffer(document?: Document): DOMBuffer
+```
+
+All implement `append(child)` and `emit()`. `ArrayBuffer` preserves nested emitted arrays rather than flattening them. `DOMBuffer` defaults to `globalThis.document`.
 
 ## Low-level APIs
 
-The package also exports the functions used by pipeline orchestration:
+### `render()`
 
-- `render`
-- `createPipelineNode`
-- `generateRangesFromLayers`
-- `generateRanges`
-- `processRanges`
-- `createRangeHooksMapFromLayers`
-- `resolveRangeHooksMap`
-- `resolveRangeHooksDefinition`
+```ts
+render<T, R = T, HC = unknown>(
+    document: string,
+    ranges: GeneratedRange[],
+    rangeHooksDefinitionMap?:
+        RangeHooksDefinitionMap<any, T, R, HC> | null,
+    renderHooks?: Partial<RenderHooks<T, R, HC>>,
+    lineBoundaries?: LineBoundaries | null
+): R
+```
+
+### `createPipelineNode()`
+
+```ts
+createPipelineNode<RenderOptions, T, R = T, HC = undefined>(
+    createRenderHooks: CreateRenderHooks<T, R, HC>,
+    layers: PipelineLayer<RenderOptions, any, T, R, HC>[]
+): PipelineNode<RenderOptions, T, R, HC>
+```
+
+### `generateRangesFromLayers()`
+
+```ts
+generateRangesFromLayers<RenderOptions, Data, T, R, HC>(
+    document: string,
+    layers: PipelineLayer<RenderOptions, Data, T, R, HC>[],
+    renderOptions?: RenderOptions,
+    lines?: LineBoundaries
+): GeneratedRange<Data>[]
+```
+
+### `generateRanges()`
+
+```ts
+generateRanges<Data, RenderOptions>(
+    document: string,
+    input: Ranges<Data, RenderOptions>,
+    context?: GenerateRangesContext<Data, RenderOptions>
+): GeneratedRange<Data>[]
+```
+
+### `processRanges()`
+
+```ts
+processRanges<Data, RenderOptions>(
+    document: string,
+    input: Ranges<Data, RenderOptions>,
+    createRange: CreateRange<Data>,
+    context?: GenerateRangesContext<Data, RenderOptions>
+): void
+```
+
+### Hook-map helpers
+
+```ts
+createRangeHooksMapFromLayers<RenderOptions, Data, T, R, HC>(
+    layers: PipelineLayer<RenderOptions, Data, T, R, HC>[]
+): RangeHooksDefinitionMap<Data, T, R, HC>
+
+resolveRangeHooksMap<Data, T, R, HC>(
+    rangeHooksMap: RangeHooksDefinitionMap<Data, T, R, HC>,
+    renderHooks: Partial<RenderHooks<T, R, HC>>
+): RangeHooksMap<Data, T, R>
+
+resolveRangeHooksDefinition<Data, T, R, HC>(
+    definition:
+        RangeHooksDefinition<Data, T, R, HC> | undefined | null,
+    renderHooks: Partial<RenderHooks<T, R, HC>>
+): RangeHooks<Data, T, R> | null
+```
 
 Prefer renderer pipelines for application code. The low-level functions are intended for custom orchestration, renderers, debugging tools, and tests that need explicit intermediate products.
 
 ## Exported types
 
-All declarations in `src/types.d.ts` are exported from the package root, including pipeline, range, hook, context, renderer, buffer, marker, and line boundary types. See [TypeScript](typescript.md) for common generic patterns.
+All declarations in `src/types.d.ts` are exported from the package root:
+
+- Pipeline: `CreateRenderHooks`, `PipelineLayer`, `PipelineNode`
+- Range sources and values: `Ranges`, `RangeIterable`, `RangeTuple`, `RangeRecord`, `RangeOrigin`, `CreateRange`, `GenerateRanges`, `GenerateRangesContext`, `RangesGenerator`, `TransformRanges`
+- Generated ranges and operations: `GeneratedRange`, `RangeMarker`, `RangeOperationContext`
+- Hook definitions and maps: `RangeHooksDefinition`, `RangeHooksShortcut`, `RangeHooksFactory`, `RangeHooksDefinitionMap`, `RangeHooksMap`, `RangeHooks`, `RangeCallableHook`
+- Callable hooks and context: `RangeHookOpen`, `RangeHookClose`, `RangeHookWrap`, `RangeHookText`, `RangeHookReplace`, `RangeHookContext`, `RangeHookContextDump`
+- Renderer contracts: `RenderHooks`, `RenderBuffer`
+- Text coordinates: `LineBoundaries`
+
+See [TypeScript](typescript.md) for common generic patterns.
+
+## Export map
+
+The package currently supports one public entry point, `hitext`. There are no supported public subpath exports.
+
+| Group | Runtime exports |
+|---|---|
+| Renderers | `string`, `html`, `tty`, `dom`, `jsx` |
+| Pipeline and rendering | `createRenderPipeline`, `createPipelineNode`, `render` |
+| Range generation | `generateRangesFromLayers`, `generateRanges`, `processRanges` |
+| Hook resolution | `createRangeHooksMapFromLayers`, `resolveRangeHooksMap`, `resolveRangeHooksDefinition` |
+| Range sources | `rangesCompose`, `rangesConcat`, `rangesForLines`, `rangesForMatch`, `rangesFrom`, `rangesFromLayer`, `rangesFromOptions`, `rangesWithFallback` |
+| Range transformers | `applyAppend`, `applyAugment`, `applyCollapseTo`, `applyDataMap`, `applyExpandTo`, `applyFallback`, `applyFilter`, `applyFitToWindow`, `applyFork`, `applyInvert`, `applyMap`, `applyMerge`, `applyPadLines`, `applyResetOrigin`, `applySort`, `applyTake` |
+| Range hook utilities | `rangeHooksHide` |
+| Buffers and text utilities | `StringBuffer`, `createStringBuffer`, `ArrayBuffer`, `createArrayBuffer`, `DOMBuffer`, `createDOMBuffer`, `createLineBoundaries` |

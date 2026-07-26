@@ -50,16 +50,17 @@ createRenderPipeline(renderer) → .addLayer(ranges, hooks, name?) → .render(d
 ### Glossary
 
 **Ranges:**
-- **Range** - Text fragment of document with `start`/`end` offsets (zero-based, end-exclusive), optional `data`/`origin`
+- **Range** - Attributed half-open interval or boundary in document-relative coordinates, with `start`/`end` offsets (zero-based, end-exclusive) and optional `data`/`origin`
 - **Range Data** - Custom metadata (match results, diagnostics, token types)
-- **Range Origin** - Reference to source range(s) that produced a derivative (tracks transformation lineage)
-- **Range Input** - Various forms: record `{start, end, data?, origin?}` or tuple `[start, end, data?, origin?]`
+- **Range Origin** - Operation-specific lineage reference to one or more ranges that produced a derivative
+- **Range Value** - A record `{start, end, data?, origin?}` or tuple `[start, end, data?, origin?]`
+- **Range Iterable** - Iterable collection of Range Values
 - **Range Set** - Collection of ranges
-- **Range Source** - Iterable of Range Inputs, or a function producing ranges
-- **Range Normalization** - Converting input forms to standard record format `{start, end, data, origin}` during range generation
-- **Range Segment** - Portion of range between interruptions; ranges split into segments during rendering for intersection/conflict resolution
+- **Range Source** - A Range Iterable or a generator function producing ranges (`Ranges`)
+- **Range Normalization** - Converting Range Values to `GeneratedRange` records `{type, start, end, data?, origin?}` during pipeline generation; `type` carries the current Layer Marker
+- **Segment** - Portion of a generated range between interruptions; ranges split into segments during rendering for intersection/conflict resolution
 - **Range Generator** - Function producing ranges via `createRange(start, end, data?, origin?)` callback
-- **Range Transformer** - Curried function taking range input, returning new generator (enables composition)
+- **Range Transformer** - Curried function taking a Range Source and returning a new generator (enables composition)
 - **Range Derivative** - Range created from another range
 
 **Text:**
@@ -71,15 +72,20 @@ createRenderPipeline(renderer) → .addLayer(ranges, hooks, name?) → .render(d
 **Pipeline:**
 - **Renderer** - Output format handler providing `createRenderHooks()` for buffer management
 - **Render Pipeline** - Immutable layer chain: `createRenderPipeline()` → `.addLayer()` → `.render()`
-- **Layer** - Range generator + render hooks + optional name
-- **Render Options** - User config passed to generators/hooks (theme, viewport)
-- **Render Buffer** - Output accumulator (string/DOM/JSX); subbuffers created during render (on hook execution), emitted results attach to parent buffer up to top buffer (result of `render()`)
+- **Layer Configuration** - Range Source + Range Hook Definition + optional user-supplied name
+- **Layer** - Runtime layer record with an assigned name, unique Layer Marker, Range Source and Range Hook Definition
+- **Layer Marker** - Marker stored as `layer.marker` and copied to `generatedRange.type`; `addLayer()` creates a unique symbol, while low-level `PipelineLayer` records may supply another `RangeMarker`
+- **Render Options** - Per-call user config available to generators and Range Operation Callbacks (theme, viewport); Range Hook Context does not include render options
+- **Render Buffer** - Output accumulator with `append()` and `emit()`; child buffers accumulate nested content, and emitted results attach to parent buffers up to the root result returned by `render()`
 
 **Hooks:**
-- **Range Hooks** - Render functions applied to each range segment: `open`, `close`, `wrap`, `text`, `replace`, `break` flag
-- **Hook Context** - Data passed to hooks: `document`, `offset`, `line`, `column`, `start`, `end`, `range`, `data`, `lines` (LineBoundaries)
+- **Range Hook Definition** - Layer rendering input: partial hooks, `wrap` shortcut, Range Hook Factory or nullish value
+- **Range Hooks** - Resolved functions and flags applied to each segment: `open`, `close`, `wrap`, `text`, `replace`, `break`
+- **Range Hook Factory** - Renderer-specific definition exposing `createRangeHooks(rendererContext)`
+- **Range Hook Context** - Data passed to callable Range Hooks: `document`, `offset`, `line`, `column`, `start`, `end`, `range`, `data`, `lines` (LineBoundaries)
+- **Renderer Hooks** - Renderer-level buffer, text and lifecycle behavior (`RenderHooks`)
 - **Generation Context** - Data passed by pipeline generation: `renderOptions`, `marker`, `rangesByMarker`, `rangesByName`, `lines` (LineBoundaries). The context type also has an optional `ranges` field for low-level callers, but pipeline generation does not populate it.
-- **Operation Context** - Data passed to predicates: `document`, `lines` (LineBoundaries), `renderOptions`, `ranges`
+- **Range Operation Context** - Data passed to Range Operation Callbacks: `document`, `lines` (LineBoundaries), `renderOptions`, `ranges`, `index`. `index` is a mutable zero-based input position for per-range callbacks; comparator callbacks should not rely on it.
 
 ### Project Structure
 

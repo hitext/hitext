@@ -26,6 +26,12 @@ A range is a generated annotation over the source document. A segment is the por
 
 One range can produce several segments. In hook context, `range.start/end` describe the complete range, while `start/end` describe the current segment. `rangeIndex` remains stable across those segments.
 
+## Why is there no public `segments()` API?
+
+Segmentation is an internal render operation in HiText 2.0. Hooks expose segment boundaries and stable generated-range identity, but the pipeline does not return a standalone segment list.
+
+For debugging, attach temporary hooks and record `context.dump()` as described in [Introspection and Debugging](introspection-and-debugging.md#trace-segments). Do not depend on internal stack structures.
+
 ## Can HiText render non-string output?
 
 Yes. Built-in renderers produce strings, a DOM `DocumentFragment`, or JSX-compatible child arrays. `createRenderPipeline()` and a custom buffer can produce another result type.

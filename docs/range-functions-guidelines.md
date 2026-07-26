@@ -21,14 +21,13 @@ See [Range Functions Reference](range-functions-reference.md) for the complete A
 
 **Origin tracking:**
 - Type: `RangeRecord<Data> | RangeRecord<Data>[] | undefined`
-- Purpose: Maintain reference to **root source range(s)**, not intermediate transformation steps
-- **Points to transformation root** - Origin tracks the original range that started the transformation chain, not the previous step. The pattern `origin || { start, end, data }` preserves the root through multiple transformations.
+- Purpose: Record operation-specific lineage from derivatives to contributing ranges
+- **Defined per transformer** - A transformer may preserve existing lineage, derive from the current input, aggregate input records, clear origin, or produce unrelated output.
 - **Set only for derivative ranges** - Original ranges from sources have `origin: undefined`
 - Use cases:
   - **Injection context** - When collapsing to insertion points, origin shows what range triggered the injection and its original position/data
   - **Content generation** - Access source data when generating summaries, TOCs, or derived content (e.g., merged headers → TOC entries with original header data)
   - **Viewport understanding** - Know which part of original range is visible after framing/fitting operations
-  - **Root access** - Direct access to transformation root without traversing chain
 - Automatically managed by transformers according to transformation semantics (see Design Principle #7)
 
 **Function categories:**
@@ -36,8 +35,8 @@ See [Range Functions Reference](range-functions-reference.md) for the complete A
 - **Range Transformers** (`apply*`) - Transform ranges, curried, return `(input: Ranges) => GenerateRanges`
 
 **Context objects:**
-- `GenerateRangesContext` - Available in range source/transformer implementation: `{renderOptions, marker, ranges, rangesByMarker, rangesByName, lines}`
-- `RangeOperationContext` - Available in predicate callbacks (filter, map, sort): `{document, lines, renderOptions, ranges, index}` where `index` is a lazy getter for the current range's zero-based position
+- `GenerateRangesContext` - Available in range source/transformer implementation: `{renderOptions, marker, ranges?, rangesByMarker, rangesByName, lines}`. Pipeline generation does not populate `ranges`; it is available to low-level callers.
+- `RangeOperationContext` - Available in range-operation callbacks (filter, map, sort, and related operations): `{document, lines, renderOptions, ranges, index}`. `index` is a mutable zero-based input position for per-range callbacks; comparator callbacks should not rely on it.
 - Both provide access to `lines` (LineBoundaries) for on-demand metric computation
 
 ---
@@ -67,10 +66,10 @@ Function behavior is obvious from name and parameters.
 
 ### 5. Immutability
 
-Input ranges are never mutated. Transformations always create new range objects, preserving the original as `origin`:
+Input ranges are never mutated. Transformations always emit new range records and apply their documented origin policy:
 
 ```typescript
-// ✅ Correct: Create new range with origin
+// Example derivative policy: preserve lineage or establish current input
 createRange(newStart, newEnd, range.data, range.origin || range)
 
 // ❌ Wrong: Mutate input range
@@ -100,15 +99,15 @@ processRanges(document, input, (start, end, data, origin) => {
 ranges.forEach(range => createRange(...));
 ```
 
-**Exception:** Functions with predicate callbacks need temporary arrays to provide stable `context.ranges` parameter (e.g., `applyFilter`, `applyDataMap`, `applySort`).
+**Exception:** Functions with range-operation callbacks need temporary arrays to provide stable `context.ranges` (for example `applyFilter`, `applyMap`, `applyAugment`, `applyDataMap`, `applySort`, and `applyTake`).
 
-**Why:** Avoids memory overhead for large range sets, enables true streaming pipelines.
+**Why:** Avoids collecting input when a transform does not need whole-set knowledge or stable operation context.
 
 ### 7. Origin Tracking
 
-Transformations preserve range lineage via `origin` field, which points to the **transformation root**, not intermediate steps. **Original ranges from sources have `origin: undefined`** - only derivative ranges carry origin references.
+Transformations record lineage through `origin` according to operation semantics. **Original ranges from sources have `origin: undefined`**; derivatives may establish or retain origin references.
 
-**The root preservation pattern:**
+**A common root-preserving pattern:**
 ```typescript
 // ✅ Correct: Preserve root through chain
 createRange(newStart, newEnd, data, origin || { start, end, data });
@@ -116,31 +115,30 @@ createRange(newStart, newEnd, data, origin || { start, end, data });
 // This means:
 // - If origin exists → keep it (points to root)
 // - If no origin → current range becomes root
-// Never creates origin.origin.origin... chains
+// This particular policy does not create origin chains
 ```
 
 **Transformer origin behaviors:**
 
-- **Inherits (most transformers):** Uses pattern above - `origin || { start, end, data }` preserves root through transformation chain (e.g., `applyExpandTo`, `applyCollapseTo`, `applyFilter`)
+- **Preserves:** Copies an existing origin unchanged without establishing one (e.g., `applyFilter`, `applySort`, `applyTake`).
+
+- **Derives:** Uses `origin || { start, end, data }` to preserve existing lineage or establish the current input as origin (e.g., `applyExpandTo`, `applyCollapseTo`).
 
 - **Cleared (data transformations):** Sets `origin = undefined` - the transformed range becomes a new root. Used when data is semantically transformed and the result IS the new source of truth. Example: `applyDataMap()` creates new data with same position as origin - keeping origin would point to obsolete data. If original data is needed, carry it forward explicitly in new data structure.
 
-- **Array (merge operations):** Origin is array of all merged source ranges - enables access to individual items when multiple ranges combine into one (e.g., `applyMerge()` for generating summaries from merged headers)
+- **Array (merge operations):** Origin is an array of all input records in the merged group, including their existing origins (e.g., `applyMerge()` for generating summaries from merged headers).
+
+- **Current input:** Uses the complete current input record and can therefore form nested lineage (e.g., `applyPadLines()`). `applyFitToWindow()` may also wrap prior lineage when trimming visible geometry.
 
 - **None (inversions):** No origin - output ranges have no relationship to input ranges (e.g., `applyInvert()` returns gaps, not derivatives)
 
-**Why preserve root, not previous step:**
-- Enables direct access to transformation source without traversing chain
-- Use cases: access original match data after expansion, know source position after viewport fitting, generate content from root data
-- Memory efficient: single reference vs linked list
-
-This enables access to source ranges for functional composition (e.g., generating TOC from merged headers via `range.origin.map(...)`).
+Every range function must document and test its actual policy. Do not infer universal root-only behavior from the common `origin || input` pattern.
 
 ### 8. Consistent Callback Signatures
 
 Functions accepting callbacks follow consistent parameter patterns for predictable APIs:
 
-**Single range operations (filter, pick, data transforms):**
+**Single range operations (filter, take predicates, data transforms):**
 ```typescript
 (range: RangeRecord<Data>, context: RangeOperationContext) => result
 ```
@@ -158,7 +156,7 @@ Functions accepting callbacks follow consistent parameter patterns for predictab
 Where:
 - `range` - Full range object `{start, end, data, origin}`
 - `createRange` - Function to emit output ranges (for mapping operations)
-- `context` - `{document, lines, renderOptions, ranges, index}` where `index` is a lazy getter
+- `context` - `{document, lines, renderOptions, ranges, index}` where `index` is a mutable zero-based input position for per-range callbacks
 - Returns: appropriate type for operation (boolean for filter, data for map, number for sort, void for createRange)
 
 **Examples:**
@@ -197,14 +195,14 @@ applySort((a, b, { lines }) =>
 
 Avoid storing line boundary metrics (line numbers, columns) in `range.data` unless absolutely required. Compute on-demand from `context.lines`:
 - **Range sources/transformers**: `GenerateRanges` callback receives `context` with `lines`
-- **Range operation callbacks**: Predicates receive `context` with `lines`
-- **Render hooks**: Pre-computed `line`/`column` properties available
+- **Range-operation callbacks**: Receive `context` with `lines`
+- **Range hooks**: Receive pre-computed `line`/`column` properties in `RangeHookContext`
 
 **Why:** Line calculations are fast. Storing bloats data and creates redundancy.
 
 **❌ Avoid:**
 ```typescript
-applyDataMap((range, index, { lines }) => ({
+applyDataMap((range, { lines }) => ({
     ...range.data,
     line: lines.getLine(range.start),      // Unnecessary
     column: lines.getColumn(range.start)   // Unnecessary
@@ -217,7 +215,7 @@ applyDataMap((range, index, { lines }) => ({
 
 ### 10. Mapping Functions: `createRange` Pattern
 
-Mapping functions (1-to-N transforms) receive `createRange` callback for emitting output ranges. This pattern avoids array allocation overhead and provides ergonomic conditional logic.
+Mapping functions (1-to-N transforms) receive a `createRange` callback for emitting output ranges. This avoids requiring a result array per callback and provides ergonomic conditional logic. The implementation still collects the complete input when it must expose stable `context.ranges`.
 
 **Pattern:**
 ```typescript
@@ -230,10 +228,10 @@ applyMap((range, createRange, context) => {
 ```
 
 **Benefits:**
-- **No garbage collection overhead** - No intermediate arrays created
+- **No per-callback result array** - Outputs are emitted directly through `createRange`
 - **Ergonomic conditionals** - Natural if/else without array manipulation
 - **Automatic origin tracking** - All emitted ranges automatically get `origin = range.origin || range`
-- **Streaming friendly** - Ranges flow through pipeline without buffering
+- **Stable operation context** - Input may be buffered so callbacks can inspect `context.ranges`
 
 **Specialized wrappers:**
 - `applyAugment()` - Convenience wrapper that automatically emits original range first, then calls user function for additional ranges
@@ -332,7 +330,7 @@ rangesCompose(
 
 **When to add multiple examples:**
 
-- ✅ **Different parameter types** (e.g., `applyPick('first')` vs `applyPick(predicate)`)
+- ✅ **Different parameter types** (e.g., `applyTake('first')` vs `applyTake(10, predicate)`)
 - ✅ **Different parameter forms** (e.g., `applyExpandTo('line', 2)` vs `applyExpandTo('line', [1, 3])`)
 - ✅ **Optional parameters with significant behavior change** (e.g., `applySort()` vs `applySort(comparator)`)
 - ❌ **NOT for using different range properties** (data vs lines vs index - all show same pattern)
@@ -420,7 +418,7 @@ export function applyTransform(param: Type): TransformRanges {
 **Predicates must follow consistent signatures:**
 
 ```typescript
-// Single range operations (filter, pick, data transforms)
+// Single range operations (filter, take predicates, data transforms)
 (range: RangeRecord<Data>, context: RangeOperationContext) => result
 
 // Range mapping (1-to-N with createRange)

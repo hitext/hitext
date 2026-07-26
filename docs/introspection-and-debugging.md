@@ -75,13 +75,13 @@ for (const marker of Reflect.ownKeys(definitions)) {
 }
 ```
 
-Values retain their input form. A function is still a `wrap` shorthand, and a renderer factory is not yet expanded.
+Values retain their input form. A function is still a `wrap` shorthand, and a range hook factory is not yet expanded.
 
 Use `Reflect.ownKeys()` rather than `Object.keys()`, because default layer markers are symbols.
 
 ## Inspect resolved hooks
 
-`rangeHooksMap()` returns another marker-keyed object after resolving shortcuts and renderer factories:
+`rangeHooksMap()` returns another marker-keyed object after resolving shortcuts and range hook factories:
 
 ```js
 const hooks = pipeline.rangeHooksMap();
@@ -248,7 +248,7 @@ Several zero-width ranges at one offset are ordered by interruption flags, geome
 
 ### TTY style leaks
 
-Use `tty.createStyle()` or `tty.createStyleMap()` rather than raw ANSI wrappers when annotations can nest or cross. The renderer factory manages restoration through its style stack.
+Use `tty.createStyle()` or `tty.createStyleMap()` rather than raw ANSI wrappers when annotations can nest or cross. The TTY renderer and its range hook factories manage restoration through the style stack.
 
 ## A debugging sequence
 

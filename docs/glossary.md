@@ -6,23 +6,27 @@ The immutable input string passed to `pipeline.ranges()` or `pipeline.render()`.
 
 ## Coordinate space
 
-Zero-based UTF-16 string offsets in the document. Range ends are exclusive. Output has its own structure and is not a range coordinate space.
+Zero-based UTF-16 string offsets relative to the document. Range ends are exclusive. Finite out-of-bounds coordinates are accepted; for example, `applyInvert(false)` may use `document.length + 1` as an omission sentinel. Output has its own structure and is not a range coordinate space.
 
 ## Range
 
-An interval with `start`, `end`, optional `data`, and optional `origin`. A generated range also has a `type` marker.
+An attributed half-open interval or boundary with `start`, `end`, optional `data`, and optional `origin`. A generated range also has a `type` carrying its layer marker.
 
 ## Point range
 
 A zero-width range where `start === end`. Commonly used for insertion at a document or line boundary.
 
-## Range input
+## Range value
 
-An iterable of tuple or record ranges, or a generator function that emits ranges through `createRange()`.
+One tuple `[start, end, data?, origin?]` or record `{ start, end, data?, origin? }`.
+
+## Range iterable
+
+An iterable collection of range values.
 
 ## Range source
 
-Any accepted range input considered as the starting point of a layer or composition. Built-in sources find matches, create line ranges, adapt options, or reuse prior layers.
+The `Ranges` union accepted by a layer or transformer: a range iterable or a generator function. Built-in sources find matches, create line ranges, adapt options, or reuse prior layers.
 
 ## Range generator
 
@@ -30,7 +34,15 @@ A function receiving `document`, `createRange`, and optional generation context.
 
 ## Range transformer
 
-A curried function that receives range input and returns a generator. Transformers filter, map, combine, or change geometry without owning rendering.
+A curried function that receives a range source and returns a generator. Transformers filter, map, combine, or change geometry without owning rendering.
+
+## Curried transformer
+
+A transformer configured before it receives its range source, such as `applyExpandTo('line', 2)`. This gives transformers a uniform source-to-generator shape for composition.
+
+## Cardinality
+
+The relationship between input and output range counts, such as one-to-one, one-to-many, or whole-set transformation.
 
 ## Range normalization
 
@@ -46,7 +58,11 @@ Application or source metadata associated with a range, such as a regular expres
 
 ## Origin
 
-One source range or an array of source ranges from which a derivative was produced. It records lineage, not output positions.
+One range or an array of ranges from which a derivative was produced. Origin records operation-specific lineage, not output positions. Each transformer defines whether it preserves existing lineage, derives from the current input, aggregates inputs, clears origin, or produces unrelated output.
+
+## Provenance
+
+The ability to trace a derivative through its `origin` lineage to the ranges used by earlier operations.
 
 ## Range derivative
 
@@ -54,15 +70,15 @@ A range produced by transforming another range. Its geometry or data may differ 
 
 ## Layer
 
-A range source, range hook definition, optional name, and unique marker. It is the unit added to a render pipeline.
+At configuration time, a range source, range hook definition, and optional user-supplied name. Layers created by `addLayer()` always receive an assigned name and unique symbol marker. Low-level `createPipelineNode()` callers provide their own `PipelineLayer` records, where `name` is optional and marker uniqueness is their responsibility.
 
 ## Layer name
 
 A human-readable string used by `rangesFromLayer()` and `rangesByName` to access a previously generated result.
 
-## Range marker
+## Layer marker
 
-A symbol, string, or number that identifies a layer's generated ranges and associates them with hooks. Pipeline layers use unique symbols by default.
+A symbol, string, or number identifying a layer's generated ranges and associating them with hooks. It is stored as `layer.marker` and copied to `generatedRange.type`. `addLayer()` creates unique symbols; low-level pipeline records may supply another `RangeMarker`.
 
 ## Analytical layer
 
@@ -86,11 +102,15 @@ Context supplied to transformer callbacks: document, lines, render options, stab
 
 ## Range hooks
 
-Functions and flags interpreting a layer during rendering: `open`, `close`, `wrap`, `text`, `replace`, and `break`.
+Resolved functions and flags interpreting a layer during rendering: `open`, `close`, `wrap`, `text`, `replace`, and `break`.
 
 ## Hook definition
 
-The value passed to `addLayer()`: a partial hook object, `wrap` shorthand, renderer-specific factory, or nullish value.
+The value passed to `addLayer()`: a partial hook object, `wrap` shorthand, renderer-specific range hook factory, or nullish value.
+
+## Range hook factory
+
+A renderer-specific definition whose `createRangeHooks(rendererContext)` method produces a partial hook object, `wrap` shortcut, or nullish value during resolution.
 
 ## Hook resolution
 
@@ -98,11 +118,15 @@ Conversion of definitions into normalized hooks for one renderer context. Factor
 
 ## Hook context
 
-The source, position, segment, range, data, line helpers, and buffer factory passed to callable range hooks.
+The document, position, segment, range, data, line helpers, and buffer factory passed to callable range hooks. It does not include render options.
 
 ## Segment
 
 The portion of a generated range rendered between interruptions. Crossing ranges can split one range into several segments.
+
+## Segmentation
+
+The render-time process that splits crossing generated ranges into properly nested segments while retaining generated-range identity.
 
 ## Range index
 
@@ -114,7 +138,7 @@ Renderer-level behavior: buffer creation, source text conversion, document-level
 
 ## Render buffer
 
-An accumulator with `append(child)` and `emit()`. Root and nested buffers materialize strings, nodes, child arrays, or custom results.
+An accumulator with `append(child)` and `emit()`. A child buffer accumulates nested content; its emitted result is passed to `wrap`. `render()` returns the root buffer's emitted result.
 
 ## Renderer
 
@@ -126,7 +150,11 @@ A rendering change that preserves all source content, such as highlighting a mat
 
 ## Projection
 
-A derived view that selects, hides, replaces, inserts, or aggregates source content while retaining source-coordinate annotations.
+A derived output view that may select, omit, replace, reorder, or aggregate document content and may insert synthetic content, while annotations retain document-relative coordinates.
+
+## Streaming transformer
+
+In this documentation, a transformer that emits output range-by-range without first collecting its complete input. This does not imply streaming document input or streaming renderer output.
 
 ## Omitted range
 

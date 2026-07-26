@@ -25,6 +25,20 @@ Interruption weight is:
 
 Therefore a `break` replacement sorts ahead of an ordinary replacement, which sorts ahead of an ordinary annotation at the same start. Longer ranges open before shorter ones when the preceding criteria are equal.
 
+When all comparison keys tie, JavaScript's stable sort preserves generation order. The practical cases are:
+
+| Case | Order |
+|---|---|
+| Identical ranges in one layer | Source iteration order |
+| Duplicate ranges | Preserved; duplicates are not deduplicated |
+| Equal ranges in different layers | Earlier resolved layer first |
+| Point and interval at one offset | Interruption weight first, then the interval's greater `end` |
+| Several ordinary point insertions | Earlier layer first; points within one layer keep source order |
+
+Use explicit layer and source order for equal-boundary insertions, and assert exact output when ordering is significant.
+
+These layer-priority guarantees describe pipelines built with `addLayer()`, whose markers are insertion-ordered symbols. Low-level callers can supply string or numeric markers; JavaScript own-key ordering then affects the marker priority returned by `Reflect.ownKeys()`.
+
 Rendering does not clamp finite ranges to document bounds. Application sources and transformers should normally produce document-relative offsets. String slicing naturally limits emitted source text, but out-of-bounds hook context remains the supplied geometry.
 
 ## Nested ranges
@@ -111,7 +125,7 @@ Opening an ordinary segment:
 
 Closing it:
 
-1. Emits the child buffer and calls `wrap`, when present.
+1. Calls `emit()` on the child buffer and passes the emitted result to `wrap`, when present.
 2. Appends the wrap result to the restored parent buffer.
 3. Calls `close` and appends its result.
 
@@ -154,9 +168,11 @@ A range with equal boundaries consumes no source text. With `replace`, it insert
 
 At equal starts, interruption weight, end, and layer priority determine ordering among points and intervals. When insertion order matters, use separate layers in deliberate order and test the emitted result.
 
+See the [range ordering table](#range-ordering) for complete-tie and duplicate behavior.
+
 ## Buffer nesting
 
-Only `wrap` requires a nested buffer. The engine pushes the current buffer, creates a compatible child through the renderer factory, and restores the parent when the segment closes.
+Only `wrap` requires a nested buffer. The engine pushes the current buffer, creates a compatible child through the renderer's buffer factory, and restores the parent when the segment closes.
 
 This gives `wrap` a complete renderer-native result:
 

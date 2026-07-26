@@ -4,9 +4,13 @@ HiText renders a document through an immutable pipeline of annotation layers. Ea
 
 ## Install
 
+HiText 2.0 is not published yet. The unqualified npm package currently exposes the legacy `1.0.0-beta.1` API. Once a 2.0 prerelease or stable version is published, install it with:
+
 ```bash
 npm install hitext
 ```
+
+Until then, the examples below target the current repository branch.
 
 HiText provides both ESM and CommonJS entry points. The examples in this guide use ESM:
 
@@ -187,11 +191,11 @@ string()
 // Result: 42
 ```
 
-Highlighting is decoration: all source text remains visible. Replacement, hiding, and insertion build a projection: output selects or synthesizes a view while ranges continue to use source offsets.
+Highlighting is decoration: all document text remains visible. Replacement, hiding, and insertion build a projection: a derived output view while ranges retain document-relative coordinates.
 
 ## Use render options
 
-Render options are supplied when a document is processed. Range generators, transformers, predicates, and hooks can use them to produce different views with one pipeline:
+Render options are supplied when a document is processed. Range generators and range-operation callbacks can use them to produce different views with one pipeline. Range hooks receive `RangeHookContext`, which does not include render options:
 
 ```js
 const pipeline = html().addLayer(

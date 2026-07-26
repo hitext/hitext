@@ -4,9 +4,9 @@ HiText evaluates attributed intervals over an immutable string and interprets th
 
 For introductory definitions, start with [Core Concepts](core-concepts.md). For implementation-level traversal details, continue with [Rendering Model](rendering-model.md).
 
-## Source model
+## Document model
 
-The source is one JavaScript string called the document. Its coordinate space is the set of UTF-16 string offsets from `0` through `document.length`.
+The document is one JavaScript string. Its ordinary coordinate space uses UTF-16 string offsets from `0` through `document.length`.
 
 A range uses a half-open interval:
 
@@ -16,11 +16,11 @@ A range uses a half-open interval:
 
 `start` is included and `end` is excluded. A point range has `start === end` and represents a source boundary rather than source content.
 
-The document is not mutated. Output may have different length and structure, but all generated ranges continue to address the source coordinate space.
+The document is not mutated. Output may have different length and structure, while generated ranges retain document-relative coordinates. Finite out-of-bounds coordinates are accepted; notably, `applyInvert(false)` may use `document.length + 1` as an omission sentinel.
 
 ## Annotation model
 
-A range input is an attributed interval:
+A range value is an attributed interval or boundary:
 
 ```js
 {
@@ -119,7 +119,7 @@ For a replacement segment:
 open -> replace -> wrap -> close
 ```
 
-`wrap` is present only when defined and receives the emitted child buffer. `text` is selected from the nearest active range that defines it, falling back to the renderer text hook.
+`wrap` is present only when defined and receives the child buffer's emitted result. `text` is selected from the nearest active range that defines it, falling back to the renderer text hook.
 
 Replacement advances the source offset to the replacement range end. Fully contained ranges are skipped. Crossing ranges may continue after the replacement unless interruption rules force a stronger boundary.
 
@@ -134,7 +134,7 @@ interface RenderBuffer<T, R> {
 }
 ```
 
-The render engine creates a root buffer. A range with `wrap` creates a child buffer, renders the segment into it, emits the child, calls `wrap`, and appends the result to the parent.
+The render engine creates a root buffer. A range with `wrap` creates a child buffer, renders the segment into it, calls `emit()`, passes the emitted child result to `wrap`, and appends the hook result to the parent. `render()` returns the root buffer's emitted result.
 
 The traversal is shared. Materialization differs:
 
@@ -147,7 +147,7 @@ The traversal is shared. Materialization differs:
 
 ## Projections
 
-Decoration changes representation while preserving all source content. Projection changes which source intervals are materialized.
+Decoration changes representation while preserving all document content. A projection is a derived output view that may select, omit, replace, reorder, or aggregate document content and may insert synthetic content, while annotations retain document-relative coordinates.
 
 Projection is expressed with ordinary ranges and hooks, typically:
 

@@ -68,4 +68,28 @@ For architecture and contribution work:
 Computational Model -> Design and Architecture -> Contributing
 ```
 
+For a 1.x upgrade:
+
+```text
+HiText 2.0 Release Notes -> Migration from HiText 1.x -> Getting Started
+```
+
+For typed integrations:
+
+```text
+TypeScript -> API Reference
+```
+
+For diagnosing traversal behavior:
+
+```text
+Introspection and Debugging -> Rendering Model -> FAQ
+```
+
+For contributing a range function:
+
+```text
+Range Functions Guidelines -> Contributing
+```
+
 The pages in `drafts/` are working material. They are not part of the public documentation set and may contain incomplete or superseded descriptions.

@@ -48,7 +48,7 @@ Use `rangesFromOptions('diagnostics')` when results change per call. HiText does
 
 ## Custom transformer
 
-A transformer is curried: configuration returns a function from range input to generator. Public `processRanges()` adapts every supported input form:
+A transformer is curried: configuration returns a function from range source to generator. Public `processRanges()` adapts every supported range source form:
 
 ```js
 import { processRanges } from 'hitext';

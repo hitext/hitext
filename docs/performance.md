@@ -71,7 +71,7 @@ Measure with representative geometry: nested, crossing, equal-boundary, and repl
 
 Renderer output changes the allocation profile:
 
-- string, HTML, and TTY buffers accumulate string parts;
+- string, HTML, and TTY buffers accumulate string output;
 - `wrap` introduces a nested buffer for each rendered segment;
 - DOM output allocates text nodes, elements supplied by hooks, and fragments;
 - JSX output allocates arrays plus elements supplied by the caller;

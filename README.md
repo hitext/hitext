@@ -27,9 +27,13 @@ Annotations always use offsets in the original document. A syntax highlighter, s
 
 ## Install
 
+HiText 2.0 is not published yet. The unqualified `hitext` package on npm currently resolves to the legacy `1.0.0-beta.1` API; the command below applies once a 2.0 prerelease or stable version is published:
+
 ```bash
 npm install hitext
 ```
+
+Until then, the examples in this README describe the current repository branch rather than the published npm package.
 
 ## Quick start
 
@@ -118,7 +122,7 @@ These figures were measured from `npm run build` output with `wc -c` and `gzip -
 
 ## Status
 
-The current branch is the development line for HiText 2.0. It is a redesign of the public API around explicit range sources, transformations, immutable layers, renderer-independent hooks, and typed pipeline products.
+The current branch is the unreleased development line for HiText 2.0. It is a redesign of the public API around explicit range sources, transformations, immutable layers, renderer-independent hooks, and typed pipeline products. The current npm release is `1.0.0-beta.1` and uses the legacy API.
 
 ## License
 

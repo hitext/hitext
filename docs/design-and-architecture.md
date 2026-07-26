@@ -24,7 +24,7 @@ The source modules have focused responsibilities:
 | Module | Responsibility |
 |---|---|
 | `pipeline.ts` | Immutable pipeline creation, layers, and orchestration |
-| `ranges.ts` | Range input processing, normalization, and layer evaluation |
+| `ranges.ts` | Range source processing, range value normalization, and layer evaluation |
 | `range-sources/` | Sources and source combiners |
 | `range-compose/` | Curried range transformers |
 | `range-hooks-map.ts` | Definition collection and renderer-specific resolution |
