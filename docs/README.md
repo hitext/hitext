@@ -1,95 +1,38 @@
 # HiText Documentation
 
-HiText combines independent range annotations over a source document and renders them through an ordered, immutable pipeline. The documentation is organized by task: start with the tutorial, use the guides to understand the model, and use the references when implementing a specific layer or extension.
+The public documentation is organized around a short path: build one useful result, understand the model, then look up exact behavior only when needed.
 
-## Start here
+## Start
 
-- [Overview](../README.md) introduces the problem, package, and first examples.
-- [Getting Started](getting-started.md) builds a pipeline, adds independent layers, derives ranges, uses render options, and inspects intermediate products.
-- [Core Concepts](core-concepts.md) defines the document coordinate space, ranges, layers, segments, hooks, buffers, and projections.
-- [Computational Model](computational-model.md) states the source, annotation, evaluation, interpretation, and materialization stages precisely.
+- [Getting Started](getting-started.md) builds a contextual HTML excerpt from independent annotations in one tutorial.
+- [Core Concepts](core-concepts.md) is the canonical user model for document coordinates, ranges, layers, intersections, hooks, buffers, and derived views.
 
-## Guides
+## Build
 
-- [Layers and Pipeline](layers-and-pipeline.md) covers immutable construction, dependencies, generation context, options, reuse, and pipeline products.
-- [Range Functions Guide](range-functions-guide.md) explains how to choose and compose range sources and transformers.
-- [Range Hooks](range-hooks.md) explains `open`, `close`, `wrap`, `text`, `replace`, `break`, and hook context.
-- [Renderers](renderers.md) covers string, HTML, TTY, DOM, JSX, and custom renderers.
-- [Projections and Excerpts](projections-and-excerpts.md) shows how to retain annotated context while hiding or replacing omitted regions.
-- [Introspection and Debugging](introspection-and-debugging.md) works from generated ranges through hook resolution and segment tracing.
-- [TypeScript](typescript.md) explains pipeline generics and typed range data, options, hooks, and renderers.
-- [Performance](performance.md) describes cost factors, allocations, reuse, large documents, bundle measurement, and non-guarantees.
-- [Extending HiText](extending-hitext.md) builds custom sources, transformers, hook utilities, and structured renderers.
-
-## Examples
-
-- [Recipes](recipes.md) covers highlighting, excerpts, line numbers, diff context, diagnostics, logs, progressive detail, redaction, and generated documents.
-- [Projections and Excerpts](projections-and-excerpts.md) develops search snippets, horizontal windows, folding, omission kinds, and output budgets.
+- [Range Functions Guide](range-functions-guide.md) explains how to create, transform, combine, and derive ranges.
+- [Rendering](rendering.md) covers range hooks, crossings, replacement, insertion, hiding, and buffer behavior.
+- [Renderers](renderers.md) compares string, HTML, TTY, DOM, JSX, and custom output.
+- [Recipes](recipes.md) applies the model to excerpts, diagnostics, diffs, logs, redaction, and generated content.
 
 ## Reference
 
-- [API Reference](api-reference.md) describes the public package exports and pipeline surface.
-- [Range Functions Reference](range-functions-reference.md) documents every built-in range source and transformer.
-- [Rendering Model](rendering-model.md) specifies ordering, crossing ranges, segmentation, stack behavior, hook order, and buffer nesting.
-- [Glossary](glossary.md) defines the terminology used across the project.
+- [Range Functions Reference](range-functions-reference.md) contains signatures, data and origin behavior, ordering, cardinality, and edge cases for every range function.
+- [API Reference](api-reference.md) lists application-level contracts and inventories root-exported low-level machinery that still requires pre-release API review.
 
-## Project
+## Upgrade
 
-- [Design and Architecture](design-and-architecture.md) explains module boundaries and the rationale for ranges, layers, segments, hooks, and buffers.
-- [Migration from HiText 1.x](migration-from-1.x.md) maps the previous chain-oriented model to HiText 2.0.
-- [HiText 2.0 Release Notes](release-notes-2.0.md) presents the redesign and its new capabilities.
-- [FAQ](faq.md) answers scope, overlap, output, streaming, editor, and origin questions.
-- [Contributing](contributing.md) defines validation, public API testing, documentation sync, and change workflows.
-- [Range Functions Guidelines](range-functions-guidelines.md) defines implementation and documentation rules for contributors adding range functions.
+- [Upgrade to HiText 2.0](upgrade-to-2.0.md) explains the redesign, breaking changes, verified before-and-after examples, and the upgrade checklist.
 
-## Reading paths
+<details>
+<summary>Supporting and maintainer notes</summary>
 
-For a first integration:
+These pages preserve verified detail and editorial source material, but they are not independent public API contracts or required reading:
 
-```text
-Getting Started -> Core Concepts -> Layers and Pipeline -> Range Functions Guide
-```
+- [Layers and Pipeline](layers-and-pipeline.md), [Rendering Model](rendering-model.md), and [Range Hooks](range-hooks.md) contain extended material behind the canonical public guides.
+- [Projections and Excerpts](projections-and-excerpts.md), [TypeScript Notes](typescript.md), [Introspection and Debugging](introspection-and-debugging.md), [Performance Notes](performance.md), [Extending HiText](extending-hitext.md), [Glossary](glossary.md), and [FAQ](faq.md) are supporting drafts for later editorial work.
+- [Contributing](contributing.md), [Design and Architecture](design-and-architecture.md), [Range Functions Guidelines](range-functions-guidelines.md), and [Computational Model](computational-model.md) are maintainer documentation.
+- [Migration from HiText 1.x](migration-from-1.x.md) and [HiText 2.0 Release Notes](release-notes-2.0.md) remain source material for the consolidated upgrade guide.
 
-For excerpts, folding, or generated views:
+Pages under `drafts/` are superseded working material.
 
-```text
-Core Concepts -> Projections and Excerpts -> Recipes
-```
-
-For a new output format:
-
-```text
-Range Hooks -> Rendering Model -> Renderers -> Extending HiText
-```
-
-For architecture and contribution work:
-
-```text
-Computational Model -> Design and Architecture -> Contributing
-```
-
-For a 1.x upgrade:
-
-```text
-HiText 2.0 Release Notes -> Migration from HiText 1.x -> Getting Started
-```
-
-For typed integrations:
-
-```text
-TypeScript -> API Reference
-```
-
-For diagnosing traversal behavior:
-
-```text
-Introspection and Debugging -> Rendering Model -> FAQ
-```
-
-For contributing a range function:
-
-```text
-Range Functions Guidelines -> Contributing
-```
-
-The pages in `drafts/` are working material. They are not part of the public documentation set and may contain incomplete or superseded descriptions.
+</details>

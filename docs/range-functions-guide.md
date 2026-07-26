@@ -181,7 +181,7 @@ rangesCompose(
 )
 ```
 
-Use filtering for semantic selection, sorting when an operation depends on custom order, and `applyTake()` to limit a stream after optional predicate selection.
+Use filtering for semantic selection, sorting when an operation depends on custom order, and `applyTake()` to limit collected input after optional predicate selection.
 
 ## Transform data
 
@@ -252,7 +252,7 @@ The transformer form `applyFallback()` uses the current composition result first
 
 `applyAppend()` adds independent sources to a transformed stream. `applyFork()` passes original ranges through and appends one transformed branch after applying its configured same-data-type transformers left-to-right. Use a separate layer or direct data-changing transformer when the derivative needs a different data type.
 
-## Build projections
+## Build excerpts
 
 An annotation-preserving excerpt usually has two layer roles:
 
@@ -270,7 +270,7 @@ const pipeline = html()
     );
 ```
 
-The first layer defines interesting content and still renders it. The second derives omitted regions and replaces them during the same traversal. See [Projections and Excerpts](projections-and-excerpts.md).
+The first layer defines interesting content and still renders it. The second derives omitted regions and replaces them during the same traversal. See [Recipes](recipes.md#search-excerpts-across-annotation-classes) for a complete multi-class example.
 
 ## Work with points
 
@@ -295,7 +295,7 @@ pipeline.addLayer(
 
 Origin connects derivative ranges to the source annotations that produced them. Common patterns are:
 
-- expansion or collapse retaining one root source range;
+- expansion or collapse retaining one source lineage reference;
 - `applyMap()` producing several derivatives with the same origin;
 - `applyMerge()` aggregating several source ranges into an origin array;
 - generated point ranges carrying the data needed to build a summary or appendix.
@@ -327,7 +327,7 @@ A custom source can still feed built-in transformers. Keep analysis and subseque
 | Insert after annotations | `rangesFromLayer -> applyCollapseTo('end')` |
 | Add derivatives beside originals | `... -> applyAugment` or `applyFork` |
 | First available insertion point | `rangesWithFallback` |
-| Progressive detail | `rangesFromOptions -> selected source -> projection` |
+| Progressive detail | `rangesFromOptions -> selected source -> omitted regions` |
 | Aggregate source annotations | derive points `-> applyMerge -> origin[]` |
 
 Continue with [Range Functions Reference](range-functions-reference.md) for the complete API or [Recipes](recipes.md) for end-to-end pipeline examples.

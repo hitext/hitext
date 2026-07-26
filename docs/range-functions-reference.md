@@ -30,30 +30,24 @@ Range Sources:
 
 Range Transformers:
 
-| Function | Transform Type | Description | Modifies Data | Origin | Implementation |
-|----------|----------------|-------------|---------------|--------|----------------|
-| [`applyAppend`](#applyappendsources) | N-to-N | Append sources | No | Preserves | Wrapper |
-| [`applyAugment`](#applyaugmentcallback) | 1-to-N | Add derivatives | No | Originals preserve; derivatives derive | Temp array* |
-| [`applyCollapseTo`](#applycollapsetoposition) | 1-to-1 | Zero-width markers | No | Derives | Streaming |
-| [`applyDataMap`](#applydatamapmapper) | 1-to-1 | Data transformation | Yes | Cleared | Temp array* |
-| [`applyExpandTo`](#applyexpandtoposition-lines) | 1-to-1 | Expand boundaries | No | Derives | Streaming |
-| [`applyFallback`](#applyfallbackfallbacks) | N-to-N | Provide fallback | No | From source | Wrapper |
-| [`applyFilter`](#applyfilterpredicate) | N-to-N | Conditional selection | No | Preserves | Temp array* |
-| [`applyFitToWindow`](#applyfittowindowsize-allowtrimming) | 1-to-1 | Horizontal viewport | No | Operation-specific | Streaming |
-| [`applyFork`](#applyforktransformers) | N-to-N | Fork sub-pipeline | No | Preserves | Wrapper |
-| [`applyInvert`](#applyinvertexact) | N-to-M | Negate ranges | No | None | Temp array |
-| [`applyMap`](#applymapcallback) | 1-to-N | Transform ranges | No | Creates new | Temp array* |
-| [`applyMerge`](#applymerge) | N-to-M | Merge overlapping groups | Yes: clears | Aggregates inputs | Temp array |
-| [`applyPadLines`](#applypadlineslines-size) | 1-to-N | Add line padding | Yes: number | Current input | Temp array |
-| [`applyResetOrigin`](#applyresetorigin) | 1-to-1 | Clear origins | No | Cleared | Streaming |
-| [`applySort`](#applysortcomparator) | N-to-N | Custom ordering | No | Preserves | Temp array* |
-| [`applyTake`](#applytaken-predicate) | N-to-N | Take first/last N + filter | No | Preserves | Temp array |
-
-**Implementation notes:**
-- **Streaming** - Processes ranges one-by-one without collecting in memory (1-to-1 transforms)
-- **Temp array*** - Required for range-operation callbacks to provide stable `context.ranges`
-- **Temp array** - Required for complex logic (merging, inverting, windowing, padding)
-- **Wrapper** - Delegates to other range functions (composition helper)
+| Function | Transform Type | Description | Data | Origin |
+|----------|----------------|-------------|------|--------|
+| [`applyAppend`](#applyappendsources) | N-to-N | Append sources | Preserves | Preserves |
+| [`applyAugment`](#applyaugmentcallback) | 1-to-N | Add derivatives | Preserves | Originals preserve; derivatives derive |
+| [`applyCollapseTo`](#applycollapsetoposition) | 1-to-1 | Zero-width markers | Preserves | Derives |
+| [`applyDataMap`](#applydatamapmapper) | 1-to-1 | Data transformation | Replaces | Clears |
+| [`applyExpandTo`](#applyexpandtoposition-lines) | 1-to-1 | Expand boundaries | Preserves | Derives |
+| [`applyFallback`](#applyfallbackfallbacks) | N-to-N | Provide fallback | Selected source | Selected source |
+| [`applyFilter`](#applyfilterpredicate) | N-to-N | Conditional selection | Preserves | Preserves |
+| [`applyFitToWindow`](#applyfittowindowsize-allowtrimming) | 1-to-1 | Horizontal viewport | Preserves | Operation-specific |
+| [`applyFork`](#applyforktransformers) | N-to-N | Original plus derivative branch | Same declared type | Per sub-pipeline |
+| [`applyInvert`](#applyinvertexact) | N-to-M | Negate ranges | Clears | None |
+| [`applyMap`](#applymapcallback) | 1-to-N | Transform ranges | Callback-defined | Derives |
+| [`applyMerge`](#applymerge) | N-to-M | Merge overlapping groups | Clears | Aggregates inputs |
+| [`applyPadLines`](#applypadlineslines-size) | 1-to-N | Add line padding | Padding number | Current input |
+| [`applyResetOrigin`](#applyresetorigin) | 1-to-1 | Clear origins | Preserves | Clears |
+| [`applySort`](#applysortcomparator) | N-to-N | Custom ordering | Preserves | Preserves |
+| [`applyTake`](#applytaken-predicate) | N-to-N | Take first/last N + filter | Preserves | Preserves |
 
 **Transform types:**
 - **1-to-1** - Each input range produces exactly one output range
@@ -736,7 +730,9 @@ applyInvert<Data, RenderOptions>(
 **Parameters:**
 - `exact` - Boundary behavior:
   - `true` - Bound to `[0, document.length]`
-  - `false` (default) - Extend to `[0, document.length + 1]`
+    - `false` (default) - The current implementation may extend the final omission to `document.length + 1` so replacement can cover trailing content
+
+The extended boundary is pre-release behavior under API review, not yet a compatibility guarantee. Use `applyInvert(true)` when downstream code requires document-bounded ranges.
 
 **Origin:** None (no connection between input and output)
 
@@ -1019,34 +1015,32 @@ rangesCompose(
 
 ## Semantics Matrix
 
-| Function | Input and output geometry | Data | Origin | Ordering | Cardinality | Collects input? |
-|---|---|---|---|---|---|---|
-| `rangesCompose` | Per configured transformer | Per configured transformer | Per configured transformer | Per configured transformer | Per configured transformer | Per configured transformer |
-| `rangesConcat` | Concatenates source geometry | Preserves | Preserves | Source order, then each source's order | N-to-N | No |
-| `rangesForLines` | Line intervals or boundary points | One-based line number | None | Document order | One per logical line, except `newline` | No |
-| `rangesForMatch` | Match intervals | Match value or `RegExpExecArray` | None | Match order | Zero-to-many | No |
-| `rangesFrom` | Adapts supplied geometry | Preserves | Preserves | Input order | N-to-N | No |
-| `rangesFromLayer` | Copies an earlier layer's geometry | Preserves | Preserves | Earlier layer order | N-to-N | No |
-| `rangesFromOptions` | Adapts option-selected source | Per selected source | Per selected source | Per selected source | Per selected source | Per selected source |
-| `rangesWithFallback` | First non-empty source | Per selected source | Per selected source | Per selected source | N-to-N | No; attempts sources sequentially |
-| `applyAppend` | Original geometry plus appended sources | Preserves | Preserves | Original, then appended source order | N-to-N | No, beyond nested sources |
-| `applyAugment` | Original plus emitted derivatives | Same data type | Originals preserve; derivatives derive | Each original, then its derivatives | One-to-many | Yes |
-| `applyCollapseTo` | Collapses each interval to a point | Preserves | Derives | Input order | One-to-one | No |
-| `applyDataMap` | Preserves geometry | Replaces | Clears | Input order | One-to-one | Yes |
-| `applyExpandTo` | Expands selected boundaries | Preserves | Derives | Input order | One-to-one | No |
-| `applyFallback` | Input or first non-empty fallback | Per selected source | Per selected source | Per selected source | N-to-N | Buffers attempted sources |
-| `applyFilter` | Selects existing geometry | Preserves | Preserves | Input order | N-to-N | Yes |
-| `applyFitToWindow` | Expands or trims within first line | Preserves | Operation-specific | Input order | One-to-one | No |
-| `applyFork` | Original plus final sub-pipeline result | Same declared type | Per sub-pipeline | Originals, then transformed result | N-to-N | Evaluates input twice |
-| `applyInvert` | Produces gaps around merged input | `undefined` | None | Document order | N-to-M | Yes |
-| `applyMap` | Callback-defined derivative geometry | Callback-defined | Derives | Input and emission order | One-to-many | Yes |
-| `applyMerge` | Unions overlapping or adjacent ranges | Clears | Aggregates input records | Start order of merged groups | N-to-M | Yes |
-| `applyPadLines` | Emits clamped line-content ranges | Padding number | Current input record | Input order, then line offset | One-to-many | Yes |
-| `applyResetOrigin` | Preserves geometry | Preserves | Clears | Input order | One-to-one | No |
-| `applySort` | Preserves geometry | Preserves | Preserves | Comparator or start/end default | N-to-N | Yes |
-| `applyTake` | Selects existing geometry | Preserves | Preserves | Selected input order | N-to-N | Yes |
-
-“Collects input” describes each function's own implementation. Nested sources or transformers may still collect independently.
+| Function | Input and output geometry | Data | Origin | Ordering | Cardinality |
+|---|---|---|---|---|---|
+| `rangesCompose` | Per configured transformer | Per configured transformer | Per configured transformer | Per configured transformer | Per configured transformer |
+| `rangesConcat` | Concatenates source geometry | Preserves | Preserves | Source order, then each source's order | N-to-N |
+| `rangesForLines` | Line intervals or boundary points | One-based line number | None | Document order | One per logical line, except `newline` |
+| `rangesForMatch` | Match intervals | Match value or `RegExpExecArray` | None | Match order | Zero-to-many |
+| `rangesFrom` | Adapts supplied geometry | Preserves | Preserves | Input order | N-to-N |
+| `rangesFromLayer` | Copies an earlier layer's geometry | Preserves | Preserves | Earlier layer order | N-to-N |
+| `rangesFromOptions` | Adapts option-selected source | Per selected source | Per selected source | Per selected source | Per selected source |
+| `rangesWithFallback` | First non-empty source | Per selected source | Per selected source | Per selected source | N-to-N |
+| `applyAppend` | Original geometry plus appended sources | Preserves | Preserves | Original, then appended source order | N-to-N |
+| `applyAugment` | Original plus emitted derivatives | Same data type | Originals preserve; derivatives derive | Each original, then its derivatives | One-to-many |
+| `applyCollapseTo` | Collapses each interval to a point | Preserves | Derives | Input order | One-to-one |
+| `applyDataMap` | Preserves geometry | Replaces | Clears | Input order | One-to-one |
+| `applyExpandTo` | Expands selected boundaries | Preserves | Derives | Input order | One-to-one |
+| `applyFallback` | Input or first non-empty fallback | Per selected source | Per selected source | Per selected source | N-to-N |
+| `applyFilter` | Selects existing geometry | Preserves | Preserves | Input order | N-to-N |
+| `applyFitToWindow` | Expands or trims within first line | Preserves | Operation-specific | Input order | One-to-one |
+| `applyFork` | Original plus final sub-pipeline result | Same declared type | Per sub-pipeline | Originals, then transformed result | N-to-N |
+| `applyInvert` | Produces gaps around merged input | `undefined` | None | Document order | N-to-M |
+| `applyMap` | Callback-defined derivative geometry | Callback-defined | Derives | Input and emission order | One-to-many |
+| `applyMerge` | Unions overlapping or adjacent ranges | Clears | Aggregates input records | Start order of merged groups | N-to-M |
+| `applyPadLines` | Emits clamped line-content ranges | Padding number | Current input record | Input order, then line offset | One-to-many |
+| `applyResetOrigin` | Preserves geometry | Preserves | Clears | Input order | One-to-one |
+| `applySort` | Preserves geometry | Preserves | Preserves | Comparator or start/end default | N-to-N |
+| `applyTake` | Selects existing geometry | Preserves | Preserves | Selected input order | N-to-N |
 
 ## Range Operation Context
 
@@ -1066,7 +1060,6 @@ interface RangeOperationContext<RenderOptions = unknown> {
 - `index` is a mutable zero-based input position set for per-range callbacks.
 - A sort comparator receives the same context object, but `index` is not updated for comparator calls and should not be used there.
 - `applySort()` sorts the array also exposed as `context.ranges`; callbacks should treat it as operation-owned state and not mutate it.
-- Collection means these operations are not streaming, even when their callback emits ranges through `createRange()`.
 
 ## Shared Edge Cases
 
@@ -1074,10 +1067,10 @@ Unless a function section states otherwise:
 
 - Empty input produces empty output. Fallback functions are the explicit exception.
 - Point ranges (`start === end`) are valid and remain points unless geometry changes them.
-- Range sources and transformers do not generally clamp finite coordinates to the document.
+- The current implementation does not generally clamp finite coordinates to the document. Treat acceptance of out-of-document values as pre-release behavior under review, not a stable guarantee.
 - Unsorted input is preserved by pass-through operations; sorting, merging, inversion, and other whole-set operations apply their documented ordering.
 - Duplicate ranges are preserved unless an operation such as merge combines their geometry.
 - Line-based functions use `LineBoundaries` and preserve `\n`, `\r\n`, and `\r` distinctions.
-- Invalid or out-of-document ranges may remain visible through `pipeline.ranges()`; render traversal separately filters reversed and non-finite ranges.
+- Reversed, non-finite, or out-of-document values may remain visible through `pipeline.ranges()` before render filtering. Applications should generate valid document-relative ranges rather than rely on that implementation detail.
 
 Function-specific behavior for empty matches, final empty lines, extended inversion boundaries, clamped line padding, and multiline horizontal windows is documented in the corresponding section.

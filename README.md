@@ -6,36 +6,24 @@
 
 [![NPM version](https://img.shields.io/npm/v/hitext.svg)](https://www.npmjs.com/package/hitext)
 
-HiText is a range-based text transformation and rendering engine. It combines independent annotations over one source document, resolves their intersections, and materializes the result as a string, HTML, terminal output, DOM, JSX, or a custom output type.
+**Build rich text views from independent annotations without rewriting offsets or cutting rendered markup.**
 
-```text
-Document text
-    -> Layers (ranges + hooks)
-    -> Render pipeline
-    -> String / HTML / TTY / DOM / JSX / custom output
-```
+Rich text output rarely comes from one operation. Syntax highlighting, search matches, diagnostics, line numbers, folds, and excerpt selection may all come from different tools, but they refer to positions in the same source text.
 
-Annotations always use offsets in the original document. A syntax highlighter, search matcher, diagnostic provider, and excerpt builder can therefore be composed without parsing each other's markup or translating positions after every transformation.
+Applying those operations one after another creates a painful choice:
 
-## Why HiText
+- Cut the source first, and every remaining annotation needs new coordinates.
+- Render first, and later operations must cut through HTML, DOM, JSX, or terminal escape sequences without breaking their structure.
 
-- Independent stand-off annotations can overlap without coordinating their output.
-- Range transformers build context windows, insertion points, omissions, and derived views.
-- Projections retain annotations while hiding or replacing unrelated source regions.
-- The same pipeline model renders strings, HTML, TTY, DOM, JSX, or custom structures.
-- Intermediate ranges and hook maps remain available for testing and tooling.
+The problem becomes harder when annotations overlap or when a result keeps only several disconnected parts of the document.
 
-## Install
+HiText keeps every annotation anchored to the original text and resolves them together when producing the result. Independent layers do not parse each other's output, and annotations remain correctly placed when unrelated content is omitted or replaced.
 
-HiText 2.0 is not published yet. The unqualified `hitext` package on npm currently resolves to the legacy `1.0.0-beta.1` API; the command below applies once a 2.0 prerelease or stable version is published:
-
-```bash
-npm install hitext
-```
-
-Until then, the examples in this README describe the current repository branch rather than the published npm package.
+> **Release status:** HiText 2.0 is currently in development and has not been published. The examples below describe the API in this repository. The unqualified `hitext` package on npm currently provides the legacy `1.0.0-beta.1` API.
 
 ## Quick start
+
+A layer identifies parts of the source text and defines how they appear in the result:
 
 ```js
 import { html, rangesForMatch } from 'hitext';
@@ -45,15 +33,15 @@ const highlight = html().addLayer(
     content => `<mark>${content}</mark>`
 );
 
-highlight.render('Hello world! Hello world!');
-// Hello <mark>world</mark>! Hello <mark>world</mark>!
+highlight.render('Hello world!');
+// Hello <mark>world</mark>!
 ```
 
-A layer combines a range source with rendering hooks. `addLayer()` returns a new immutable pipeline, and `render()` can reuse that pipeline for any document.
+Highlighting one match is easy. The advantage of HiText appears when several independent operations must remain correct in a derived view.
 
-## Compose derived views
+## Where composition matters
 
-Ranges are not limited to decoration. A later layer can derive ranges from earlier layers and use them to select, hide, replace, or insert content while preserving the annotations that remain visible.
+Suppose keyword highlighting is produced independently from a search result, and the final view should contain only the line with that result:
 
 ```js
 import {
@@ -65,64 +53,82 @@ import {
     rangesFromLayer
 } from 'hitext';
 
-const searchExcerpt = html()
+const document = [
+    'const x = 1;',
+    'const y = 2;',
+    'const z = 3;'
+].join('\n');
+
+const excerpt = html()
     .addLayer(
-        rangesForMatch('ERROR'),
+        rangesForMatch(/const/g),
+        content => `<span class="keyword">${content}</span>`
+    )
+    .addLayer(
+        rangesForMatch(/y/g),
         content => `<mark>${content}</mark>`,
-        'matches'
+        'search'
     )
     .addLayer(
         rangesCompose(
-            rangesFromLayer('matches'),
-            applyExpandTo('line', 1),
+            rangesFromLayer('search'),
+            applyExpandTo('line'),
             applyInvert()
         ),
         { replace: () => '...\n' }
     );
+
+excerpt.render(document);
 ```
 
-This pipeline finds matches, expands them to one line of context, inverts the visible regions, and replaces omissions with an ellipsis. Match highlighting is rendered normally inside the retained excerpts.
+Output:
 
-## Built-in renderers
+```html
+...
+<span class="keyword">const</span> <mark>y</mark> = 2;
+...
+```
 
-- `string()` produces unescaped strings.
-- `html()` produces strings and escapes source text for HTML.
-- `tty()` produces ANSI-colored terminal strings.
-- `dom()` produces a `DocumentFragment`.
-- `jsx()` produces an array of JSX-compatible children.
-- `createRenderPipeline()` builds a renderer for another output type.
+All three layers use positions in the original document. The keyword layer does not know about the search layer, and neither one knows which lines the final view will retain. The last layer derives the visible line from the search result and replaces everything else; it never cuts completed HTML.
 
-HiText has no runtime dependencies.
+The same model can build search excerpts, diagnostic views, folded code, diff context, redacted output, and generated document sections while keeping surviving annotations attached to their source text.
 
-## Package size
+## What HiText provides
 
-The current complete ESM bundle is 15,214 bytes minified and 5,857 bytes gzip-compressed. The minified UMD bundle is 16,359 bytes and 6,283 bytes gzip-compressed.
+- Independent range sources and overlapping annotations.
+- Range transformations for filtering, expansion, merging, inversion, insertion points, and derived data.
+- Named layers whose generated ranges can feed later layers.
+- Replacement and insertion during the same traversal as annotation rendering.
+- Pipelines for strings, escaped HTML, terminal output, DOM, and JSX.
+- Custom output through a small buffer interface.
+- Inspection of generated ranges and resolved hooks for tests and tooling.
 
-These figures were measured from `npm run build` output with `wc -c` and `gzip -c` on macOS. Application size depends on imports, tree shaking, target, minifier, and compression.
+HiText has no runtime dependencies. The current complete ESM bundle is 15,214 bytes minified and 5,857 bytes after gzip, measured from `npm run build` output.
+
+## Scope
+
+HiText renders immutable document snapshots. It is not an editor, parser, or syntax highlighter, although those tools can produce ranges for it.
+
+HiText 2.0 does not provide incremental updates after edits, streaming output, or a built-in relevance and budget optimizer. Applications own document updates and selection policy.
 
 ## Documentation
 
-- [Documentation overview](docs/README.md)
-- [Getting Started](docs/getting-started.md)
-- [Core Concepts](docs/core-concepts.md)
-- [Layers and Pipeline](docs/layers-and-pipeline.md)
-- [Range Functions Guide](docs/range-functions-guide.md)
-- [Range Functions Reference](docs/range-functions-reference.md)
-- [Rendering Model](docs/rendering-model.md)
-- [API Reference](docs/api-reference.md)
-- [Recipes](docs/recipes.md)
-- [Migration from HiText 1.x](docs/migration-from-1.x.md)
-- [HiText 2.0 Release Notes](docs/release-notes-2.0.md)
+- [Getting Started](docs/getting-started.md) — build one useful pipeline in about ten minutes.
+- [Core Concepts](docs/core-concepts.md) — understand ranges, layers, intersections, and output.
+- [Range Functions Guide](docs/range-functions-guide.md) — compose selections and derived ranges.
+- [Rendering](docs/rendering.md) — hooks, crossings, replacement, and insertion.
+- [Recipes](docs/recipes.md) — excerpts, diagnostics, diffs, logs, and generated content.
+- [API Reference](docs/api-reference.md) — package exports and exact contracts.
+- [Upgrade to HiText 2.0](docs/upgrade-to-2.0.md) — breaking changes and verified migration examples.
+
+See the [documentation overview](docs/README.md) for the complete public set.
 
 ## Related projects
 
 - **HiMatch** is a separate matching project that can produce structured ranges for HiText. HiText does not depend on it.
 - **Discovery.js** is an established consumer of the HiText 1.x beta API and a real-world migration target for 2.0.
-- **HiRange** and **HiRender** describe possible future package boundaries for range algebra and rendering. They are not release commitments.
 
-## Status
-
-The current branch is the unreleased development line for HiText 2.0. It is a redesign of the public API around explicit range sources, transformations, immutable layers, renderer-independent hooks, and typed pipeline products. The current npm release is `1.0.0-beta.1` and uses the legacy API.
+Possible future package boundaries such as HiRange and HiRender are design directions, not release commitments.
 
 ## License
 

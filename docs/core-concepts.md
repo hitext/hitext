@@ -161,7 +161,7 @@ A function used directly as a hook definition is shorthand for `wrap`:
 content => `<mark>${content}</mark>`
 ```
 
-See [Range Hooks](range-hooks.md) for lifecycle and context details.
+See [Rendering](rendering.md) for lifecycle, crossings, replacement, and insertion.
 
 ## Ranges and segments
 
@@ -200,11 +200,11 @@ The renderer creates a root buffer. A `wrap` hook causes rendering to use a chil
 
 String, DOM, and JSX outputs use the same traversal. They differ in their buffer implementation and renderer-level text handling.
 
-## Decoration and projection
+## Decoration and derived views
 
 Decoration preserves the complete source text and changes its representation. Highlighting is a decoration.
 
-Projection builds a derived output view. It may select, omit, replace, reorder, or aggregate document content and may insert synthetic content, while annotations retain document-relative coordinates.
+A derived view changes which document regions or generated values are materialized. It may omit or replace content, insert generated values, or aggregate range data while annotations retain document-relative coordinates.
 
 ```text
 interesting ranges
@@ -214,20 +214,11 @@ interesting ranges
     -> replace omitted regions
 ```
 
-Because projection happens during the same traversal as annotation rendering, it does not need to cut completed markup or repair output trees. See [Projections and Excerpts](projections-and-excerpts.md).
+Because selection and replacement happen during the same traversal as annotation rendering, HiText does not need to cut completed markup or repair output trees. See [Recipes](recipes.md#search-excerpts-across-annotation-classes) for a complete excerpt.
 
-## Pipeline products
+## Inspecting results
 
-A pipeline exposes several observable stages:
-
-```js
-pipeline.ranges(document, renderOptions);
-pipeline.rangeHooksDefinitionMap();
-pipeline.rangeHooksMap();
-pipeline.render(document, renderOptions);
-```
-
-These are useful for testing and introspection. Range generation and rendered output can be verified independently.
+A pipeline can expose generated ranges separately from rendered output. This is useful for testing selection and transformation logic before debugging hooks or markup. Exact introspection methods are listed in the [API Reference](api-reference.md#pipeline).
 
 ## Scope
 

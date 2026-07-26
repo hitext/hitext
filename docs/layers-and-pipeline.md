@@ -224,7 +224,7 @@ for (const layer of pipeline.layers) {
 
 For generated counts by layer, group `pipeline.ranges()` by each range's `type`, or compare it with `pipeline.layers[].marker`. For lineage, inspect `range.origin` recursively.
 
-The [Getting Started](getting-started.md#inspect-a-pipeline) guide introduces the same inspection methods in a smaller example.
+The [API Reference](api-reference.md#pipeline) lists the exact inspection method contracts.
 
 ## Testing pipelines
 

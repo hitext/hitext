@@ -1,244 +1,156 @@
 # Getting Started
 
-HiText renders a document through an immutable pipeline of annotation layers. Each layer combines a range source, which identifies parts of the original document, with range hooks, which describe how those parts should be rendered.
+This tutorial builds an HTML excerpt that combines independent keyword and search annotations, then keeps only the line containing the search result.
 
-## Install
+The final output will be:
 
-HiText 2.0 is not published yet. The unqualified npm package currently exposes the legacy `1.0.0-beta.1` API. Once a 2.0 prerelease or stable version is published, install it with:
+```html
+...
+<span class="keyword">const</span> <mark>y</mark> = 2;
+...
+```
+
+## Before you start
+
+HiText 2.0 is not published yet. The unqualified npm package currently exposes the legacy `1.0.0-beta.1` API. The examples below target the current repository branch.
+
+Once a 2.0 prerelease or stable version is published, install it with:
 
 ```bash
 npm install hitext
 ```
 
-Until then, the examples below target the current repository branch.
+The examples use ESM imports. HiText also provides a CommonJS entry point.
 
-HiText provides both ESM and CommonJS entry points. The examples in this guide use ESM:
+## 1. Create an HTML pipeline
 
-```js
-import { html, rangesForMatch } from 'hitext';
-```
-
-## Create a pipeline
-
-A renderer creates an empty pipeline. This example uses the HTML renderer:
+A renderer creates an empty pipeline:
 
 ```js
 import { html } from 'hitext';
 
 const pipeline = html();
-const result = pipeline.render('One < two');
+```
 
-console.log(result);
+Without layers, the pipeline renders the complete document and escapes it for HTML:
+
+```js
+pipeline.render('One < two');
 // One &lt; two
 ```
 
-Without layers, a pipeline renders the complete document. The HTML renderer escapes document text; other renderers materialize the same pipeline model as plain strings, terminal output, DOM nodes, or JSX children.
+## 2. Add independent annotations
 
-## Add a layer
+Start with this document:
 
-Use `addLayer(ranges, hooks, name?)` to describe an annotation:
+```js
+const document = [
+    'const x = 1;',
+    'const y = 2;',
+    'const z = 3;'
+].join('\n');
+```
+
+Add one layer for keywords and another for the search result:
 
 ```js
 import { html, rangesForMatch } from 'hitext';
 
-const highlight = html().addLayer(
-    rangesForMatch('world'),
-    content => `<mark>${content}</mark>`
-);
-
-console.log(highlight.render('Hello world! Hello world!'));
-// Hello <mark>world</mark>! Hello <mark>world</mark>!
-```
-
-`rangesForMatch('world')` finds ranges in the original document. The function passed as the second argument is shorthand for a `wrap` hook. It receives the content rendered for each range and returns its replacement in the renderer's output type.
-
-`addLayer()` does not mutate the existing pipeline. It returns a new pipeline with the additional layer:
-
-```js
-const base = html();
-const highlighted = base.addLayer(
-    [[0, 5]],
-    content => `<strong>${content}</strong>`
-);
-
-base.render('Hello world');
-// Hello world
-
-highlighted.render('Hello world');
-// <strong>Hello</strong> world
-```
-
-## Combine independent annotations
-
-Layers always use offsets in the same source document, so they do not need to know about markup produced by other layers:
-
-```js
-const pipeline = html()
+const annotated = html()
     .addLayer(
-        rangesForMatch(/const|return/g),
+        rangesForMatch(/const/g),
         content => `<span class="keyword">${content}</span>`
     )
     .addLayer(
-        rangesForMatch('answer'),
-        content => `<mark>${content}</mark>`
+        rangesForMatch(/y/g),
+        content => `<mark>${content}</mark>`,
+        'search'
     );
-
-pipeline.render('const answer = () => return 42');
-// <span class="keyword">const</span> <mark>answer</mark> = () => <span class="keyword">return</span> 42
 ```
 
-The same principle applies when ranges overlap. HiText resolves intersections during rendering and produces correctly nested output for the selected renderer.
+Each `rangesForMatch()` call reads the original document. The layers do not see or parse markup produced by each other.
 
-## Use range data
+The function passed as the second argument is shorthand for a `wrap` hook: it receives the content rendered for a range and returns its representation in the current renderer.
 
-Ranges can carry arbitrary data. Hooks receive it through their context:
+Render the complete document:
 
 ```js
-const pipeline = html().addLayer(
-    [{
-        start: 0,
-        end: 5,
-        data: { kind: 'greeting' }
-    }],
-    {
-        open: ({ data }) => `<span class="${data.kind}">`,
-        close: () => '</span>'
-    }
-);
-
-pipeline.render('Hello world');
-// <span class="greeting">Hello</span> world
+annotated.render(document);
+// <span class="keyword">const</span> x = 1;
+// <span class="keyword">const</span> <mark>y</mark> = 2;
+// <span class="keyword">const</span> z = 3;
 ```
 
-Range offsets are zero-based and `end` is exclusive, matching `String.prototype.slice()`.
+## 3. Derive an excerpt from the search layer
 
-## Name and derive layers
+The search layer has the name `search`. A later layer can reuse its generated ranges without running the search again.
 
-A named layer can be used as the source for a later layer. This turns a pipeline into an ordered dataflow rather than a flat list of decorations:
+Build omitted regions in three steps:
+
+```text
+search match
+    -> expand to its complete line
+    -> invert the visible line into omitted regions
+```
 
 ```js
 import {
     applyExpandTo,
     applyInvert,
-    html,
     rangesCompose,
-    rangesForMatch,
     rangesFromLayer
 } from 'hitext';
 
-const excerpts = html()
-    .addLayer(
-        rangesForMatch('ERROR'),
-        content => `<mark>${content}</mark>`,
-        'matches'
-    )
-    .addLayer(
-        rangesCompose(
-            rangesFromLayer('matches'),
-            applyExpandTo('line', 1),
-            applyInvert()
-        ),
-        { replace: () => '...\n' }
-    );
-```
-
-Here the second layer takes the generated ranges from `matches`, expands them by one surrounding line, inverts the selection, and replaces omitted regions. The match layer still renders normally inside the retained excerpts.
-
-Layer dependencies are evaluated in order. A layer can reference only a named layer added before it.
-
-## Replace, hide, and insert content
-
-Hooks can build projections as well as decorations. `replace` consumes a range and emits another value:
-
-```js
-html()
-    .addLayer(
-        rangesForMatch(/token=\w+/g),
-        { replace: () => 'token=[redacted]' }
-    )
-    .render('request token=secret');
-// request token=[redacted]
-```
-
-For line-aware excerpts, derive omitted regions and use `rangeHooksHide()`:
-
-```js
-import { rangeHooksHide } from 'hitext';
-
-const excerpts = html()
-    .addLayer(matches, matchHooks, 'matches')
-    .addLayer(
-        rangesCompose(
-            rangesFromLayer('matches'),
-            applyExpandTo('line', 1),
-            applyInvert()
-        ),
-        rangeHooksHide()
-    );
-```
-
-A zero-width range inserts output without consuming document text:
-
-```js
-import { rangesFrom, string } from 'hitext';
-
-string()
-    .addLayer(
-        rangesFrom('document-start'),
-        { replace: () => 'Result: ' }
-    )
-    .render('42');
-// Result: 42
-```
-
-Highlighting is decoration: all document text remains visible. Replacement, hiding, and insertion build a projection: a derived output view while ranges retain document-relative coordinates.
-
-## Use render options
-
-Render options are supplied when a document is processed. Range generators and range-operation callbacks can use them to produce different views with one pipeline. Range hooks receive `RangeHookContext`, which does not include render options:
-
-```js
-const pipeline = html().addLayer(
-    (document, createRange, { renderOptions }) => {
-        if (renderOptions?.highlight) {
-            createRange(0, document.length);
-        }
-    },
-    content => `<mark>${content}</mark>`
+const excerpt = annotated.addLayer(
+    rangesCompose(
+        rangesFromLayer('search'),
+        applyExpandTo('line'),
+        applyInvert()
+    ),
+    { replace: () => '...\n' }
 );
-
-pipeline.render('Hello', { highlight: false });
-// Hello
-
-pipeline.render('Hello', { highlight: true });
-// <mark>Hello</mark>
 ```
 
-TypeScript users can specify the render options type when creating a custom pipeline or renderer. See [TypeScript](typescript.md) for the generic types involved.
-
-## Inspect a pipeline
-
-A pipeline exposes its intermediate products:
+Render the same document:
 
 ```js
-pipeline.ranges(document, options);
-pipeline.rangeHooksDefinitionMap();
-pipeline.rangeHooksMap();
+excerpt.render(document);
+// ...
+// <span class="keyword">const</span> <mark>y</mark> = 2;
+// ...
 ```
 
-- `ranges()` generates and normalizes all layer ranges.
-- `rangeHooksDefinitionMap()` returns the hook definitions attached to layer markers.
-- `rangeHooksMap()` resolves those definitions for the pipeline's renderer.
+The last layer replaces omitted source regions during the same traversal that renders the keyword and search annotations. It never cuts completed HTML, and the surviving annotations keep their original offsets.
 
-These methods are useful for tests, debugging, and tooling. `render()` performs the complete generation, hook resolution, and rendering flow.
+## 4. Reuse the pipeline
+
+`addLayer()` returns a new pipeline instead of changing its receiver. The `annotated` pipeline still renders the full document, while `excerpt` renders the reduced view.
+
+Both pipelines can process other documents because their range sources derive offsets for each input:
+
+```js
+excerpt.render([
+    'const before = 1;',
+    'const y = 2;',
+    'const after = 3;'
+].join('\n'));
+```
+
+Static range arrays are different: the application must ensure that their offsets belong to the document being rendered.
+
+## What you used
+
+- A renderer selected the output format.
+- Each layer combined a range source with rendering behavior.
+- Independent layers shared one document coordinate space.
+- A named layer supplied generated ranges to a later transformation.
+- Replacement created an excerpt without post-processing markup.
+- Immutable pipelines allowed the full and reduced views to coexist.
 
 ## Next steps
 
-- [Core Concepts](core-concepts.md) explains ranges, layers, segments, hooks, buffers, and projections.
-- [Layers and Pipeline](layers-and-pipeline.md) covers names, markers, dependencies, options, reuse, and intermediate products.
-- [Range Functions Guide](range-functions-guide.md) explains how to select and compose sources and transformers.
-- [Range Functions Reference](range-functions-reference.md) documents the built-in sources and transformers.
-- [Range Hooks](range-hooks.md) covers rendering behavior and hook context.
-- [Renderers](renderers.md) compares the built-in output formats.
-- [Projections and Excerpts](projections-and-excerpts.md) shows how to hide, replace, and retain annotated source regions.
-- [Recipes](recipes.md) applies the model to diffs, diagnostics, logs, progressive views, and generated documents.
+- [Core Concepts](core-concepts.md) defines ranges, layers, intersections, hooks, and output buffers.
+- [Range Functions Guide](range-functions-guide.md) explains sources, transformations, data, and origin.
+- [Rendering](rendering.md) covers crossings, hook lifecycle, replacement, and insertion.
+- [Renderers](renderers.md) compares HTML, strings, TTY, DOM, JSX, and custom output.
+- [Recipes](recipes.md) develops diagnostics, diffs, logs, redaction, and generated document sections.

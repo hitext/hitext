@@ -103,22 +103,6 @@ pipeline.rangeHooksMap(): RangeHooksMap<any, T, R>
 
 Resolves definitions against a new renderer hooks instance and returns normalized `RangeHooks` keyed by layer marker.
 
-### `pipeline.layers`
-
-```ts
-pipeline.layers: PipelineLayer<RenderOptions, any, T, R, HC>[]
-```
-
-The ordered runtime layer records used by the pipeline. Treat the array and its records as introspection data; construct changed pipelines with `addLayer()`.
-
-### `pipeline.createRenderHooks`
-
-```ts
-pipeline.createRenderHooks: CreateRenderHooks<T, R, HC>
-```
-
-The renderer-hooks factory used to resolve hooks and render output. This is primarily useful for low-level integrations.
-
 ## Range values and sources
 
 ```ts
@@ -230,7 +214,7 @@ interface RangeHooks<Data, T, R = T> {
 
 Definitions are partial and can also use a `wrap` function shortcut or `RangeHooksFactory`. Resolved maps contain the complete normalized shape above.
 
-See [Range Hooks](range-hooks.md) for hook order, segmentation, and context.
+See [Rendering](rendering.md) for hook order, crossings, replacement, and context.
 
 ### `rangeHooksHide(options?)`
 
@@ -311,6 +295,19 @@ createDOMBuffer(document?: Document): DOMBuffer
 All implement `append(child)` and `emit()`. `ArrayBuffer` preserves nested emitted arrays rather than flattening them. `DOMBuffer` defaults to `globalThis.document`.
 
 ## Low-level APIs
+
+The following values are exported from the package root because the current implementation and custom renderer tooling use them. Their presence as exports should not yet be read as a promise that every mutable record shape is a finalized 2.0 application-level extension contract. Review this surface before the 2.0 release.
+
+For normal application pipelines, prefer renderer factories, `addLayer()`, `render()`, `ranges()`, and the documented range functions.
+
+### Pipeline internals exposed for tooling
+
+```ts
+pipeline.layers: PipelineLayer<RenderOptions, any, T, R, HC>[]
+pipeline.createRenderHooks: CreateRenderHooks<T, R, HC>
+```
+
+`layers` contains the ordered runtime records and is currently mutable. Construct changed pipelines with `addLayer()` rather than mutating this array. `createRenderHooks` creates renderer-level hooks and state for low-level integration.
 
 ### `render()`
 
@@ -399,7 +396,7 @@ All declarations in `src/types.d.ts` are exported from the package root:
 - Renderer contracts: `RenderHooks`, `RenderBuffer`
 - Text coordinates: `LineBoundaries`
 
-See [TypeScript](typescript.md) for common generic patterns.
+Supporting [TypeScript Notes](typescript.md) record current generic patterns and known inference limits.
 
 ## Export map
 

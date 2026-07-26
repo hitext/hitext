@@ -163,4 +163,4 @@ Renderer hooks have these responsibilities:
 - `open(context)` and `close(context)` emit at the start and end of the complete render.
 - `rangeHooksContext` exposes renderer-specific helpers to range hook factories.
 
-Custom renderer tests should cover plain text, nested ranges, crossing ranges, `wrap`, replacement, zero-width insertion, and empty output. Those cases exercise the shared traversal and the buffer's parent/child behavior.
+Custom renderer tests should cover plain text, nested ranges, crossing ranges, `wrap`, replacement, zero-width insertion, and empty output. Those cases exercise the shared traversal and the buffer's parent/child behavior. The shared hook and crossing semantics are defined in [Rendering](rendering.md).
