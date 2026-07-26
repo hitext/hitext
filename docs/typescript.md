@@ -206,4 +206,21 @@ Layer names are runtime identifiers. TypeScript does not derive a name-to-data m
 
 HiText keeps each layer's data generic local, but a pipeline can contain heterogeneous layers. Introspection methods therefore return broad generated-range and hook-map types. Narrow data at the layer, source, transformer, or hook where its contract is known rather than casting the complete pipeline to one data type.
 
+## Why 2.0 changed the API
+
+The 1.x beta API combined decorators, fluent chains, printer selection, and factory extension in dynamic objects. A local attempt to add TypeScript definitions exposed that the types would need to reconstruct relationships the runtime API did not represent explicitly.
+
+HiText 2.0 changes those ownership boundaries instead of hiding them behind increasingly complex generics:
+
+- sources own range data production;
+- transformers have a uniform curried shape;
+- layers bind one data type to hooks;
+- named dependencies expose runtime dataflow explicitly;
+- renderers define child, result, and factory-context types;
+- pipelines expose generated ranges, definitions, resolved hooks, and output as separate products.
+
+This does not make every relationship statically inferable. In particular, a string layer name cannot carry its data type through the immutable chain automatically. The new model keeps those limits local and visible rather than making the complete pipeline depend on a growing type-level registry.
+
+See [HiText 2.0 Release Notes](release-notes-2.0.md#why-a-redesign) for the architectural context and [Migration from HiText 1.x](migration-from-1.x.md) for practical changes.
+
 For exact declarations, see [API Reference](api-reference.md) and the types exported by the installed package.

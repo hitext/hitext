@@ -69,6 +69,54 @@ const output = excerpts.render(
 
 The first layer both identifies and renders matches. The named result is reused by the second layer to define the viewport. Highlighting survives because retained text is still rendered through the first layer.
 
+## Horizontal context windows
+
+`applyFitToWindow(size, allowTrimming?)` creates a character-width window within the line containing each input range:
+
+```js
+const snippets = html()
+    .addLayer(
+        rangesForMatch(/important keyword/gi),
+        content => `<mark>${content}</mark>`,
+        'matches'
+    )
+    .addLayer(
+        rangesCompose(
+            rangesFromLayer('matches'),
+            applyFitToWindow(80)
+        ),
+        null,
+        'windows'
+    )
+    .addLayer(
+        rangesCompose(
+            rangesFromLayer('windows'),
+            applyInvert()
+        ),
+        rangeHooksHide()
+    );
+```
+
+The transformer expands short matches toward an 80-character line window, redistributing unused space when it reaches a line boundary. A long match is trimmed from the right unless the second argument is `false`.
+
+It does not accept separate `{ before, after }` values and does not cross line boundaries. Use a custom transformer when a projection needs asymmetric character context.
+
+## Merge nearby windows
+
+Expansion can make windows overlap. `applyInvert()` merges its input before computing gaps, so ordinary excerpt pipelines already avoid placeholders inside overlapping visible regions.
+
+Use `applyMerge()` explicitly when a named visible-window layer, origin aggregation, or subsequent operation should observe the union itself:
+
+```js
+rangesCompose(
+    rangesFromLayer('matches'),
+    applyExpandTo('line', 2),
+    applyMerge()
+)
+```
+
+The merged range's origin array identifies the contributing windows.
+
 ## Smart omission markers
 
 For mixed inline and line-oriented omissions, use `rangeHooksHide()`:
@@ -147,6 +195,25 @@ pipeline.render(document, { detail: 'full' });
 `rangesFromOptions()`, options-aware generators, and operation predicates can turn layers on or off or change context geometry. The source coordinate space remains stable across views.
 
 HiText supplies the range composition and materialization model. It does not currently provide an optimizer that chooses ranges for a character, line, token, or relevance budget; applications can implement that policy in a source or transformer.
+
+## Output budgets
+
+A budget-aware projector usually separates policy from materialization:
+
+```text
+application policy
+    -> rank important ranges
+    -> choose ranges within a character, line, or token budget
+HiText composition
+    -> add context
+    -> merge selected windows
+    -> invert omissions
+    -> render retained annotations and omission metadata
+```
+
+The policy may prioritize diagnostics, application frames, changed lines, headings, or relevance scores carried in range data. HiText provides operation context over the complete range set for custom selection, but it does not define what “most useful” means.
+
+Budget the materialized representation, not only raw source characters, when generated labels or structured output contribute meaningful size. That accounting belongs to the application because renderer output units differ.
 
 ## Testing projections
 

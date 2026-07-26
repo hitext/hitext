@@ -17,6 +17,14 @@ Document text
 
 Annotations always use offsets in the original document. A syntax highlighter, search matcher, diagnostic provider, and excerpt builder can therefore be composed without parsing each other's markup or translating positions after every transformation.
 
+## Why HiText
+
+- Independent stand-off annotations can overlap without coordinating their output.
+- Range transformers build context windows, insertion points, omissions, and derived views.
+- Projections retain annotations while hiding or replacing unrelated source regions.
+- The same pipeline model renders strings, HTML, TTY, DOM, JSX, or custom structures.
+- Intermediate ranges and hook maps remain available for testing and tooling.
+
 ## Install
 
 ```bash
@@ -82,15 +90,31 @@ This pipeline finds matches, expands them to one line of context, inverts the vi
 
 HiText has no runtime dependencies.
 
+## Package size
+
+The current complete ESM bundle is 15,214 bytes minified and 5,857 bytes gzip-compressed. The minified UMD bundle is 16,359 bytes and 6,283 bytes gzip-compressed.
+
+These figures were measured from `npm run build` output with `wc -c` and `gzip -c` on macOS. Application size depends on imports, tree shaking, target, minifier, and compression.
+
 ## Documentation
 
 - [Documentation overview](docs/README.md)
 - [Getting Started](docs/getting-started.md)
 - [Core Concepts](docs/core-concepts.md)
+- [Layers and Pipeline](docs/layers-and-pipeline.md)
+- [Range Functions Guide](docs/range-functions-guide.md)
 - [Range Functions Reference](docs/range-functions-reference.md)
+- [Rendering Model](docs/rendering-model.md)
 - [API Reference](docs/api-reference.md)
 - [Recipes](docs/recipes.md)
 - [Migration from HiText 1.x](docs/migration-from-1.x.md)
+- [HiText 2.0 Release Notes](docs/release-notes-2.0.md)
+
+## Related projects
+
+- **HiMatch** is a separate matching project that can produce structured ranges for HiText. HiText does not depend on it.
+- **Discovery.js** is an established consumer of the HiText 1.x beta API and a real-world migration target for 2.0.
+- **HiRange** and **HiRender** describe possible future package boundaries for range algebra and rendering. They are not release commitments.
 
 ## Status
 

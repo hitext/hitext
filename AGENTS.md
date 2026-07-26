@@ -78,7 +78,7 @@ createRenderPipeline(renderer) → .addLayer(ranges, hooks, name?) → .render(d
 **Hooks:**
 - **Range Hooks** - Render functions applied to each range segment: `open`, `close`, `wrap`, `text`, `replace`, `break` flag
 - **Hook Context** - Data passed to hooks: `document`, `offset`, `line`, `column`, `start`, `end`, `range`, `data`, `lines` (LineBoundaries)
-- **Generation Context** - Data passed to generators: `renderOptions`, `marker`, `ranges`, `rangesByMarker`, `rangesByName`, `lines` (LineBoundaries)
+- **Generation Context** - Data passed by pipeline generation: `renderOptions`, `marker`, `rangesByMarker`, `rangesByName`, `lines` (LineBoundaries). The context type also has an optional `ranges` field for low-level callers, but pipeline generation does not populate it.
 - **Operation Context** - Data passed to predicates: `document`, `lines` (LineBoundaries), `renderOptions`, `ranges`
 
 ### Project Structure

@@ -142,6 +142,53 @@ Here the second layer takes the generated ranges from `matches`, expands them by
 
 Layer dependencies are evaluated in order. A layer can reference only a named layer added before it.
 
+## Replace, hide, and insert content
+
+Hooks can build projections as well as decorations. `replace` consumes a range and emits another value:
+
+```js
+html()
+    .addLayer(
+        rangesForMatch(/token=\w+/g),
+        { replace: () => 'token=[redacted]' }
+    )
+    .render('request token=secret');
+// request token=[redacted]
+```
+
+For line-aware excerpts, derive omitted regions and use `rangeHooksHide()`:
+
+```js
+import { rangeHooksHide } from 'hitext';
+
+const excerpts = html()
+    .addLayer(matches, matchHooks, 'matches')
+    .addLayer(
+        rangesCompose(
+            rangesFromLayer('matches'),
+            applyExpandTo('line', 1),
+            applyInvert()
+        ),
+        rangeHooksHide()
+    );
+```
+
+A zero-width range inserts output without consuming document text:
+
+```js
+import { rangesFrom, string } from 'hitext';
+
+string()
+    .addLayer(
+        rangesFrom('document-start'),
+        { replace: () => 'Result: ' }
+    )
+    .render('42');
+// Result: 42
+```
+
+Highlighting is decoration: all source text remains visible. Replacement, hiding, and insertion build a projection: output selects or synthesizes a view while ranges continue to use source offsets.
+
 ## Use render options
 
 Render options are supplied when a document is processed. Range generators, transformers, predicates, and hooks can use them to produce different views with one pipeline:
@@ -184,7 +231,10 @@ These methods are useful for tests, debugging, and tooling. `render()` performs 
 ## Next steps
 
 - [Core Concepts](core-concepts.md) explains ranges, layers, segments, hooks, buffers, and projections.
+- [Layers and Pipeline](layers-and-pipeline.md) covers names, markers, dependencies, options, reuse, and intermediate products.
+- [Range Functions Guide](range-functions-guide.md) explains how to select and compose sources and transformers.
 - [Range Functions Reference](range-functions-reference.md) documents the built-in sources and transformers.
 - [Range Hooks](range-hooks.md) covers rendering behavior and hook context.
 - [Renderers](renderers.md) compares the built-in output formats.
 - [Projections and Excerpts](projections-and-excerpts.md) shows how to hide, replace, and retain annotated source regions.
+- [Recipes](recipes.md) applies the model to diffs, diagnostics, logs, progressive views, and generated documents.

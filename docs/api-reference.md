@@ -144,10 +144,11 @@ Generation context contains:
 |---|---|
 | `renderOptions` | Options passed to `ranges()` or `render()` |
 | `marker` | Marker of the layer being generated |
-| `ranges` | Previously generated ranges |
 | `rangesByMarker` | Previous ranges grouped by layer marker |
 | `rangesByName` | Previous ranges grouped by layer name |
 | `lines` | `LineBoundaries` for the document |
+
+The `GenerateRangesContext` type also permits an optional `ranges` field for low-level callers. Pipeline generation does not populate it; previous layer products are available through `rangesByMarker` and `rangesByName`.
 
 ## Range sources
 

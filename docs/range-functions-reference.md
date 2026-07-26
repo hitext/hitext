@@ -22,7 +22,7 @@ Range Sources:
 | [`rangesForMatch`](#rangesformatchpattern) | Source | Pattern matching | None (new ranges) |
 | [`rangesFrom`](#rangesfrominput) | Source | Raw data conversion & document keywords | None (new ranges) |
 | [`rangesFromLayer`](#rangesfromlayername) | Source | Layer reference | Preserves existing |
-| [`rangesFromOptions`](#rangesfromoptionskey) | Source | User options | Preserves existing |
+| [`rangesFromOptions`](#rangesfromoptionsrangeinput) | Source | User options | Preserves existing |
 | [`rangesWithFallback`](#rangeswithfallbackinputs) | Combiner | First non-empty | Preserves existing |
 
 Range Transformers:
@@ -376,20 +376,22 @@ rangesCompose(
 Pass through original ranges unchanged, add derived ranges.
 
 ```typescript
-applyAugment<Data, RenderOptions, NewData = Data>(
-    callback: (
+applyAugment<Data, RenderOptions>(
+        augmenter: (
         range: RangeRecord<Data>,
-        createRange: CreateRange<NewData>,
-        context: RangeOperationContext<Data, RenderOptions>
+                createRange: (start: number, end: number, data?: Data) => void,
+                opContext: RangeOperationContext<RenderOptions>
     ) => void
-): TransformRanges<Data | NewData, RenderOptions>
+): TransformRanges<Data, RenderOptions>
 ```
 
 **Parameters:**
-- `callback` - Function that creates additional ranges via `createRange(start, end, data?)`
+- `augmenter` - Function that creates additional ranges via `createRange(start, end, data?)`
   - `range` - Current input range (passed through unchanged)
   - `createRange` - Function to create derivative ranges
-  - `context` - Operation context with `{ document, lines, renderOptions, ranges, index }`
+    - `opContext` - Operation context with `{ document, lines, renderOptions, ranges, index }`
+
+Additional ranges use the same data type as the input. Use `applyMap()` when derivatives need a different output data type.
 
 **Origin:** Original range keeps its origin unchanged, derivatives get automatic origin tracking
 
@@ -405,7 +407,7 @@ rangesCompose(
     rangesFromOptions('diagnostics'),
     applyAugment((range, createRange, { lines }) => {
         const lineStart = lines.getLineStart(range.start);
-        createRange(lineStart, lineStart, { type: 'error-marker' });
+        createRange(lineStart, lineStart, range.data);
     })
 )
 ```
@@ -457,16 +459,19 @@ rangesCompose(
 Transform range data while preserving positions. **Clears `origin` tracking** (data transformation creates new semantic meaning).
 
 ```typescript
-applyDataMap<Data, NewData>(
-    mapper: (range, index, context) => NewData
-): TransformRanges<Data, NewData>
+applyDataMap<Data, NewData, RenderOptions>(
+    mapper: (
+        range: RangeRecord<Data>,
+        opContext: RangeOperationContext<RenderOptions>
+    ) => NewData
+): (input: Ranges<Data, RenderOptions>) =>
+    GenerateRanges<NewData, RenderOptions>
 ```
 
 **Parameters:**
 - `mapper` - Transformation function receiving:
   - `range` - Full range object
-  - `index` - Zero-based position
-  - `context` - Operation context
+  - `opContext` - Operation context with `{ document, lines, renderOptions, ranges, index }`
 
 **Origin:** Cleared (`undefined`) - new semantic meaning
 
@@ -489,7 +494,7 @@ rangesCompose(
 // Add sequential IDs
 rangesCompose(
     ranges,
-    applyDataMap((range, index) => ({
+    applyDataMap((range, { index }) => ({
         ...range.data,
         id: `item-${index}`
     }))
@@ -585,16 +590,18 @@ rangesCompose(
 Filter ranges using a predicate function.
 
 ```typescript
-applyFilter(
-    predicate: (range, index, context) => boolean
-): TransformRanges
+applyFilter<Data, RenderOptions>(
+    predicate: (
+        range: RangeRecord<Data>,
+        opContext: RangeOperationContext<RenderOptions>
+    ) => boolean
+): TransformRanges<Data, RenderOptions>
 ```
 
 **Parameters:**
 - `predicate` - Function receiving:
   - `range` - Full range object `{start, end, data, origin}`
-  - `index` - Zero-based position in sequence
-  - `context` - `{document, lines, renderOptions, ranges}`
+    - `opContext` - `{document, lines, renderOptions, ranges, index}`
 
 **Origin:** Inherits from input range (direct connection)
 
@@ -608,7 +615,7 @@ applyFilter(
 // Filter single-line ranges only
 rangesCompose(
     rangesForMatch(/\w+/g),
-    applyFilter((range, i, { lines }) =>
+    applyFilter((range, { lines }) =>
         lines.getLine(range.start) === lines.getLine(range.end)
     )
 )
@@ -733,20 +740,24 @@ rangesCompose(
 Core 1-to-N primitive for range transformation. Creates derivative ranges with automatic origin tracking.
 
 ```typescript
-applyMap<Data, RenderOptions, NewData = Data>(
-    callback: (
-        range: RangeRecord<Data>,
-        createRange: CreateRange<NewData>,
-        context: RangeOperationContext<Data, RenderOptions>
+applyMap<InputData, OutputData, RenderOptions>(
+    mapper: (
+        range: RangeRecord<InputData>,
+        createRange: (
+            start: number,
+            end: number,
+            data?: OutputData
+        ) => void,
+        opContext: RangeOperationContext<RenderOptions>
     ) => void
-): TransformRanges<NewData, RenderOptions>
+): TransformRanges<OutputData, RenderOptions>
 ```
 
 **Parameters:**
-- `callback` - Function that creates output ranges via `createRange(start, end, data?)`
+- `mapper` - Function that creates output ranges via `createRange(start, end, data?)`
   - `range` - Current input range
   - `createRange` - Function to create derivative ranges
-  - `context` - Operation context with `{ document, lines, renderOptions, ranges, index }`
+  - `opContext` - Operation context with `{ document, lines, renderOptions, ranges, index }`
 
 **Origin:** Automatically tracks to input range (preserves transformation lineage)
 
@@ -882,14 +893,18 @@ rangesCompose(
 Sort ranges by custom criteria.
 
 ```typescript
-applySort(
-    comparator?: (rangeA, rangeB, context) => number
-): TransformRanges
+applySort<Data, RenderOptions>(
+    comparator?: (
+        rangeA: RangeRecord<Data>,
+        rangeB: RangeRecord<Data>,
+        opContext: RangeOperationContext<RenderOptions>
+    ) => number
+): TransformRanges<Data, RenderOptions>
 ```
 
 **Parameters:**
 - `comparator` - Comparison function (optional):
-  - Receives `rangeA`, `rangeB`, `context`
+    - Receives `rangeA`, `rangeB`, `opContext`
   - Returns negative (A before B), zero (equal), or positive (B before A)
   - Default: sort by start ascending, then end descending
 

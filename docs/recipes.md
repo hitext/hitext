@@ -180,3 +180,274 @@ const output = pipeline.render('a1 b22');
 ```
 
 Assert ranges when testing selection and transformation geometry. Assert output when testing hooks, escaping, segmentation, or renderer behavior.
+
+## Render diff context
+
+Use one analytical layer to identify changed lines, independent layers to style additions and removals, and a derived layer to omit distant context:
+
+```js
+import {
+    applyExpandTo,
+    applyInvert,
+    html,
+    rangeHooksHide,
+    rangesCompose,
+    rangesForMatch,
+    rangesFromLayer
+} from 'hitext';
+
+const diff = html()
+    .addLayer(
+        rangesForMatch(/^[-+]/gm),
+        null,
+        'changes'
+    )
+    .addLayer(
+        rangesForMatch(/^-.*$/gm),
+        content => `<del>${content}</del>`
+    )
+    .addLayer(
+        rangesForMatch(/^\+.*$/gm),
+        content => `<ins>${content}</ins>`
+    )
+    .addLayer(
+        rangesCompose(
+            rangesFromLayer('changes'),
+            applyExpandTo('line', 2),
+            applyInvert()
+        ),
+        rangeHooksHide({
+            skippedLines: '... unchanged lines ...'
+        })
+    );
+```
+
+The analytical `changes` layer drives the viewport but renders nothing. Styling layers remain independent and survive inside retained context.
+
+## Show a diagnostic with a suggestion
+
+This pipeline combines context projection, line-prefix insertion, highlighting, and a suggestion inserted at the diagnostic end:
+
+```js
+import {
+    applyCollapseTo,
+    applyExpandTo,
+    applyInvert,
+    html,
+    rangeHooksHide,
+    rangesCompose,
+    rangesForLines,
+    rangesForMatch,
+    rangesFromLayer
+} from 'hitext';
+
+const diagnostic = html()
+    .addLayer(
+        rangesForMatch(/\bif \([^)]*[^=!<>]=(?!=)[^)]*\)/g),
+        null,
+        'errors'
+    )
+    .addLayer(
+        rangesCompose(
+            rangesFromLayer('errors'),
+            applyExpandTo('line', 1),
+            applyInvert()
+        ),
+        rangeHooksHide()
+    )
+    .addLayer(
+        rangesForLines('line-start'),
+        {
+            replace: ({ data: line }) =>
+                `<span class="line-number">${line}</span> `
+        }
+    )
+    .addLayer(
+        rangesFromLayer('errors'),
+        content => `<mark class="error">${content}</mark>`
+    )
+    .addLayer(
+        rangesCompose(
+            rangesFromLayer('errors'),
+            applyCollapseTo('end')
+        ),
+        {
+            replace: () =>
+                '<span class="suggestion">Use == or === for comparison</span>'
+        }
+    );
+```
+
+All insertion points remain tied to the original document. The line-number layer does not need to know which lines the projection will omit.
+
+## Render progressive detail
+
+One pipeline can select different source categories through render options:
+
+```js
+import {
+    applyExpandTo,
+    applyInvert,
+    rangeHooksHide,
+    rangesCompose,
+    rangesConcat,
+    rangesForMatch,
+    rangesFrom,
+    rangesFromOptions,
+    string
+} from 'hitext';
+
+const headings = rangesForMatch(/^#+ .*$/gm);
+const summaries = rangesForMatch(/^Summary:.*$/gm);
+const details = rangesForMatch(/^Details:.*$/gm);
+
+const progressive = string().addLayer(
+    rangesCompose(
+        rangesFromOptions(({ detail = 'summary' }) => {
+            switch (detail) {
+                case 'outline':
+                    return headings;
+                case 'summary':
+                    return rangesConcat(headings, summaries);
+                case 'detailed':
+                    return rangesConcat(headings, summaries, details);
+                case 'full':
+                    return rangesFrom('document');
+            }
+        }),
+        applyExpandTo('line'),
+        applyInvert()
+    ),
+    rangeHooksHide()
+);
+
+progressive.render(document, { detail: 'outline' });
+progressive.render(document, { detail: 'summary' });
+progressive.render(document, { detail: 'detailed' });
+progressive.render(document, { detail: 'full' });
+```
+
+Pipeline structure is unchanged between calls. Only the visible source ranges selected from options differ.
+
+## Filter logs by severity
+
+Named severity layers can feed an option-dependent viewport while independent TTY layers color retained messages:
+
+```js
+import {
+    applyExpandTo,
+    applyInvert,
+    rangeHooksHide,
+    rangesCompose,
+    rangesConcat,
+    rangesForMatch,
+    rangesFromLayer,
+    rangesFromOptions,
+    tty
+} from 'hitext';
+
+const logs = tty()
+    .addLayer(rangesForMatch(/ERROR/g), null, 'errors')
+    .addLayer(rangesForMatch(/WARN/g), null, 'warnings')
+    .addLayer(
+        rangesFromOptions(({ severity = 'all' }) => {
+            if (severity === 'errors') {
+                return rangesCompose(
+                    rangesFromLayer('errors'),
+                    applyExpandTo('line', 1),
+                    applyInvert()
+                );
+            }
+
+            if (severity === 'problems') {
+                return rangesCompose(
+                    rangesConcat(
+                        rangesFromLayer('errors'),
+                        rangesFromLayer('warnings')
+                    ),
+                    applyExpandTo('line', 1),
+                    applyInvert()
+                );
+            }
+
+            return null;
+        }),
+        rangeHooksHide({ skippedLines: '... hidden log lines ...' })
+    )
+    .addLayer(
+        rangesForMatch(/ERROR.*$/gm),
+        tty.createStyle('red')
+    )
+    .addLayer(
+        rangesForMatch(/WARN.*$/gm),
+        tty.createStyle('yellow')
+    );
+
+logs.render(document, { severity: 'all' });
+logs.render(document, { severity: 'problems' });
+logs.render(document, { severity: 'errors' });
+```
+
+Returning `null` from `rangesFromOptions()` produces no omission ranges and therefore shows the complete log.
+
+## Generate a Markdown table of contents
+
+This example turns heading matches into structured data, collapses them to one insertion point, merges them, and uses the merged origin array to generate a new block:
+
+```js
+import {
+    applyCollapseTo,
+    applyDataMap,
+    applyMerge,
+    rangesCompose,
+    rangesForMatch,
+    rangesFromLayer,
+    string
+} from 'hitext';
+
+const headings = rangesCompose(
+    rangesForMatch(/^(#{1,6})\s+(.+)$/gm),
+    applyDataMap(range => {
+        const [, hashes, text] = range.data;
+
+        return {
+            level: hashes.length,
+            text,
+            slug: text
+                .toLowerCase()
+                .replace(/\s+/g, '-')
+                .replace(/[^\w-]/g, '')
+        };
+    })
+);
+
+const withToc = string()
+    .addLayer(headings, null, 'headings')
+    .addLayer(
+        rangesCompose(
+            rangesFromLayer('headings'),
+            applyCollapseTo('document-start'),
+            applyMerge()
+        ),
+        {
+            replace: ({ range }) => [
+                '## Table of contents',
+                ...range.origin.map(({ data }) =>
+                    `${'  '.repeat(data.level - 1)}- ` +
+                    `[${data.text}](#${data.slug})`
+                ),
+                ''
+            ].join('\n')
+        }
+    );
+```
+
+`applyDataMap()` clears the original match lineage because it changes semantic data. `applyCollapseTo()` then establishes each enriched heading as the origin of its insertion point, and `applyMerge()` aggregates those points.
+
+This pattern generalizes to footnote appendices, link definitions, summaries, and other generated document sections.
+
+## Build structured output
+
+HiText output does not need to be text. A custom buffer can build JSON-compatible annotation nodes while using the same sources, transformations, crossings, and replacement semantics.
+
+See the complete [custom structured renderer](extending-hitext.md#custom-structured-renderer) and its expected output.
