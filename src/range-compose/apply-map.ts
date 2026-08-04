@@ -29,20 +29,19 @@ import { processRangesWithContext } from '../utils/range-operation-context.js';
  * @returns A transformer function that accepts ranges and returns mapped ranges
  *
  * @example
- * // Split each range into start and end markers
- * applyMap((range, createRange) => {
- *   createRange(range.start, range.start + 1);  // opening marker
- *   createRange(range.end - 1, range.end);      // closing marker
- * })
- *
- * @example
- * // Filter and transform: only emit if condition met
- * applyMap((range, createRange, { document }) => {
- *   const text = document.slice(range.start, range.end);
- *   if (text.includes('error')) {
- *     createRange(range.start, range.end, 'ERROR');
- *   }
- * })
+ * // Split each range into prefix and label ranges
+ * rangesCompose(
+ *   rangesForMatch(/(?:(\w+) )?(ERROR|WARNING|INFO)/g),
+ *   applyMap((range, createRange, { document }) => {
+ *     const prefix = range.data[1]; // optional prefix
+ *     let labelStart = range.start;
+ *     if (prefix !== undefined) {
+ *       createRange(range.start, range.start + prefix.length, 'prefix');  // opening prefix
+ *       labelStart += prefix.length + 1; // +1 for space
+ *     }
+ *     createRange(labelStart, range.end, range.data[2]); // label
+ *   })
+ * )
  */
 export function applyMap<InputData, OutputData, RenderOptions>(
     mapper: (
