@@ -23,7 +23,7 @@ import { processSpansWithContext } from '../utils/span-operation-context.js';
 export function applyFilter<Data, RenderOptions>(
     predicate: (
         span: SpanRecord<Data>,
-        opContext: SpanOperationContext<RenderOptions>
+        opContext: SpanOperationContext<Data, RenderOptions>
     ) => boolean
 ): TransformSpans<Data, RenderOptions> {
     return (input: SpansSource<Data, RenderOptions>) => {

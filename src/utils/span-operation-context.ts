@@ -17,7 +17,7 @@ export function createSpanOperationContext<Data, RenderOptions>(
     document: string,
     spans: Array<SpanRecord<Data>>,
     genContext?: GenerateSpansContext<Data, RenderOptions>
-): SpanOperationContext<RenderOptions> & { index: number } {
+): SpanOperationContext<Data, RenderOptions> & { index: number } {
     return {
         document,
         lines: genContext?.lines || createLineBoundaries(document),
@@ -43,7 +43,7 @@ export function processSpansWithContext<Data, RenderOptions>(
     context: GenerateSpansContext<Data, RenderOptions> | undefined,
     callback: (
         spans: Array<SpanRecord<Data>>,
-        opContext: SpanOperationContext<RenderOptions>
+        opContext: SpanOperationContext<Data, RenderOptions>
     ) => void
 ): void {
     const spans: Array<SpanRecord<Data>> = [];

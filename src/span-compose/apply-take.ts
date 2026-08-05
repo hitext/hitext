@@ -41,7 +41,7 @@ export function applyTake<Data, RenderOptions>(
     n: number | 'first' | 'last',
     predicate?: (
         span: SpanRecord<Data>,
-        opContext: SpanOperationContext<RenderOptions>
+        opContext: SpanOperationContext<Data, RenderOptions>
     ) => boolean
 ): TransformSpans<Data, RenderOptions> {
     return (input: SpansSource<Data, RenderOptions>) => {

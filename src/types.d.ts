@@ -56,11 +56,11 @@ export type SpansSourceFactory<Data, RenderOptions> =
     (document: string, renderOptions?: RenderOptions) => SpansSource<Data, RenderOptions>;
 
 // Span operation context (for filter, map, sort, etc.)
-export interface SpanOperationContext<RenderOptions = any> {
+export interface SpanOperationContext<Data = unknown, RenderOptions = unknown> {
     document: string;
     lines: LineBoundaries;
     renderOptions?: RenderOptions;
-    spans: Array<SpanRecord<any>>;
+    spans: Array<SpanRecord<Data>>;
     index: number;
 }
 
@@ -141,6 +141,7 @@ export type SpanHookContext<Data = unknown, T = unknown, R = T> = {
     spanIndex: number;
     spanText: string;
     span: GeneratedSpan<Data>;
+    /** Include `undefined` in `Data` when spans in the layer may omit data. */
     data: Data;
     createBuffer(): RenderBuffer<T, R>;
     dump(): SpanHookContextDump<Data>;

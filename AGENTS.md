@@ -51,7 +51,7 @@ createRenderPipeline(createRenderHooks) â†’ .addLayer(spans, spanHooks, name?) â
 
 **Spans:**
 - **Span** - Text fragment of document with `start`/`end` offsets (zero-based, end-exclusive), optional `data`/`origin`
-- **Span Data** - Custom metadata (match results, diagnostics, token types)
+- **Span Data** - Custom metadata (match results, diagnostics, token types); hook context exposes the declared `Data` type, so include `undefined` in `Data` when layer spans may omit data
 - **Span Origin** - Reference to source span(s) that produced a derivative (tracks transformation lineage)
 - **Span Input** - Various forms: record `{start, end, data?, origin?}` or tuple `[start, end, data?, origin?]`
 - **Span Set** - Collection of spans

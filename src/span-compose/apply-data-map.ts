@@ -30,7 +30,7 @@ import { processSpansWithContext } from '../utils/span-operation-context.js';
 export function applyDataMap<Data, NewData, RenderOptions>(
     mapper: (
         span: SpanRecord<Data>,
-        opContext: SpanOperationContext<RenderOptions>
+        opContext: SpanOperationContext<Data, RenderOptions>
     ) => NewData
 ): (input: SpansSource<Data, RenderOptions>) => GenerateSpans<NewData, RenderOptions> {
     return (input: SpansSource<Data, RenderOptions>) => {

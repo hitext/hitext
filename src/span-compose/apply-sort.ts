@@ -23,7 +23,7 @@ export function applySort<Data, RenderOptions>(
     comparator?: (
         spanA: SpanRecord<Data>,
         spanB: SpanRecord<Data>,
-        opContext: SpanOperationContext<RenderOptions>
+        opContext: SpanOperationContext<Data, RenderOptions>
     ) => number
 ): TransformSpans<Data, RenderOptions> {
     return (input: SpansSource<Data, RenderOptions>) => {

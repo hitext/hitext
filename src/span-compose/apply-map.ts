@@ -47,7 +47,7 @@ export function applyMap<InputData, OutputData, RenderOptions>(
     mapper: (
         span: SpanRecord<InputData>,
         createSpan: (start: number, end: number, data?: OutputData) => void,
-        opContext: SpanOperationContext<RenderOptions>
+        opContext: SpanOperationContext<InputData, RenderOptions>
     ) => void
 ): TransformSpans<OutputData, RenderOptions> {
     return ((input: SpansSource<InputData, RenderOptions>) => {

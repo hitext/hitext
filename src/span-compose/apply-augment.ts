@@ -38,7 +38,7 @@ export function applyAugment<Data, RenderOptions>(
     augmenter: (
         span: SpanRecord<Data>,
         createSpan: (start: number, end: number, data?: Data) => void,
-        opContext: SpanOperationContext<RenderOptions>
+        opContext: SpanOperationContext<Data, RenderOptions>
     ) => void
 ): TransformSpans<Data, RenderOptions> {
     return (input: SpansSource<Data, RenderOptions>) => {
