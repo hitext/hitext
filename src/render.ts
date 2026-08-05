@@ -67,14 +67,14 @@ export function render<T, R = T, HC = unknown>(
     let segmentStart = 0;
     let segmentEnd = -1;
 
-    // Track buffers stack for nested spans with content hook
+    // Track buffer nesting for spans with a wrap hook
     const bufferStack: ReturnType<typeof createBuffer>[] = [];
     let currentBuffer = createBuffer();
 
     // Track opened spans and their segment start offsets
     // spanStack is sorted by end descending, i.e. [[2, 10], [1, 6], [3, 3]]
     const spanStack: Array<GeneratedSpan> = [];
-    const spanStackSegmentStarts: number[] = []; // Parallel array to activeSpans
+    const spanStackSegmentStarts: number[] = []; // Parallel array to spanStack
     let spanStackOpenIndex = 0;
     let currentSpanHook: SpanCallableHook = 'open';
     let currentSpan: GeneratedSpan = {
@@ -147,7 +147,7 @@ export function render<T, R = T, HC = unknown>(
         for (; spanStackOpenIndex < spanStack.length; spanStackOpenIndex++) {
             openSpanSegment(spanStack[spanStackOpenIndex], -1);
 
-            // Track where this segment started (current offset) for close/content hooks
+            // Track where this segment started (current offset) for close/wrap hooks
             spanStackSegmentStarts[spanStackOpenIndex] = renderedOffset;
         }
     }

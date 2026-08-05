@@ -264,7 +264,7 @@ describe('render span hooks context', () => {
             );
         });
 
-        it('should handle spans without content hook', () => {
+        it('should handle spans without wrap hook', () => {
             const document = 'Hello';
             const spans = [
                 { type: 'test' as const, start: 1, end: 4, data: { id: 'a' } }

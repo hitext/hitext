@@ -108,7 +108,7 @@ describe('render / text hook', () => {
         );
     });
 
-    it('should work with content hook and text hook together', () => {
+    it('should work with wrap hook and text hook together', () => {
         strictEqual(
             render('0123456789', [
                 { type: 'test', start: 2, end: 7 }
@@ -122,7 +122,7 @@ describe('render / text hook', () => {
         );
     });
 
-    it('should apply text transformation before content hook', () => {
+    it('should apply text transformation before wrap hook', () => {
         let capturedContent = '';
         render('Hello', [
             { type: 'test', start: 0, end: 5 }

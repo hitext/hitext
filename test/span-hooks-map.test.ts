@@ -1,20 +1,20 @@
 import { strictEqual, deepStrictEqual } from 'assert';
 import type { SpanHooks, SpanHooksDefinition } from '../src/types.js';
 import {
-    createSpanHooksMapFromLayers,
+    createSpanHooksDefinitionMapFromLayers,
     resolveSpanHooksMap,
     resolveSpanHooksDefinition,
     html
 } from '../src/index.js';
 
 describe('Span Hooks Map Helpers', () => {
-    describe('createSpanHooksMapFromLayers', () => {
+    describe('createSpanHooksDefinitionMapFromLayers', () => {
         it('should create a map from layers', () => {
             const marker1 = Symbol('layer1');
             const marker2 = Symbol('layer2');
             const spanHooks1 = (content: string) => `<div>${content}</div>`;
             const spanHooks2 = (content: string) => `<span>${content}</span>`;
-            const map = createSpanHooksMapFromLayers([
+            const map = createSpanHooksDefinitionMapFromLayers([
                 {
                     marker: marker1,
                     spans: [[0, 5]],
@@ -37,7 +37,7 @@ describe('Span Hooks Map Helpers', () => {
             const marker1 = Symbol('layer1');
             const marker2 = Symbol('layer2');
             const spanHooks2 = (content: string) => `<c>${content}</c>`;
-            const map = createSpanHooksMapFromLayers([
+            const map = createSpanHooksDefinitionMapFromLayers([
                 {
                     marker: marker1,
                     spans: [[0, 5]]
@@ -58,7 +58,7 @@ describe('Span Hooks Map Helpers', () => {
         it('should preserve function shortcuts', () => {
             const marker = Symbol('layer');
             const shortcut = (content: string) => `[${content}]`;
-            const map = createSpanHooksMapFromLayers([
+            const map = createSpanHooksDefinitionMapFromLayers([
                 {
                     marker,
                     spans: [[0, 5]],
@@ -78,7 +78,7 @@ describe('Span Hooks Map Helpers', () => {
             strictEqual(resolveSpanHooksDefinition(undefined, {}), null);
         });
 
-        it('should convert function shortcut to content hook', () => {
+        it('should convert function shortcut to wrap hook', () => {
             const shortcut = (content: string) => `[${content}]`;
             const resolved = resolveSpanHooksDefinition(shortcut, {});
 

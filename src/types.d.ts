@@ -10,7 +10,7 @@ export type PipelineLayer<RenderOptions, Data = unknown, T = unknown, R = T, HC 
     spanHooks?: SpanHooksDefinition<Data, T, R, HC> | null;
 };
 export interface PipelineNode<RenderOptions, T, R = T, HC = unknown> {
-    createRenderHooks: CreateRenderHooks;
+    createRenderHooks: CreateRenderHooks<T, R, HC>;
     layers: PipelineLayer<RenderOptions, any, T, R, HC>[];
     addLayer<D = unknown>(
         spans: SpansSource<D, RenderOptions>,
@@ -18,7 +18,7 @@ export interface PipelineNode<RenderOptions, T, R = T, HC = unknown> {
         name?: string
     ): PipelineNode<RenderOptions, T, R, HC>;
     spans(document: string, options?: RenderOptions): GeneratedSpan[];
-    spanHooksMap(): SpanHooksMap<any, T, R, HC>;
+    spanHooksMap(): SpanHooksMap<any, T, R>;
     spanHooksDefinitionMap(): SpanHooksDefinitionMap<any, T, R, HC>;
     render(document: string, options?: RenderOptions): R;
 }
@@ -86,13 +86,13 @@ export type SpanHooksDefinitionMap<Data, T, R = T, HC = unknown> = Record<
     SpanMarker,
     SpanHooksDefinition<Data, T, R, HC> | undefined | null
 >;
-export type SpanHooksDefinition<Data = unknown, T, R = T, HC = unknown> =
+export type SpanHooksDefinition<Data = unknown, T = unknown, R = T, HC = unknown> =
     | Partial<SpanHooks<Data, T, R>>
     | SpanHooksShortcut<Data, T, R>
     | SpanHooksFactory<Data, T, R, HC>;
-export type SpanHooksShortcut<Data = unknown, T, R = T> =
+export type SpanHooksShortcut<Data = unknown, T = unknown, R = T> =
     Exclude<SpanHookWrap<Data, T, R>, undefined | null>;
-export type SpanHooksFactory<Data = unknown, T, R = T, HC = unknown> = {
+export type SpanHooksFactory<Data = unknown, T = unknown, R = T, HC = unknown> = {
     createSpanHooks: (createSpanHooksContext: HC) =>
         | Partial<SpanHooks<Data, T, R>>
         | SpanHooksShortcut<Data, T, R>
@@ -101,7 +101,7 @@ export type SpanHooksFactory<Data = unknown, T, R = T, HC = unknown> = {
 };
 
 export type SpanCallableHook = 'open' | 'close' | 'wrap' | 'text' | 'replace';
-export interface SpanHooks<Data = unknown, T, R = T> {
+export interface SpanHooks<Data = unknown, T = unknown, R = T> {
     open: SpanHookOpen<Data, T, R> | null;
     close: SpanHookClose<Data, T, R> | null;
     wrap: SpanHookWrap<Data, T, R> | null;

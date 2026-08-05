@@ -59,7 +59,9 @@ export function generateSpansFromLayers<RenderOptions, Data, T, R, HC>(
  * @param context - Optional context object containing:
  *   - marker: The marker to tag spans with (defaults to unique Symbol)
  *   - renderOptions: Rendering options passed to generator functions
- *   - spans: Existing array to reference (not used for output)
+ *   - spans: Optional caller-provided spans to reference (not used for output)
+ *   - spansByMarker: Previously generated layer spans keyed by marker
+ *   - spansByName: Previously generated named layer spans
  *   - lines: LineBoundaries instance for line calculations
  * @returns Array of generated spans with the marker type
  *
@@ -108,7 +110,9 @@ export function generateSpans<Data, RenderOptions>(
  * @param context - Optional context object containing:
  *   - marker: Marker identifier for spans
  *   - renderOptions: Rendering options passed to generator functions
- *   - spans: Existing array to reference
+ *   - spans: Optional caller-provided spans to reference
+ *   - spansByMarker: Previously generated layer spans keyed by marker
+ *   - spansByName: Previously generated named layer spans
  *   - lines: LineBoundaries instance for line calculations
  *
  * @example

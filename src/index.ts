@@ -16,7 +16,7 @@ export {
     processSpans
 } from './spans.js';
 export {
-    createSpanHooksMapFromLayers,
+    createSpanHooksDefinitionMapFromLayers,
     resolveSpanHooksMap,
     resolveSpanHooksDefinition
 } from './span-hooks-map.js';

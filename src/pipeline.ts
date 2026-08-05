@@ -1,6 +1,6 @@
 import type { PipelineNode, PipelineLayer, CreateRenderHooks } from './types.js';
 import { generateSpansFromLayers } from './spans.js';
-import { createSpanHooksMapFromLayers, resolveSpanHooksMap } from './span-hooks-map.js';
+import { createSpanHooksDefinitionMapFromLayers, resolveSpanHooksMap } from './span-hooks-map.js';
 import { render } from './render.js';
 import { createLineBoundaries } from './utils/line-boundaries.js';
 
@@ -31,18 +31,18 @@ export function createPipelineNode<RenderOptions, T, R = T, HC = undefined>(
             return generateSpansFromLayers(document, layers, renderOptions, createLineBoundaries(document));
         },
         spanHooksDefinitionMap() {
-            return createSpanHooksMapFromLayers(layers);
+            return createSpanHooksDefinitionMapFromLayers(layers);
         },
         spanHooksMap() {
-            return resolveSpanHooksMap(createSpanHooksMapFromLayers(layers), createRenderHooks());
+            return resolveSpanHooksMap(createSpanHooksDefinitionMapFromLayers(layers), createRenderHooks());
         },
         render(document, renderOptions) {
             const lineBoundaries = createLineBoundaries(document);
             const spans = generateSpansFromLayers(document, layers, renderOptions, lineBoundaries);
-            const spanHooksMap = createSpanHooksMapFromLayers(layers);
+            const spanHooksDefinitionMap = createSpanHooksDefinitionMapFromLayers(layers);
             const renderHooks = createRenderHooks();
 
-            return render(document, spans, spanHooksMap, renderHooks, lineBoundaries);
+            return render(document, spans, spanHooksDefinitionMap, renderHooks, lineBoundaries);
         }
     };
 }

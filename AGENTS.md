@@ -24,11 +24,11 @@ This document is the SOURCE OF TRUTH for development of the project. Outdated do
 
 ### Architecture
 
-**Core Flow:** Document Text → Layers (Spans + Hooks) → Render Pipeline → Output
+**Core Flow:** Document Text → Layers (Span Sources + Span Hooks) → Render Pipeline → Output
 
 **Pipeline Creation:**
 ```
-createRenderPipeline(renderer) → .addLayer(spans, hooks, name?) → .render(document, options?)
+createRenderPipeline(createRenderHooks) → .addLayer(spans, spanHooks, name?) → .render(document, options?)
 ```
 
 **Internal Flow:**
@@ -69,17 +69,18 @@ createRenderPipeline(renderer) → .addLayer(spans, hooks, name?) → .render(do
 - **Line Content** - Line text excluding trailing newlines
 
 **Pipeline:**
-- **Renderer** - Output format handler providing `createRenderHooks()` for buffer management
+- **Render Hooks Factory** - Function passed to `createRenderPipeline()` that creates output-specific render hooks and buffers
+- **Renderer Factory** - Public output-specific function (`string`, `html`, `dom`, `tty`, `jsx`) that creates a configured render pipeline
 - **Render Pipeline** - Immutable layer chain: `createRenderPipeline()` → `.addLayer()` → `.render()`
-- **Layer** - Span generator + render hooks + optional name
-- **Render Options** - User config passed to generators/hooks (theme, viewport)
+- **Layer** - Span source + span hooks definition + optional name
+- **Render Options** - User config passed to span generators and operation callbacks (theme, viewport)
 - **Render Buffer** - Output accumulator (string/DOM/JSX); subbuffers created during render (on hook execution), emitted results attach to parent buffer up to top buffer (result of `render()`)
 
 **Hooks:**
 - **Span Hooks** - Render functions applied to each span segment: `open`, `close`, `wrap`, `text`, `replace`, `break` flag
-- **Hook Context** - Data passed to hooks: `document`, `offset`, `line`, `column`, `start`, `end`, `span`, `data`, `lines` (LineBoundaries)
-- **Generation Context** - Data passed to generators: `renderOptions`, `marker`, `spans`, `spansByMarker`, `spansByName`, `lines` (LineBoundaries)
-- **Operation Context** - Data passed to predicates: `document`, `lines` (LineBoundaries), `renderOptions`, `spans`
+- **Hook Context** - Data passed to hooks: `hook`, `document`, `lines`, `offset`, `line`, `column`, `start`, `end`, `spanIndex`, `spanText`, `span`, `data`, `createBuffer`, `dump`
+- **Generation Context** - Optional generation state: `renderOptions`, `marker`, `spans`, `spansByMarker`, `spansByName`, `lines`; pipeline generation supplies all except caller-provided `spans`
+- **Operation Context** - Data passed to operation callbacks: `document`, `lines`, `renderOptions`, `spans`, `index`
 
 ### Project Structure
 
@@ -88,24 +89,25 @@ src/
 ├── index.ts              # Public API exports
 ├── types.d.ts            # TypeScript type definitions
 ├── pipeline.ts           # Pipeline creation and layer management
-├── spans.ts             # Span generation (generateSpans, processSpans)
-├── span-hooks-map.ts    # Hook resolution and normalization
+├── spans.ts              # Span generation (generateSpans, processSpans)
+├── span-hooks-map.ts     # Hook resolution and normalization
 ├── render.ts             # Core rendering engine
-├── span-sources/        # Span generators (spansFromMatch, spansFromLines, etc.)
-├── span-compose/        # Span transformers (applyFilter, applyMerge, etc.)
-├── span-hooks/          # Render hooks (spanHooksHide, etc.)
+├── span-sources/         # Span generators (spansFromMatch, spansFromLines, etc.)
+├── span-compose/         # Span transformers (applyFilter, applyMerge, etc.)
+├── span-hooks/           # Render hooks (spanHooksHide, etc.)
 ├── renderers/            # Output renderers (string, html, dom, tty, jsx)
 └── utils/                # Utilities (buffers, line-boundaries)
 
 test/
-├── utils.ts              # Test helpers (generateSpans, renderSpans, etc.)
-├── span-sources/        # Mirror src structure
-├── span-compose/        # Mirror src structure
+├── utils.ts              # Test helpers
+├── span-sources/         # Mirror src structure
+├── span-compose/         # Mirror src structure
+├── span-hooks/           # Mirror src structure
 └── *.test.ts             # Core module tests
 
 docs/
-├── span-functions-reference.md  # Span functions implementation reference
-└── README.md             # Getting started guide
+├── span-functions-guidelines.md  # Span function development guidelines
+└── span-functions-reference.md   # Span functions implementation reference
 ```
 
 **Note:** Test files mirror source structure: `src/span-compose/apply-*.ts` → `test/span-compose/apply-*.test.ts`

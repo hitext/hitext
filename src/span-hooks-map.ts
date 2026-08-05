@@ -8,7 +8,7 @@ import type {
     RenderHooks
 } from './types.js';
 
-export function createSpanHooksMapFromLayers<RenderOptions, Data, T, R = T, HC = unknown>(
+export function createSpanHooksDefinitionMapFromLayers<RenderOptions, Data, T, R = T, HC = unknown>(
     layers: PipelineLayer<RenderOptions, Data, T, R, HC>[]
 ): SpanHooksDefinitionMap<Data, T, R, HC> {
     return fromEntries(layers.map(
@@ -17,13 +17,13 @@ export function createSpanHooksMapFromLayers<RenderOptions, Data, T, R = T, HC =
 }
 
 export function resolveSpanHooksMap<Data, T, R = T, HC = unknown>(
-    spanHooksMap: SpanHooksDefinitionMap<Data, T, R, HC>,
+    spanHooksDefinitionMap: SpanHooksDefinitionMap<Data, T, R, HC>,
     renderHooks: Partial<RenderHooks<T, R, HC>>
 ): SpanHooksMap<Data, T, R> {
     const resolvedMap: SpanHooksMap<Data, T, R> = createNoProtoObject();
 
-    for (const key of ownKeys(spanHooksMap)) {
-        const definition = resolveSpanHooksDefinition(spanHooksMap[key], renderHooks);
+    for (const key of ownKeys(spanHooksDefinitionMap)) {
+        const definition = resolveSpanHooksDefinition(spanHooksDefinitionMap[key], renderHooks);
 
         // Skip empty definitions
         if (!definition) {
@@ -45,7 +45,7 @@ export function resolveSpanHooksDefinition<Data, T, R = T, HC = unknown>(
         definition = definition.createSpanHooks(renderHooks?.spanHooksContext as HC);
     }
 
-    // Function shortcut -> { content: fn }
+    // Function shortcut -> { wrap: fn }
     if (typeof definition === 'function') {
         definition = { wrap: definition };
     }

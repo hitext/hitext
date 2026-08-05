@@ -232,9 +232,10 @@ describe('Pipeline API', () => {
             const firstKey: keyof typeof hooksMap = keys[0];
             const spanHooks = hooksMap[firstKey];
 
-            // Function shortcut should be converted to {content: fn}
-            strictEqual(typeof spanHooks?.wrap, 'function');
-            strictEqual(spanHooks?.wrap('test', {} as any), '[test]');
+            // Function shortcut should be converted to {wrap: fn}
+            const wrap = spanHooks?.wrap;
+            strictEqual(typeof wrap, 'function');
+            strictEqual(wrap!('test', {} as any), '[test]');
         });
 
         it('should test factory logic with spanHooksContext', () => {
