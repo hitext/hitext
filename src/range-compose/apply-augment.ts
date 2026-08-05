@@ -27,18 +27,12 @@ import { processRangesWithContext } from '../utils/range-operation-context.js';
  * @returns A transformer function that accepts ranges and returns augmented ranges
  *
  * @example
- * // Add line-start marker for each error
- * applyAugment((range, createRange, { lines }) => {
- *   const lineStart = lines.getLineStart(range.start);
- *   createRange(lineStart, lineStart, { type: 'line-marker' });
- * })
- *
- * @example
- * // Add left/right margin decorations for diagnostics
- * applyAugment((range, createRange) => {
- *   createRange(range.start, range.start, { type: 'left-margin' });
- *   createRange(range.end, range.end, { type: 'right-margin' });
- * })
+ * rangesCompose(...,
+ *   applyAugment((range, createRange, { lines }) => {
+ *     const lineStart = lines.getLineStart(range.start);
+ *     createRange(lineStart, lineStart, { type: 'line-marker' });
+ *   })
+ * )
  */
 export function applyAugment<Data, RenderOptions>(
     augmenter: (

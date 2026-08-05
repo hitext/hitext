@@ -65,7 +65,7 @@ export function generateRangesFromLayers<RenderOptions, Data, T, R, HC>(
  *
  * @example
  * // Using a generator function
- * const ranges = generateRanges(document, rangeMatch(/error/g));
+ * const ranges = generateRanges(document, rangesForMatch(/error/g));
  *
  * @example
  * // Using tuples with data and origin
@@ -73,7 +73,7 @@ export function generateRangesFromLayers<RenderOptions, Data, T, R, HC>(
  *
  * @example
  * // With context
- * const ranges = generateRanges(document, rangeMatch(/error/g), {
+ * const ranges = generateRanges(document, rangesForMatch(/error/g), {
  *   marker: Symbol('errors'),
  *   renderOptions: { theme: 'dark' }
  * });
@@ -114,13 +114,13 @@ export function generateRanges<Data, RenderOptions>(
  * @example
  * // Collect ranges in a custom format
  * const customRanges = [];
- * processRanges(document, rangeMatch(/error/g), (start, end, data) => {
+ * processRanges(document, rangesForMatch(/error/g), (start, end, data) => {
  *   customRanges.push({ start, end, data });
  * });
  *
  * @example
  * // Process tuples with origin tracking
- * processRanges(document, [[0, 5, 'data', parentRange]], (start, end, data, origin) => {
+ * processRanges(document, [[0, 5, 'data', originRange]], (start, end, data, origin) => {
  *   console.log(`Range ${start}-${end}, origin:`, origin);
  * });
  */
