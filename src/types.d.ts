@@ -182,6 +182,7 @@ export interface LineBoundaries {
      * If lines parameter is provided:
      *   - Positive value: move forward N lines
      *   - Negative value: move backward N lines
+     * Preserves the source column when moving and clamps it to the target line end.
      * Returns the 1-based column position within the line.
      */
     getColumn(offset: number, lines?: number): number;

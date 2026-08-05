@@ -63,8 +63,8 @@ export function createLineBoundaries(document: string): LineBoundaries {
         if (offset < 0) {
             return 0;
         }
-        if (offset >= document.length) {
-            offset = document.length - 1;
+        if (offset > document.length) {
+            offset = document.length;
         }
 
         let lineIndex: number;
@@ -120,12 +120,25 @@ export function createLineBoundaries(document: string): LineBoundaries {
         if (offset < 0) {
             return 1;
         }
-        if (offset >= document.length) {
+        if (offset > document.length) {
             offset = document.length;
         }
 
-        const lineStart = getLineStart(offset, lines);
-        return offset - lineStart + 1;
+        const lineIndex = getLineIndex(offset);
+        const column = offset - lineStarts[lineIndex] + 1;
+
+        if (lines === 0) {
+            return column;
+        }
+
+        const targetLineIndex = getLineIndex(offset, lines);
+        ensureLines(targetLineIndex + 2);
+        const targetLineEnd = targetLineIndex + 1 < lineStarts.length
+            ? lineStarts[targetLineIndex + 1]
+            : document.length;
+        const maxColumn = targetLineEnd - lineStarts[targetLineIndex] + 1;
+
+        return Math.min(column, maxColumn);
     }
 
     function getOffset(line: number, column = 1): number {
@@ -258,7 +271,16 @@ export function createLineBoundaries(document: string): LineBoundaries {
             return 0;
         }
 
-        const lineStart = getOffset(to, 1);
+        for (let line = to; line > from; line--) {
+            const lineStart = getOffset(line, 1);
+            const contentEnd = getLineContentEnd(lineStart);
+
+            if (contentEnd > lineStart) {
+                return contentEnd;
+            }
+        }
+
+        const lineStart = getOffset(from, 1);
         return getLineContentEnd(lineStart);
     }
 

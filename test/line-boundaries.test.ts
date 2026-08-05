@@ -288,6 +288,19 @@ describe('LineBoundaries', () => {
             strictEqual(lb.getColumn(6), 7);   // at \n (7th column)
             strictEqual(lb.getColumn(7), 1);   // start of line2
         });
+
+        it('should preserve and clamp column when moving between lines', () => {
+            const lb = createLineBoundaries('abcd\nx\n1234');
+            strictEqual(lb.getColumn(2, 2), 3);  // column 3 on line 1 -> column 3 on line 3
+            strictEqual(lb.getColumn(3, 1), 3);  // column 4 clamps to the end of short line 2
+            strictEqual(lb.getColumn(9, -2), 3); // column 3 on line 3 -> column 3 on line 1
+        });
+
+        it('should return column 1 at a trailing empty line', () => {
+            const document = 'line1\n';
+            const lb = createLineBoundaries(document);
+            strictEqual(lb.getColumn(document.length), 1);
+        });
     });
 
     describe('getOffset', () => {
@@ -588,6 +601,13 @@ describe('LineBoundaries', () => {
         it('should handle trailing newline', () => {
             const lb = createLineBoundaries('line1\nline2\n');
             strictEqual(lb.getLastLine(), 3); // empty line 3
+        });
+
+        it('should locate the trailing empty line at document end', () => {
+            const document = 'line1\nline2\n';
+            const lb = createLineBoundaries(document);
+            strictEqual(lb.getLine(document.length), 3);
+            strictEqual(lb.getLineStart(document.length), document.length);
         });
 
         it('should handle only newlines', () => {
