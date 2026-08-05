@@ -1,20 +1,20 @@
 import { strictEqual, deepStrictEqual } from 'assert';
 import { render } from '../src/index.js';
 import type {
-    GeneratedRange,
-    RangeHookContext,
-    RangeHookContextDump,
-    RangeHooksDefinitionMap
+    GeneratedSpan,
+    SpanHookContext,
+    SpanHookContextDump,
+    SpanHooksDefinitionMap
 } from '../src/types.js';
 
-const testHooks: RangeHooksDefinitionMap<any, any> = {
+const testHooks: SpanHooksDefinitionMap<any, any> = {
     test: {
-        open: ({ data: x }: RangeHookContext<string>) => `<${x}>`,
-        close: ({ data: x }: RangeHookContext<string>) => `</${x}>`
+        open: ({ data: x }: SpanHookContext<string>) => `<${x}>`,
+        close: ({ data: x }: SpanHookContext<string>) => `</${x}>`
     }
 };
 
-const generateRanges = (lines: string[]): GeneratedRange[] =>
+const generateSpans = (lines: string[]): GeneratedSpan[] =>
     lines.map(line => {
         const m = line.match(/(\S)(\1*)/);
         return {
@@ -59,7 +59,7 @@ describe('render', () => {
         );
     });
 
-    describe('ranges out of document boundaries', () => {
+    describe('spans out of document boundaries', () => {
         it('intersect with boundaries', () => {
             strictEqual(
                 render(
@@ -91,7 +91,7 @@ describe('render', () => {
         });
     });
 
-    it('should ignore ranges with bad start/end', () => {
+    it('should ignore spans with bad start/end', () => {
         strictEqual(
             render(
                 '1234567890',
@@ -116,13 +116,13 @@ describe('render', () => {
         );
     });
 
-    it('order of ranges should be independant of generator order', () => {
+    it('order of spans should be independant of generator order', () => {
         const hooks = {
             'a': testHooks.test,
             'b': testHooks.test
         };
-        const a: GeneratedRange = { type: 'a', start: 1, end: 2, data: 'a' };
-        const b: GeneratedRange = { type: 'b', start: 1, end: 2, data: 'b' };
+        const a: GeneratedSpan = { type: 'a', start: 1, end: 2, data: 'a' };
+        const b: GeneratedSpan = { type: 'b', start: 1, end: 2, data: 'b' };
 
         strictEqual(
             render('123', [a, b], hooks),
@@ -135,10 +135,10 @@ describe('render', () => {
         );
     });
 
-    it('should be fine when open/close is omitted in printer range hook', () => {
-        const a: GeneratedRange = { type: 'a', start: 1, end: 2 };
-        const b: GeneratedRange = { type: 'b', start: 2, end: 3 };
-        const c: GeneratedRange = { type: 'c', start: 3, end: 4 };
+    it('should be fine when open/close is omitted in printer span hook', () => {
+        const a: GeneratedSpan = { type: 'a', start: 1, end: 2 };
+        const b: GeneratedSpan = { type: 'b', start: 2, end: 3 };
+        const c: GeneratedSpan = { type: 'c', start: 3, end: 4 };
 
         strictEqual(
             render('123456', [a, b, c], {
@@ -158,63 +158,63 @@ describe('render', () => {
 
     [
         {
-            ranges: [
+            spans: [
                 'aaaaaaaaaa',
                 '  bbbbbb  '
             ],
             expected: '<a>12<b>345678</b>90</a>'
         },
         {
-            ranges: [
+            spans: [
                 '  bbbbbb  ',
                 'aaaaaaaaaa'
             ],
             expected: '<a>12<b>345678</b>90</a>'
         },
         {
-            ranges: [
+            spans: [
                 'aaaaaaaaaa',
                 'bbbbb     '
             ],
             expected: '<a><b>12345</b>67890</a>'
         },
         {
-            ranges: [
+            spans: [
                 'bbbbb     ',
                 'aaaaaaaaaa'
             ],
             expected: '<a><b>12345</b>67890</a>'
         },
         {
-            ranges: [
+            spans: [
                 'aaaaaaaaaa',
                 '     bbbbb'
             ],
             expected: '<a>12345<b>67890</b></a>'
         },
         {
-            ranges: [
+            spans: [
                 '     bbbbb',
                 'aaaaaaaaaa'
             ],
             expected: '<a>12345<b>67890</b></a>'
         },
         {
-            ranges: [
+            spans: [
                 'aaaaa     ',
                 '     bbbbb'
             ],
             expected: '<a>12345</a><b>67890</b>'
         },
         {
-            ranges: [
+            spans: [
                 '     bbbbb',
                 'aaaaa     '
             ],
             expected: '<a>12345</a><b>67890</b>'
         },
         {
-            ranges: [
+            spans: [
                 'aaaaaaaaaa',
                 '  bbbbbb  ',
                 '    cc    ',
@@ -223,21 +223,21 @@ describe('render', () => {
             expected: '<a>12<b>34<c><d>56</d></c>78</b>90</a>'
         },
         {
-            ranges: [
+            spans: [
                 'aaaaaa    ',
                 '    bbbbbb'
             ],
             expected: '<a>1234</a><b><a>56</a>7890</b>'
         },
         {
-            ranges: [
+            spans: [
                 '    bbbbbb',
                 'aaaaaa    '
             ],
             expected: '<a>1234</a><b><a>56</a>7890</b>'
         },
         {
-            ranges: [
+            spans: [
                 'aaaaaaaa  ',
                 '    bbbbbb',
                 '     cc   '
@@ -245,7 +245,7 @@ describe('render', () => {
             expected: '<a>1234</a><b><a>5<c>67</c>8</a>90</b>'
         },
         {
-            ranges: [
+            spans: [
                 'aaaaaaa   ',
                 '  bbbbbb  ',
                 '    cccccc'
@@ -253,7 +253,7 @@ describe('render', () => {
             expected: '<a>12</a><b><a>34</a></b><c><b><a>567</a>8</b>90</c>'
         },
         {
-            ranges: [
+            spans: [
                 'aaaaa     ',
                 '   bbbb   ',
                 '     ccccc'
@@ -261,7 +261,7 @@ describe('render', () => {
             expected: '<a>123</a><b><a>45</a></b><c><b>67</b>890</c>'
         },
         {
-            ranges: [
+            spans: [
                 'aaaaaaa   ',
                 '  bbbbbbb ',
                 '    ccc   '
@@ -269,11 +269,11 @@ describe('render', () => {
             expected: '<a>12</a><b><a>34<c>567</c></a>89</b>0'
         }
     ].forEach(test =>
-        it('case\n|' + test.ranges.join('|\n|') + '|', () => {
+        it('case\n|' + test.spans.join('|\n|') + '|', () => {
             strictEqual(
                 render(
                     '1234567890',
-                    generateRanges(test.ranges),
+                    generateSpans(test.spans),
                     testHooks
                 ),
                 test.expected
@@ -334,7 +334,7 @@ describe('render', () => {
                 render('Hello world!', [
                     { type: 'greeting', start: 0, end: 5, data: { type: 'greeting' } }
                 ], {
-                    greeting: (content, { data }: RangeHookContext<{ type: string }>) =>
+                    greeting: (content, { data }: SpanHookContext<{ type: string }>) =>
                         `<span class="${data.type}">${content}</span>`
                 }),
                 '<span class="greeting">Hello</span> world!'
@@ -347,7 +347,7 @@ describe('render', () => {
                     { type: 'word', start: 0, end: 5, data: { secret: false } },
                     { type: 'word', start: 6, end: 11, data: { secret: true } }
                 ], {
-                    word: (content, { data }: RangeHookContext<{ secret: boolean }>) =>
+                    word: (content, { data }: SpanHookContext<{ secret: boolean }>) =>
                         data.secret ? '[REDACTED]' : content
                 }),
                 'Hello [REDACTED]!'
@@ -355,11 +355,11 @@ describe('render', () => {
         });
 
         it('should provide correct context in node hook', () => {
-            const range = { type: 'test', start: 6, end: 11, data: { foo: 'bar' } };
-            let capturedContext: RangeHookContextDump<{ foo: string }> | null = null;
+            const span = { type: 'test', start: 6, end: 11, data: { foo: 'bar' } };
+            let capturedContext: SpanHookContextDump<{ foo: string }> | null = null;
 
-            render('Hello\nworld!', [range], {
-                test(content, context: RangeHookContext<{ foo: string }>) {
+            render('Hello\nworld!', [span], {
+                test(content, context: SpanHookContext<{ foo: string }>) {
                     capturedContext = context.dump();
                     return content;
                 }
@@ -373,9 +373,9 @@ describe('render', () => {
                 column: 6,
                 start: 6,
                 end: 11,
-                rangeIndex: 0,
-                rangeText: 'world',
-                range,
+                spanIndex: 0,
+                spanText: 'world',
+                span,
                 data: {
                     foo: 'bar'
                 }
@@ -415,7 +415,7 @@ describe('render', () => {
                     { type: 'tag', start: 4, end: 7, data: 'b' },
                     { type: 'tag', start: 8, end: 13, data: 'c' }
                 ], {
-                    tag: (content, { data }: RangeHookContext<string>) =>
+                    tag: (content, { data }: SpanHookContext<string>) =>
                         `<${data}>${content}</${data}>`
                 }),
                 '<a>One</a> <b>Two</b> <c>Three</c>'

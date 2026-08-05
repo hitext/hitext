@@ -119,18 +119,18 @@ describe('LineBoundaries', () => {
         });
     });
 
-    describe('expand range to lines pattern', () => {
-        it('should expand range to line boundaries', () => {
+    describe('expand span to lines pattern', () => {
+        it('should expand span to line boundaries', () => {
             const lb = createLineBoundaries('line1\nline2\nline3');
-            // Range [2, 4] is in "line1", should expand to [0, 6]
+            // Span [2, 4] is in "line1", should expand to [0, 6]
             const start = lb.getLineStart(2);
             const end = lb.getLineEnd(Math.max(0, 4 - 1));
             deepStrictEqual([start, end], [0, 6]);
         });
 
-        it('should expand range spanning multiple lines', () => {
+        it('should expand span across multiple lines', () => {
             const lb = createLineBoundaries('line1\nline2\nline3');
-            // Range [3, 9] spans line1 and line2
+            // Span [3, 9] covers line1 and line2
             const start = lb.getLineStart(3);
             const end = lb.getLineEnd(Math.max(0, 9 - 1));
             deepStrictEqual([start, end], [0, 12]);
@@ -138,16 +138,16 @@ describe('LineBoundaries', () => {
 
         it('should apply padding using lines parameter', () => {
             const lb = createLineBoundaries('line1\nline2\nline3\nline4');
-            // Range [8, 10] is in line2, with padding=1 should include line1 and line3
+            // Span [8, 10] is in line2, with padding=1 should include line1 and line3
             const start = lb.getLineStart(8, -1); // back 1 line
             const end = lb.getLineEnd(Math.max(0, 10 - 1), 1); // forward 1 line
             deepStrictEqual([start, end], [0, 18]);
         });
 
-        it('should work with sequential ranges', () => {
+        it('should work with sequential spans', () => {
             const lb = createLineBoundaries('line1\nline2\nline3\nline4');
 
-            // Process ranges sequentially (common pattern)
+            // Process spans sequentially (common pattern)
             let start = lb.getLineStart(2);
             let end = lb.getLineEnd(Math.max(0, 4 - 1));
             deepStrictEqual([start, end], [0, 6]);

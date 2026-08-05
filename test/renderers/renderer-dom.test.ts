@@ -1,7 +1,7 @@
 import { strictEqual } from 'assert';
 import { parseHTML } from 'linkedom';
 import { dom } from '../../src/index.js';
-import type { RangeHookContext } from '../../src/types.js';
+import type { SpanHookContext } from '../../src/types.js';
 
 // Setup DOM environment for tests
 const { document: doc } = parseHTML('<!DOCTYPE html><html></html>');
@@ -68,7 +68,7 @@ describe('DOM renderer', () => {
                 .addLayer([
                     { start: 6, end: 10, data: { url: 'https://example.com' } }
                 ], {
-                    wrap: (content: globalThis.Node | globalThis.DocumentFragment, { data }: RangeHookContext<{ url: string }>) => {
+                    wrap: (content: globalThis.Node | globalThis.DocumentFragment, { data }: SpanHookContext<{ url: string }>) => {
                         const a = doc.createElement('a');
                         a.setAttribute('href', data.url);
                         a.setAttribute('target', '_blank');
@@ -88,7 +88,7 @@ describe('DOM renderer', () => {
                     { start: 4, end: 7, data: { className: 'second' } },
                     { start: 8, end: 13, data: { className: 'third' } }
                 ], {
-                    wrap: (content: globalThis.Node | globalThis.DocumentFragment, { data }: RangeHookContext<{ className: string }>) => {
+                    wrap: (content: globalThis.Node | globalThis.DocumentFragment, { data }: SpanHookContext<{ className: string }>) => {
                         const span = doc.createElement('span');
                         span.setAttribute('class', data.className);
                         span.append(content);
@@ -137,7 +137,7 @@ describe('DOM renderer', () => {
     });
 
     describe('edge cases', () => {
-        it('should handle empty ranges', () => {
+        it('should handle empty spans', () => {
             const result = dom({ document: doc })
                 .addLayer([
                     { start: 2, end: 2 }
@@ -161,7 +161,7 @@ describe('DOM renderer', () => {
                     { start: 0, end: 7, data: { level: 2 } },
                     { start: 0, end: 7, data: { level: 3 } }
                 ], {
-                    wrap: (content: globalThis.Node | globalThis.DocumentFragment, { data }: RangeHookContext<{ level: number }>) => {
+                    wrap: (content: globalThis.Node | globalThis.DocumentFragment, { data }: SpanHookContext<{ level: number }>) => {
                         const div = doc.createElement('div');
                         div.setAttribute('level', String(data.level));
                         div.append(content);
@@ -176,7 +176,7 @@ describe('DOM renderer', () => {
             );
         });
 
-        it('should handle overlapping ranges', () => {
+        it('should handle overlapping spans', () => {
             const pipeline = dom({ document: doc })
                 .addLayer([
                     { start: 0, end: 8 }
@@ -212,7 +212,7 @@ describe('DOM renderer', () => {
             strictEqual(result.toString(), '<#document-fragment>&lt;div&gt;Hello &amp; "world"&lt;/div&gt;</#document-fragment>');
         });
 
-        it('should handle ranges at boundaries', () => {
+        it('should handle spans at boundaries', () => {
             const result = dom({ document: doc })
                 .addLayer([
                     { start: 0, end: 4 }
@@ -228,14 +228,14 @@ describe('DOM renderer', () => {
             strictEqual(result.toString(), '<#document-fragment><mark>test</mark></#document-fragment>');
         });
 
-        it('should handle multiple adjacent ranges', () => {
+        it('should handle multiple adjacent spans', () => {
             const result = dom({ document: doc })
                 .addLayer([
                     { start: 0, end: 1, data: { id: '1' } },
                     { start: 1, end: 2, data: { id: '2' } },
                     { start: 2, end: 3, data: { id: '3' } }
                 ], {
-                    wrap: (content: globalThis.Node | globalThis.DocumentFragment, { data }: RangeHookContext<{ id: string }>) => {
+                    wrap: (content: globalThis.Node | globalThis.DocumentFragment, { data }: SpanHookContext<{ id: string }>) => {
                         const span = doc.createElement('span');
                         span.setAttribute('id', data.id);
                         span.append(content);

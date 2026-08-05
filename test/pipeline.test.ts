@@ -1,8 +1,8 @@
 import { strictEqual, deepStrictEqual } from 'assert';
-import { html, string, rangesForLines, rangesForMatch, createRenderPipeline, RangeHooks } from '../src/index.js';
-import type { GeneratedRange } from '../src/types.js';
+import { html, string, spansFromLines, spansFromMatch, createRenderPipeline, SpanHooks } from '../src/index.js';
+import type { GeneratedSpan } from '../src/types.js';
 
-const startEndPairs = (ranges: GeneratedRange[]) => ranges.map(r => [r.start, r.end]);
+const startEndPairs = (spans: GeneratedSpan[]) => spans.map(r => [r.start, r.end]);
 
 describe('Pipeline API', () => {
     describe('basic usage', () => {
@@ -30,7 +30,7 @@ describe('Pipeline API', () => {
             strictEqual(result, '<strong>Hello</strong> <em>world</em>!');
         });
 
-        it('should handle nested ranges', () => {
+        it('should handle nested spans', () => {
             const result = html()
                 .addLayer([[0, 11]], (content) => `<div>${content}</div>`)
                 .addLayer([[0, 5]], (content) => `<span>${content}</span>`)
@@ -64,7 +64,7 @@ describe('Pipeline API', () => {
             strictEqual(result, '<custom>Hello</custom> world');
         });
 
-        it('should handle array ranges', () => {
+        it('should handle array spans', () => {
             const result = html()
                 .addLayer([[0, 5], [6, 11]], (content) => `<mark>${content}</mark>`)
                 .render('Hello world');
@@ -76,7 +76,7 @@ describe('Pipeline API', () => {
     describe('with generators', () => {
         it('should work with built-in match generator', () => {
             const result = html()
-                .addLayer(rangesForMatch('world'), (content) => `<mark>${content}</mark>`)
+                .addLayer(spansFromMatch('world'), (content) => `<mark>${content}</mark>`)
                 .render('Hello world! Hello world!');
 
             strictEqual(result, 'Hello <mark>world</mark>! Hello <mark>world</mark>!');
@@ -85,7 +85,7 @@ describe('Pipeline API', () => {
         it('should work with built-in lines generator', () => {
             const result = html()
                 .addLayer(
-                    rangesForLines('line'),
+                    spansFromLines('line'),
                     {
                         open: ({ line }) => `<div data-line="${line}">`,
                         close: () => '</div>'
@@ -131,48 +131,48 @@ describe('Pipeline API', () => {
             strictEqual(Array.isArray(pipeline.layers), true);
             strictEqual(pipeline.layers.length, 2);
 
-            // Each layer should have marker, generate, and rangeHooksConfig
+            // Each layer should have marker, generate, and spanHooksConfig
             const firstLayer = pipeline.layers[0];
             strictEqual(typeof firstLayer.marker, 'symbol');
-            strictEqual(Array.isArray(firstLayer.ranges), true);
-            strictEqual(typeof firstLayer.rangeHooks, 'function');
+            strictEqual(Array.isArray(firstLayer.spans), true);
+            strictEqual(typeof firstLayer.spanHooks, 'function');
         });
 
-        it('should generate ranges without rendering', () => {
+        it('should generate spans without rendering', () => {
             const pipeline = html()
                 .addLayer([[0, 5]], (content) => `<mark>${content}</mark>`)
                 .addLayer([[6, 11]], (content) => `<em>${content}</em>`);
 
-            const ranges = pipeline.ranges('Hello world');
+            const spans = pipeline.spans('Hello world');
 
-            deepStrictEqual(startEndPairs(ranges), [[0, 5], [6, 11]]);
+            deepStrictEqual(startEndPairs(spans), [[0, 5], [6, 11]]);
         });
 
-        it('should generate ranges with generator function', () => {
+        it('should generate spans with generator function', () => {
             const pipeline = html()
-                .addLayer(rangesForMatch('world'), (content) => `<mark>${content}</mark>`);
+                .addLayer(spansFromMatch('world'), (content) => `<mark>${content}</mark>`);
 
-            const ranges = pipeline.ranges('Hello world! Hello world!');
+            const spans = pipeline.spans('Hello world! Hello world!');
 
-            deepStrictEqual(startEndPairs(ranges), [[6, 11], [19, 24]]);
+            deepStrictEqual(startEndPairs(spans), [[6, 11], [19, 24]]);
         });
 
-        it('should generate ranges from multiple layers', () => {
+        it('should generate spans from multiple layers', () => {
             const pipeline = html()
                 .addLayer([[0, 5]], (content) => `<a>${content}</a>`)
-                .addLayer(rangesForMatch('o'), (content) => `<mark>${content}</mark>`);
+                .addLayer(spansFromMatch('o'), (content) => `<mark>${content}</mark>`);
 
-            const ranges = pipeline.ranges('Hello world');
+            const spans = pipeline.spans('Hello world');
 
-            // Should have ranges from both layers: [0,5] + two 'o' matches at 4 and 7
-            deepStrictEqual(startEndPairs(ranges), [[0, 5], [4, 5], [7, 8]]);
+            // Should have spans from both layers: [0,5] + two 'o' matches at 4 and 7
+            deepStrictEqual(startEndPairs(spans), [[0, 5], [4, 5], [7, 8]]);
         });
 
-        it('should expose rangeHooksMap method', () => {
+        it('should expose spanHooksMap method', () => {
             const pipeline = html()
                 .addLayer([[0, 5]], (content) => `<mark>${content}</mark>`);
 
-            const hooksMap = pipeline.rangeHooksMap();
+            const hooksMap = pipeline.spanHooksMap();
 
             strictEqual(typeof hooksMap, 'object');
 
@@ -186,13 +186,13 @@ describe('Pipeline API', () => {
             strictEqual(typeof hooks.wrap, 'function');
         });
 
-        it('should expose rangeHooksDefinitionMap method', () => {
+        it('should expose spanHooksDefinitionMap method', () => {
             const shortcut = (content: any) => `[${content}]`;
             const pipeline = html()
                 .addLayer([[0, 5]], shortcut)
                 .addLayer([[6, 11]], shortcut);
 
-            const definitionMap = pipeline.rangeHooksDefinitionMap();
+            const definitionMap = pipeline.spanHooksDefinitionMap();
 
             strictEqual(typeof definitionMap, 'object');
 
@@ -204,46 +204,46 @@ describe('Pipeline API', () => {
             strictEqual(definitionMap[keys[1]], shortcut);
         });
 
-        it('rangeHooksMap should resolve factory-based hooks', () => {
+        it('spanHooksMap should resolve factory-based hooks', () => {
             const pipeline = html()
                 .addLayer([[0, 5]], {
-                    createRangeHooks: () => ({
+                    createSpanHooks: () => ({
                         open: () => '<dynamic>',
                         close: () => '</dynamic>'
                     })
                 });
 
-            const hooksMap = pipeline.rangeHooksMap();
+            const hooksMap = pipeline.spanHooksMap();
             const keys = Object.getOwnPropertySymbols(hooksMap);
             const firstKey: keyof typeof hooksMap = keys[0];
-            const hooks = hooksMap[firstKey] as RangeHooks<any, any>;
+            const hooks = hooksMap[firstKey] as SpanHooks<any, any>;
 
             // Should be resolved to actual hooks object
             strictEqual(typeof hooks.open, 'function');
             strictEqual(typeof hooks.close, 'function');
         });
 
-        it('rangeHooksMap should convert function shortcuts to range hook', () => {
+        it('spanHooksMap should convert function shortcuts to span hook', () => {
             const pipeline = html()
                 .addLayer([[0, 5]], (content) => `[${content}]`);
 
-            const hooksMap = pipeline.rangeHooksMap();
+            const hooksMap = pipeline.spanHooksMap();
             const keys = Object.getOwnPropertySymbols(hooksMap);
             const firstKey: keyof typeof hooksMap = keys[0];
-            const rangeHooks = hooksMap[firstKey];
+            const spanHooks = hooksMap[firstKey];
 
             // Function shortcut should be converted to {content: fn}
-            strictEqual(typeof rangeHooks?.wrap, 'function');
-            strictEqual(rangeHooks?.wrap('test', {} as any), '[test]');
+            strictEqual(typeof spanHooks?.wrap, 'function');
+            strictEqual(spanHooks?.wrap('test', {} as any), '[test]');
         });
 
-        it('should test factory logic with rangeHooksContext', () => {
+        it('should test factory logic with spanHooksContext', () => {
             // Create a custom renderer with context
             const customRenderer = html();
 
             // Create a factory that uses context
             const factoryConfig = {
-                createRangeHooks: () => ({
+                createSpanHooks: () => ({
                     open: () => '<mark>',
                     close: () => '</mark>'
                 })
@@ -272,7 +272,7 @@ describe('Pipeline API', () => {
             // 3. Factory wrapper
             const pipeline3 = html()
                 .addLayer([[0, 5]], {
-                    createRangeHooks: () => ({
+                    createSpanHooks: () => ({
                         open: () => '<c>',
                         close: () => '</c>'
                     })
@@ -286,7 +286,7 @@ describe('Pipeline API', () => {
 
             // Get introspection data
             const layers1 = pipeline1.layers;
-            pipeline1.rangeHooksMap(); // Exercise the method
+            pipeline1.spanHooksMap(); // Exercise the method
 
             // Continue building pipeline
             const pipeline2 = pipeline1
@@ -332,7 +332,7 @@ describe('Pipeline API', () => {
             strictEqual(result, '[Hello] world');
         });
 
-        it('should support rangeHooksContext', () => {
+        it('should support spanHooksContext', () => {
             const customRenderer = createRenderPipeline<unknown, string, string, { wrapper: string }>(() => {
                 let buffer = '';
 
@@ -350,7 +350,7 @@ describe('Pipeline API', () => {
                     text: (chunk) => chunk,
                     open: () => '',
                     close: () => '',
-                    rangeHooksContext: {
+                    spanHooksContext: {
                         wrapper: '<<>>'
                     }
                 };
@@ -358,7 +358,7 @@ describe('Pipeline API', () => {
 
             const result = customRenderer
                 .addLayer([[0, 5]], {
-                    createRangeHooks: ({ wrapper }) => ({
+                    createSpanHooks: ({ wrapper }) => ({
                         open: () => wrapper.slice(0, 2),
                         close: () => wrapper.slice(2)
                     })
@@ -404,7 +404,7 @@ describe('Pipeline API', () => {
             // Factory wrapper
             strictEqual(
                 customRenderer.addLayer([[0, 5]], {
-                    createRangeHooks: () => ({ open: () => '<c>', close: () => '</c>' })
+                    createSpanHooks: () => ({ open: () => '<c>', close: () => '</c>' })
                 }).render('Hello world'),
                 '<c>Hello</c> world'
             );

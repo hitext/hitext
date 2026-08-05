@@ -24,43 +24,43 @@ This document is the SOURCE OF TRUTH for development of the project. Outdated do
 
 ### Architecture
 
-**Core Flow:** Document Text → Layers (Ranges + Hooks) → Render Pipeline → Output
+**Core Flow:** Document Text → Layers (Spans + Hooks) → Render Pipeline → Output
 
 **Pipeline Creation:**
 ```
-createRenderPipeline(renderer) → .addLayer(ranges, hooks, name?) → .render(document, options?)
+createRenderPipeline(renderer) → .addLayer(spans, hooks, name?) → .render(document, options?)
 ```
 
 **Internal Flow:**
-1. `generateRangesFromLayers()` - Collects ranges from all layers
-2. `resolveRangeHooksMap()` - Normalizes hook definitions
-3. `render()` - Sorts/filters ranges, manages stack, executes hooks (open/text/wrap/replace/close)
+1. `generateSpansFromLayers()` - Collects spans from all layers
+2. `resolveSpanHooksMap()` - Normalizes hook definitions
+3. `render()` - Sorts/filters spans, manages stack, executes hooks (open/text/wrap/replace/close)
 
 **Key Modules:**
 
 - **pipeline.ts** - Pipeline API (creation, layers, orchestration)
-- **ranges.ts** - Range generation from various inputs
+- **spans.ts** - Span generation from various inputs
 - **render.ts** - Rendering engine (sorting, stack management, hook execution)
-- **range-hooks-map.ts** - Hook resolution and normalization
-- **range-sources/** - Range generators (patterns, lines, data)
-- **range-compose/** - Range transformers (filter, merge, expand, collapse, invert)
-- **range-hooks/** - Hook utilities
+- **span-hooks-map.ts** - Hook resolution and normalization
+- **span-sources/** - Span generators (patterns, lines, data)
+- **span-compose/** - Span transformers (filter, merge, expand, collapse, invert)
+- **span-hooks/** - Hook utilities
 - **renderers/** - Output formats (string, html, dom, tty, jsx)
 
 ### Glossary
 
-**Ranges:**
-- **Range** - Text fragment of document with `start`/`end` offsets (zero-based, end-exclusive), optional `data`/`origin`
-- **Range Data** - Custom metadata (match results, diagnostics, token types)
-- **Range Origin** - Reference to source range(s) that produced a derivative (tracks transformation lineage)
-- **Range Input** - Various forms: record `{start, end, data?, origin?}` or tuple `[start, end, data?, origin?]`
-- **Range Set** - Collection of ranges
-- **Range Source** - Iterable of Range Inputs, or a function producing ranges
-- **Range Normalization** - Converting input forms to standard record format `{start, end, data, origin}` during range generation
-- **Range Segment** - Portion of range between interruptions; ranges split into segments during rendering for intersection/conflict resolution
-- **Range Generator** - Function producing ranges via `createRange(start, end, data?, origin?)` callback
-- **Range Transformer** - Curried function taking range input, returning new generator (enables composition)
-- **Range Derivative** - Range created from another range
+**Spans:**
+- **Span** - Text fragment of document with `start`/`end` offsets (zero-based, end-exclusive), optional `data`/`origin`
+- **Span Data** - Custom metadata (match results, diagnostics, token types)
+- **Span Origin** - Reference to source span(s) that produced a derivative (tracks transformation lineage)
+- **Span Input** - Various forms: record `{start, end, data?, origin?}` or tuple `[start, end, data?, origin?]`
+- **Span Set** - Collection of spans
+- **Span Source** - Iterable of Span Inputs, or a function producing spans
+- **Span Normalization** - Converting input forms to standard record format `{start, end, data, origin}` during span generation
+- **Span Segment** - Portion of span between interruptions; spans split into segments during rendering for intersection/conflict resolution
+- **Span Generator** - Function producing spans via `createSpan(start, end, data?, origin?)` callback
+- **Span Transformer** - Curried function taking span input, returning new generator (enables composition)
+- **Span Derivative** - Span created from another span
 
 **Text:**
 - **Document** - Input text for pipeline (the `document` parameter in render functions)
@@ -71,15 +71,15 @@ createRenderPipeline(renderer) → .addLayer(ranges, hooks, name?) → .render(d
 **Pipeline:**
 - **Renderer** - Output format handler providing `createRenderHooks()` for buffer management
 - **Render Pipeline** - Immutable layer chain: `createRenderPipeline()` → `.addLayer()` → `.render()`
-- **Layer** - Range generator + render hooks + optional name
+- **Layer** - Span generator + render hooks + optional name
 - **Render Options** - User config passed to generators/hooks (theme, viewport)
 - **Render Buffer** - Output accumulator (string/DOM/JSX); subbuffers created during render (on hook execution), emitted results attach to parent buffer up to top buffer (result of `render()`)
 
 **Hooks:**
-- **Range Hooks** - Render functions applied to each range segment: `open`, `close`, `wrap`, `text`, `replace`, `break` flag
-- **Hook Context** - Data passed to hooks: `document`, `offset`, `line`, `column`, `start`, `end`, `range`, `data`, `lines` (LineBoundaries)
-- **Generation Context** - Data passed to generators: `renderOptions`, `marker`, `ranges`, `rangesByMarker`, `rangesByName`, `lines` (LineBoundaries)
-- **Operation Context** - Data passed to predicates: `document`, `lines` (LineBoundaries), `renderOptions`, `ranges`
+- **Span Hooks** - Render functions applied to each span segment: `open`, `close`, `wrap`, `text`, `replace`, `break` flag
+- **Hook Context** - Data passed to hooks: `document`, `offset`, `line`, `column`, `start`, `end`, `span`, `data`, `lines` (LineBoundaries)
+- **Generation Context** - Data passed to generators: `renderOptions`, `marker`, `spans`, `spansByMarker`, `spansByName`, `lines` (LineBoundaries)
+- **Operation Context** - Data passed to predicates: `document`, `lines` (LineBoundaries), `renderOptions`, `spans`
 
 ### Project Structure
 
@@ -88,27 +88,27 @@ src/
 ├── index.ts              # Public API exports
 ├── types.d.ts            # TypeScript type definitions
 ├── pipeline.ts           # Pipeline creation and layer management
-├── ranges.ts             # Range generation (generateRanges, processRanges)
-├── range-hooks-map.ts    # Hook resolution and normalization
+├── spans.ts             # Span generation (generateSpans, processSpans)
+├── span-hooks-map.ts    # Hook resolution and normalization
 ├── render.ts             # Core rendering engine
-├── range-sources/        # Range generators (rangesForMatch, rangesForLines, etc.)
-├── range-compose/        # Range transformers (applyFilter, applyMerge, etc.)
-├── range-hooks/          # Render hooks (rangeHooksHide, etc.)
+├── span-sources/        # Span generators (spansFromMatch, spansFromLines, etc.)
+├── span-compose/        # Span transformers (applyFilter, applyMerge, etc.)
+├── span-hooks/          # Render hooks (spanHooksHide, etc.)
 ├── renderers/            # Output renderers (string, html, dom, tty, jsx)
 └── utils/                # Utilities (buffers, line-boundaries)
 
 test/
-├── utils.ts              # Test helpers (generateRanges, renderRanges, etc.)
-├── range-sources/        # Mirror src structure
-├── range-compose/        # Mirror src structure
+├── utils.ts              # Test helpers (generateSpans, renderSpans, etc.)
+├── span-sources/        # Mirror src structure
+├── span-compose/        # Mirror src structure
 └── *.test.ts             # Core module tests
 
 docs/
-├── range-functions-reference.md  # Range functions implementation reference
+├── span-functions-reference.md  # Span functions implementation reference
 └── README.md             # Getting started guide
 ```
 
-**Note:** Test files mirror source structure: `src/range-compose/apply-*.ts` → `test/range-compose/apply-*.test.ts`
+**Note:** Test files mirror source structure: `src/span-compose/apply-*.ts` → `test/span-compose/apply-*.test.ts`
 
 ### Useful Commands
 
@@ -122,22 +122,22 @@ npm run build         # Transpile/bundle/emit types
 npm run check         # Full validation: lint:fix + test + typecheck + build + test builds/bundles
 ```
 
-## Range Functions
+## Span Functions
 
-**See:** [`docs/range-functions-guidelines.md`](docs/range-functions-guidelines.md) for complete implementation requirements, patterns, and design principles.
+**See:** [`docs/span-functions-guidelines.md`](docs/span-functions-guidelines.md) for complete implementation requirements, patterns, and design principles.
 
 ### Implementation Workflow
 
 1. **Implement** - Create file with JSDoc, update exports → `npm test`
 2. **Test** - Write function-specific tests → `npm run lint:fix && npm run typecheck`
-3. **Document** - Update [Quick Reference](docs/range-functions-reference.md#quick-reference) and function section ([Range Sources](docs/range-functions-reference.md#range-sources) or [Range Transformers](docs/range-functions-reference.md#range-transformers))
+3. **Document** - Update [Quick Reference](docs/span-functions-reference.md#quick-reference) and function section ([Span Sources](docs/span-functions-reference.md#span-sources) or [Span Transformers](docs/span-functions-reference.md#span-transformers))
 4. **Validate** - `npm run check` before committing
 
 **Checklist:**
-- [File structure](docs/range-functions-guidelines.md#file-structure)
-- [JSDoc](docs/range-functions-guidelines.md#jsdoc-template)
-- [Test structure](docs/range-functions-guidelines.md#test-structure)
-- [Signature patterns](docs/range-functions-guidelines.md#signature-patterns)
-- [Documentation sync](docs/range-functions-guidelines.md#documentation-sync)
+- [File structure](docs/span-functions-guidelines.md#file-structure)
+- [JSDoc](docs/span-functions-guidelines.md#jsdoc-template)
+- [Test structure](docs/span-functions-guidelines.md#test-structure)
+- [Signature patterns](docs/span-functions-guidelines.md#signature-patterns)
+- [Documentation sync](docs/span-functions-guidelines.md#documentation-sync)
 
-**Design changes?** Update [Design Principles](docs/range-functions-guidelines.md#design-principles) or [Core Concepts](docs/range-functions-guidelines.md#core-concepts) as needed.
+**Design changes?** Update [Design Principles](docs/span-functions-guidelines.md#design-principles) or [Core Concepts](docs/span-functions-guidelines.md#core-concepts) as needed.

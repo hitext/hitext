@@ -5,135 +5,132 @@
 export type CreateRenderHooks<T, R, HC> = () => Partial<RenderHooks<T, R, HC>>;
 export type PipelineLayer<RenderOptions, Data = unknown, T = unknown, R = T, HC = unknown> = {
     name?: string;
-    marker: RangeMarker;
-    ranges: Ranges<Data, RenderOptions>;
-    rangeHooks?: RangeHooksDefinition<Data, T, R, HC> | null;
+    marker: SpanMarker;
+    spans: SpansSource<Data, RenderOptions>;
+    spanHooks?: SpanHooksDefinition<Data, T, R, HC> | null;
 };
 export interface PipelineNode<RenderOptions, T, R = T, HC = unknown> {
     createRenderHooks: CreateRenderHooks;
     layers: PipelineLayer<RenderOptions, any, T, R, HC>[];
     addLayer<D = unknown>(
-        ranges: Ranges<D, RenderOptions>,
-        rangeHooks: RangeHooksDefinition<D, T, R, HC> | null,
+        spans: SpansSource<D, RenderOptions>,
+        spanHooks: SpanHooksDefinition<D, T, R, HC> | null,
         name?: string
     ): PipelineNode<RenderOptions, T, R, HC>;
-    ranges(document: string, options?: RenderOptions): GeneratedRange[];
-    rangeHooksMap(): RangeHooksMap<any, T, R, HC>;
-    rangeHooksDefinitionMap(): RangeHooksDefinitionMap<any, T, R, HC>;
+    spans(document: string, options?: RenderOptions): GeneratedSpan[];
+    spanHooksMap(): SpanHooksMap<any, T, R, HC>;
+    spanHooksDefinitionMap(): SpanHooksDefinitionMap<any, T, R, HC>;
     render(document: string, options?: RenderOptions): R;
 }
 
 //
-// Ranges
+// Spans
 //
 
 // input
-export type Ranges<Data = unknown, RenderOptions = unknown> =
-    | RangeIterable<Data>
-    | GenerateRanges<Data, RenderOptions>;
-export type RangeIterable<Data> = Iterable<RangeTuple<Data> | RangeRecord<Data>>;
-export type RangeOrigin<Data> = RangeRecord<Data> | RangeRecord<Data>[];
-export type RangeTuple<Data = unknown> = [start: number, end: number, data?: Data, origin?: RangeOrigin<Data>];
-export type RangeRecord<Data = unknown> = { start: number, end: number, data?: Data, origin?: RangeOrigin<Data> };
-export type CreateRange<Data = unknown> = (start: number, end: number, data?: Data, origin?: RangeOrigin<Data>) => void;
-export type TransformRanges<Data = unknown, RenderOptions = unknown> = (
-    input: Ranges<Data, RenderOptions>
-) => GenerateRanges<Data, RenderOptions>;
-export type GenerateRanges<Data = unknown, RenderOptions = unknown> = (
+export type SpansSource<Data = unknown, RenderOptions = unknown> =
+    | SpansIterable<Data>
+    | GenerateSpans<Data, RenderOptions>;
+export type SpansIterable<Data> = Iterable<SpanTuple<Data> | SpanRecord<Data>>;
+export type SpanOrigin<Data> = SpanRecord<Data> | SpanRecord<Data>[];
+export type SpanTuple<Data = unknown> = [start: number, end: number, data?: Data, origin?: SpanOrigin<Data>];
+export type SpanRecord<Data = unknown> = { start: number, end: number, data?: Data, origin?: SpanOrigin<Data> };
+export type CreateSpan<Data = unknown> = (start: number, end: number, data?: Data, origin?: SpanOrigin<Data>) => void;
+export type TransformSpans<Data = unknown, RenderOptions = unknown> = (
+    input: SpansSource<Data, RenderOptions>
+) => GenerateSpans<Data, RenderOptions>;
+export type GenerateSpans<Data = unknown, RenderOptions = unknown> = (
     document: string,
-    createRange: CreateRange<Data>,
-    context?: GenerateRangesContext<Data, RenderOptions>
+    createSpan: CreateSpan<Data>,
+    context?: GenerateSpansContext<Data, RenderOptions>
 ) => void;
-export type GenerateRangesContext<Data, RenderOptions> = {
+export type GenerateSpansContext<Data, RenderOptions> = {
     renderOptions?: RenderOptions;
-    marker?: RangeMarker;
-    ranges?: GeneratedRange<Data>[];
-    rangesByMarker?: Record<RangeMarker, GeneratedRange<Data>[]>;
-    rangesByName?: Record<string, GeneratedRange<Data>[]>;
+    marker?: SpanMarker;
+    spans?: GeneratedSpan<Data>[];
+    spansByMarker?: Record<SpanMarker, GeneratedSpan<Data>[]>;
+    spansByName?: Record<string, GeneratedSpan<Data>[]>;
     lines?: LineBoundaries;
 }
-export type RangesGenerator<Data, RenderOptions> =
-    (document: string, renderOptions?: RenderOptions) => Ranges<Data, RenderOptions>;
+export type SpansSourceFactory<Data, RenderOptions> =
+    (document: string, renderOptions?: RenderOptions) => SpansSource<Data, RenderOptions>;
 
-// Range operation context (for filter, map, sort, etc.)
-export interface RangeOperationContext<RenderOptions = any> {
+// Span operation context (for filter, map, sort, etc.)
+export interface SpanOperationContext<RenderOptions = any> {
     document: string;
     lines: LineBoundaries;
     renderOptions?: RenderOptions;
-    ranges: Array<RangeRecord<any>>;
+    spans: Array<SpanRecord<any>>;
     index: number;
 }
 
 // generated
-export type RangeMarker = symbol | string | number;
-export interface GeneratedRange<Data = unknown> {
-    type: RangeMarker;
+export type SpanMarker = symbol | string | number;
+export interface GeneratedSpan<Data = unknown> {
+    type: SpanMarker;
     start: number;
     end: number;
     data?: Data;
-    origin?: RangeRecord<Data> | RangeRecord<Data>[];
+    origin?: SpanRecord<Data> | SpanRecord<Data>[];
 }
 
 //
-// Render range hooks
+// Render span hooks
 //
 
-export type RangeHooksMap<Data, T, R = T> = Record<
-    RangeMarker,
-    RangeHooks<Data, T, R>
+export type SpanHooksMap<Data, T, R = T> = Record<
+    SpanMarker,
+    SpanHooks<Data, T, R>
 >;
-export type RangeHooksDefinitionMap<Data, T, R = T, HC = unknown> = Record<
-    RangeMarker,
-    RangeHooksDefinition<Data, T, R, HC> | undefined | null
+export type SpanHooksDefinitionMap<Data, T, R = T, HC = unknown> = Record<
+    SpanMarker,
+    SpanHooksDefinition<Data, T, R, HC> | undefined | null
 >;
-export type RangeHooksDefinition<Data = unknown, T, R = T, HC = unknown> =
-    | Partial<RangeHooks<Data, T, R>>
-    | RangeHooksShortcut<Data, T, R>
-    | RangeHooksFactory<Data, T, R, HC>;
-export type RangeHooksShortcut<Data = unknown, T, R = T> =
-    Exclude<RangeHookWrap<Data, T, R>, undefined | null>;
-export type RangeHooksFactory<Data = unknown, T, R = T, HC = unknown> = {
-    createRangeHooks: (createRangeHooksContext: HC) =>
-        | Partial<RangeHooks<Data, T, R>>
-        | RangeHooksShortcut<Data, T, R>
+export type SpanHooksDefinition<Data = unknown, T, R = T, HC = unknown> =
+    | Partial<SpanHooks<Data, T, R>>
+    | SpanHooksShortcut<Data, T, R>
+    | SpanHooksFactory<Data, T, R, HC>;
+export type SpanHooksShortcut<Data = unknown, T, R = T> =
+    Exclude<SpanHookWrap<Data, T, R>, undefined | null>;
+export type SpanHooksFactory<Data = unknown, T, R = T, HC = unknown> = {
+    createSpanHooks: (createSpanHooksContext: HC) =>
+        | Partial<SpanHooks<Data, T, R>>
+        | SpanHooksShortcut<Data, T, R>
         | null
         | undefined;
 };
 
-export type RangeCallableHook = 'open' | 'close' | 'wrap' | 'text' | 'replace';
-export interface RangeHooks<Data = unknown, T, R = T> {
-    open: RangeHookOpen<Data, T, R> | null;
-    close: RangeHookClose<Data, T, R> | null;
-    wrap: RangeHookWrap<Data, T, R> | null;
-    text: RangeHookText<Data, T, R> | null;
-    replace: RangeHookReplace<Data, T, R> | null;
+export type SpanCallableHook = 'open' | 'close' | 'wrap' | 'text' | 'replace';
+export interface SpanHooks<Data = unknown, T, R = T> {
+    open: SpanHookOpen<Data, T, R> | null;
+    close: SpanHookClose<Data, T, R> | null;
+    wrap: SpanHookWrap<Data, T, R> | null;
+    text: SpanHookText<Data, T, R> | null;
+    replace: SpanHookReplace<Data, T, R> | null;
     break: boolean;
 }
 
-export type RangeHookOpen<Data, T, R = T> = (
-    context: RangeHookContext<Data, T, R>
+export type SpanHookOpen<Data, T, R = T> = (
+    context: SpanHookContext<Data, T, R>
 ) => T | R | string | null | undefined;
-export type RangeHookClose<Data, T, R = T> = (
-    context: RangeHookContext<Data, T, R>
+export type SpanHookClose<Data, T, R = T> = (
+    context: SpanHookContext<Data, T, R>
 ) => T | R | string | null | undefined;
-export type RangeHookClose<Data, T, R = T> = (
-    context: RangeHookContext<Data, T, R>
-) => T | R | string | null | undefined;
-export type RangeHookWrap<Data, T, R = T> = (
+export type SpanHookWrap<Data, T, R = T> = (
     content: T | R,
-    context: RangeHookContext<Data, T, R>
+    context: SpanHookContext<Data, T, R>
 ) => T | R | string | null | undefined;
-export type RangeHookText<Data, T, R = T> = (
+export type SpanHookText<Data, T, R = T> = (
     documentChunk: string,
-    context: RangeHookContext<Data, T, R>
+    context: SpanHookContext<Data, T, R>
 ) => T | R | string | null | undefined;
-export type RangeHookReplace<Data, T, R = T> = (
-    context: RangeHookContext<Data, T, R>
+export type SpanHookReplace<Data, T, R = T> = (
+    context: SpanHookContext<Data, T, R>
 ) => T | R | string | null | undefined;
 
-export type RangeHookContextDump<T> = Omit<RangeHookContext<T>, 'lines' | 'dump' | 'createBuffer'>;
-export type RangeHookContext<Data = unknown, T = unknown, R = T> = {
-    hook: RangeCallableHook;
+export type SpanHookContextDump<T> = Omit<SpanHookContext<T>, 'lines' | 'dump' | 'createBuffer'>;
+export type SpanHookContext<Data = unknown, T = unknown, R = T> = {
+    hook: SpanCallableHook;
     document: string;
     lines: LineBoundaries;
     offset: number;
@@ -141,12 +138,12 @@ export type RangeHookContext<Data = unknown, T = unknown, R = T> = {
     column: number;
     start: number;
     end: number;
-    rangeIndex: number;
-    rangeText: string;
-    range: GeneratedRange<Data>;
+    spanIndex: number;
+    spanText: string;
+    span: GeneratedSpan<Data>;
     data: Data;
     createBuffer(): RenderBuffer<T, R>;
-    dump(): RangeHookContextDump<Data>;
+    dump(): SpanHookContextDump<Data>;
 }
 
 //
@@ -156,11 +153,11 @@ export type RangeHookContext<Data = unknown, T = unknown, R = T> = {
 export interface RenderHooks<T, R = T, HC = unknown> {
     createBuffer(): RenderBuffer<T, R>;
 
-    open(context: RangeHookContext<any, T, R>): T | null;
-    close(context: RangeHookContext<any, T, R>): T | null;
-    text: RangeHookText<any, T, R> | null;
+    open(context: SpanHookContext<any, T, R>): T | null;
+    close(context: SpanHookContext<any, T, R>): T | null;
+    text: SpanHookText<any, T, R> | null;
 
-    rangeHooksContext?: HC;
+    spanHooksContext?: HC;
 }
 export interface RenderBuffer<T, R = T> {
     append(child: string | T | R): void;

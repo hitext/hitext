@@ -1,13 +1,13 @@
 import { strictEqual } from 'assert';
-import { RangeHooks, render } from '../../src/index.js';
-// import type { RangeHookText } from '../src/index.js';
+import { SpanHooks, render } from '../../src/index.js';
+// import type { SpanHookText } from '../src/index.js';
 
 describe('render / text hook', () => {
-    const replaceTextHook = (str: string): Partial<RangeHooks<any, any>> => ({
+    const replaceTextHook = (str: string): Partial<SpanHooks<any, any>> => ({
         text: (chunk: string) => chunk.replace(/./g, str)
     });
 
-    it('should use range hook text method when defined', () => {
+    it('should use span hook text method when defined', () => {
         strictEqual(
             render('1234567890', [
                 { type: 'a', start: 1, end: 6 },
@@ -25,7 +25,7 @@ describe('render / text hook', () => {
         );
     });
 
-    it('should use innermost range text hook when nested', () => {
+    it('should use innermost span text hook when nested', () => {
         strictEqual(
             render('0123456789', [
                 { type: 'outer', start: 0, end: 10 },
@@ -69,7 +69,7 @@ describe('render / text hook', () => {
         );
     });
 
-    it('should use render text hook when no range text hook defined', () => {
+    it('should use render text hook when no span text hook defined', () => {
         strictEqual(
             render('0123456789', [
                 { type: 'test', start: 2, end: 5 }
@@ -82,7 +82,7 @@ describe('render / text hook', () => {
         );
     });
 
-    it('should handle multiple overlapping ranges with different text hooks', () => {
+    it('should handle multiple overlapping spans with different text hooks', () => {
         strictEqual(
             render('0123456789', [
                 { type: 'a', start: 0, end: 6 },
@@ -154,7 +154,7 @@ describe('render / text hook', () => {
         );
     });
 
-    it('should prioritize innermost text hook in deeply nested ranges', () => {
+    it('should prioritize innermost text hook in deeply nested spans', () => {
         strictEqual(
             render('0123456789', [
                 { type: 'level1', start: 0, end: 10 },
@@ -169,7 +169,7 @@ describe('render / text hook', () => {
         );
     });
 
-    it('should handle adjacent ranges with different text hooks', () => {
+    it('should handle adjacent spans with different text hooks', () => {
         strictEqual(
             render('0123456789', [
                 { type: 'a', start: 0, end: 3 },
@@ -184,7 +184,7 @@ describe('render / text hook', () => {
         );
     });
 
-    it('should apply text hook to interrupted range segments', () => {
+    it('should apply text hook to interrupted span segments', () => {
         strictEqual(
             render('0123456789AB', [
                 { type: 'outer', start: 0, end: 10 },

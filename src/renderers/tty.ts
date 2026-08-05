@@ -1,4 +1,4 @@
-import type { RangeHookContext, RangeHooks, RangeHooksFactory } from '../types.js';
+import type { SpanHookContext, SpanHooks, SpanHooksFactory } from '../types.js';
 import { createRenderPipeline } from '../pipeline.js';
 import { createStringBuffer } from '../utils/buffer-string.js';
 import { createNoProtoObject, entries, hasOwn } from '../utils/misc.js';
@@ -12,8 +12,8 @@ type Style = {
     bgColor?: string;
 };
 type TtyFactoryContext = {
-    createStyle: (...styles: StyleMod[]) => Partial<RangeHooks<any, any>>;
-    createStyleMap: (map: StyleModMap, fetcher?: (context: RangeHookContext<any>) => any) => Partial<RangeHooks<any, any>>;
+    createStyle: (...styles: StyleMod[]) => Partial<SpanHooks<any, any>>;
+    createStyleMap: (map: StyleModMap, fetcher?: (context: SpanHookContext<any>) => any) => Partial<SpanHooks<any, any>>;
     pushStyle: (style: Style) => void;
     popStyle: () => void;
 }
@@ -83,17 +83,17 @@ function createStyleMap(map: StyleModMap): { [key: string]: Style } {
     return result;
 }
 
-function rangeHooksFactoryCreateStyle(...styles: StyleMod[]) {
+function spanHooksFactoryCreateStyle(...styles: StyleMod[]) {
     const style = createStyle(...styles);
     return () => style;
 }
 
-function rangeHooksFactoryCreateStyleMap(
+function spanHooksFactoryCreateStyleMap(
     map: StyleModMap,
-    fetcher = ({ data, rangeText }: RangeHookContext<any>) => data ?? rangeText
+    fetcher = ({ data, spanText }: SpanHookContext<any>) => data ?? spanText
 ) {
     const styleMap = createStyleMap(map);
-    return (context: RangeHookContext<any>) => styleMap[fetcher(context)];
+    return (context: SpanHookContext<any>) => styleMap[fetcher(context)];
 }
 
 export const createTTYRenderer = /* @__PURE__ */ Object.assign(
@@ -109,10 +109,10 @@ export const createTTYRenderer = /* @__PURE__ */ Object.assign(
                 close: styleToRender,
                 text: (documentChunk) => styleToRender() + documentChunk,
 
-                // Provide style utils to range hooks factories
-                rangeHooksContext: {
-                    createStyle: rangeHooksFactory(rangeHooksFactoryCreateStyle),
-                    createStyleMap: rangeHooksFactory(rangeHooksFactoryCreateStyleMap),
+                // Provide style utils to span hooks factories
+                spanHooksContext: {
+                    createStyle: spanHooksFactory(spanHooksFactoryCreateStyle),
+                    createStyleMap: spanHooksFactory(spanHooksFactoryCreateStyleMap),
                     pushStyle,
                     popStyle
                 }
@@ -148,8 +148,8 @@ export const createTTYRenderer = /* @__PURE__ */ Object.assign(
 
                 return '';
             }
-            function rangeHooksFactory<T extends(...args: any[]) => any>(fn: T) {
-                return (...args: Parameters<T>): Partial<RangeHooks<any, any>> => {
+            function spanHooksFactory<T extends(...args: any[]) => any>(fn: T) {
+                return (...args: Parameters<T>): Partial<SpanHooks<any, any>> => {
                     const styleFetcher = fn(...args);
 
                     return {
@@ -170,14 +170,14 @@ export const createTTYRenderer = /* @__PURE__ */ Object.assign(
     {
         createStyle: (
             ...args: Parameters<TtyFactoryContext['createStyle']>
-        ): RangeHooksFactory<any, any, any, TtyFactoryContext> => ({
-            createRangeHooks: ({ createStyle }) => createStyle(...args)
+        ): SpanHooksFactory<any, any, any, TtyFactoryContext> => ({
+            createSpanHooks: ({ createStyle }) => createStyle(...args)
         }),
 
         createStyleMap: (
             ...args: Parameters<TtyFactoryContext['createStyleMap']>
-        ): RangeHooksFactory<any, any, any, TtyFactoryContext> => ({
-            createRangeHooks: ({ createStyleMap }) => createStyleMap(...args)
+        ): SpanHooksFactory<any, any, any, TtyFactoryContext> => ({
+            createSpanHooks: ({ createStyleMap }) => createStyleMap(...args)
         })
     }
 );

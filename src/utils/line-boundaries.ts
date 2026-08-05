@@ -3,7 +3,7 @@ import type { LineBoundaries } from '../types.js';
 /**
  * Factory function for creating a line boundaries utility.
  * Builds line boundary information incrementally as needed for efficient offset lookups.
- * Optimized for sequential access patterns (adjacent ranges).
+ * Optimized for sequential access patterns (adjacent spans).
  */
 export function createLineBoundaries(document: string): LineBoundaries {
     const newlineRegex = /\r\n|\r|\n/g; // Global regex for scanning

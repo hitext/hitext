@@ -1,14 +1,14 @@
 import assert from 'assert';
-import { RangeCallableHook, RangeHookContext, render } from '../../src/index.js';
+import { SpanCallableHook, SpanHookContext, render } from '../../src/index.js';
 
 /**
- * Visual test helper for rendering with ranges.
+ * Visual test helper for rendering with spans.
  *
- * Each range line uses lowercase letters to mark start/end positions.
+ * Each span line uses lowercase letters to mark start/end positions.
  * Spaces are ignored (just for alignment with document string).
  *
- * The last argument can optionally be a hooks object to customize range behavior.
- * Ranges without custom hooks get default wrap behavior: <letter>content</letter>
+ * The last argument can optionally be a hooks object to customize span behavior.
+ * SpansSource without custom hooks get default wrap behavior: <letter>content</letter>
  *
  * Custom hooks can use:
  * - Shortcut wrap syntax: `{ a: (content) => `<mark>${content}</mark>` }`
@@ -18,7 +18,7 @@ import { RangeCallableHook, RangeHookContext, render } from '../../src/index.js'
  *
  * Examples:
  *   renderTest('Hello World', 'aaaaaaaaaaa')
- *     → Range 'a' wrapping entire string with <a>Hello World</a>
+ *     → Span 'a' wrapping entire string with <a>Hello World</a>
  *
  *   renderTest('Hello World', 'aaaaa', '      bbbbb')
  *     → <a>Hello</a> <b>World</b>
@@ -36,15 +36,15 @@ function renderTest(
     document: string,
     ...args: Array<string | Record<string, any>>
 ): string {
-    const ranges: Array<{ type: string; start: number; end: number; data?: any }> = [];
+    const spans: Array<{ type: string; start: number; end: number; data?: any }> = [];
     const defaultHooks: Record<string, any> = {};
 
     // Check if last argument is a hooks object (not a string)
     const lastArg = args[args.length - 1];
     const customHooks = typeof lastArg === 'string' ? {} : (args.pop() as Record<string, any>) || {};
-    const rangeLines = args as string[];
+    const spanLines = args as string[];
 
-    rangeLines.forEach((line) => {
+    spanLines.forEach((line) => {
         // Find all contiguous groups of the same letter
         const groups: Array<{ char: string; start: number; end: number }> = [];
         let i = 0;
@@ -69,9 +69,9 @@ function renderTest(
             }
         }
 
-        // Add all groups as separate ranges
+        // Add all groups as separate spans
         groups.forEach(({ char, start, end }) => {
-            ranges.push({ type: char, start, end, data: undefined });
+            spans.push({ type: char, start, end, data: undefined });
         });
     });
 
@@ -88,7 +88,7 @@ function renderTest(
         }
     }
 
-    return render(document, ranges, normalizedHooks);
+    return render(document, spans, normalizedHooks);
 }
 
 /**
@@ -110,7 +110,7 @@ function boundaryHook(name: string) {
 
 describe('Replace Hook', () => {
     describe('Visual test helper examples', () => {
-        it('should work with simple range wrapping', () => {
+        it('should work with simple span wrapping', () => {
             const result = renderTest(
                 'Hello World',
                 'aaaaaaaaaaa'  // Wraps entire string
@@ -118,7 +118,7 @@ describe('Replace Hook', () => {
             assert.strictEqual(result, '<a>Hello World</a>');
         });
 
-        it('should work with multiple non-overlapping ranges', () => {
+        it('should work with multiple non-overlapping spans', () => {
             const result = renderTest(
                 'Hello World',
                 'aaaaa',       // Wraps "Hello"
@@ -127,7 +127,7 @@ describe('Replace Hook', () => {
             assert.strictEqual(result, '<a>Hello</a> <b>World</b>');
         });
 
-        it('should work with nested ranges', () => {
+        it('should work with nested spans', () => {
             const result = renderTest(
                 'Hello World',
                 'aaaaaaaaaaa',  // Outer wraps everything
@@ -139,7 +139,7 @@ describe('Replace Hook', () => {
         it('should work with replace syntax', () => {
             const result = renderTest(
                 'Hello [REDACTED] World',
-                '      xxxxxxxxxx',  // Range 'x' covers [REDACTED]
+                '      xxxxxxxxxx',  // Span 'x' covers [REDACTED]
                 {
                     x: { replace: () => '████' }
                 }
@@ -174,7 +174,7 @@ describe('Replace Hook', () => {
             assert.strictEqual(result, '<a>AAA </a>XXX<a> BBB</a>');
         });
 
-        it('should work with complex overlapping ranges', () => {
+        it('should work with complex overlapping spans', () => {
             const result = renderTest(
                 'START [REPLACE] END',
                 'bbbbb',                      // Wraps "START" (0-5)
@@ -202,32 +202,32 @@ describe('Replace Hook', () => {
         assert.strictEqual(result, 'Hello ████ World');
     });
 
-    it('should provide context with rangeText to replace hook', () => {
-        let capturedRangeText = '';
+    it('should provide context with spanText to replace hook', () => {
+        let capturedSpanText = '';
         const result = renderTest(
             'Replace {{name}} with value',
             '        vvvvvvvv',  // {{name}} (8-16)
             {
                 v: {
-                    replace: ({ rangeText }: any) => {
-                        capturedRangeText = rangeText;
+                    replace: ({ spanText }: any) => {
+                        capturedSpanText = spanText;
                         return 'John';
                     }
                 }
             }
         );
-        assert.strictEqual(capturedRangeText, '{{name}}');
+        assert.strictEqual(capturedSpanText, '{{name}}');
         assert.strictEqual(result, 'Replace John with value');
     });
 
-    it('should skip nested ranges within replace ranges', () => {
+    it('should skip nested spans within replace spans', () => {
         const result = renderTest(
             'Keep [hide this <mark>nested</mark>] visible',
             '     xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
             {
                 x: { replace: () => '...' }
             }
-            // Note: nested mark range (16-35) is automatically skipped by skipRanges logic
+            // Note: nested mark span (16-35) is automatically skipped by skipSpans logic
         );
         assert.strictEqual(result, 'Keep ... visible');
     });
@@ -248,10 +248,10 @@ describe('Replace Hook', () => {
     });
 
     it('should handle zero-length replace (injection)', () => {
-        // Zero-length ranges can't be represented visually, keep explicit
+        // Zero-length spans can't be represented visually, keep explicit
         const document = 'Insert here';
-        const ranges = [{ type: 'replace', start: 7, end: 7, data: undefined }];  // Zero-length
-        const result = render(document, ranges, {
+        const spans = [{ type: 'replace', start: 7, end: 7, data: undefined }];  // Zero-length
+        const result = render(document, spans, {
             replace: { replace: () => '[INJECTED] ' }
         });
         assert.strictEqual(result, 'Insert [INJECTED] here');
@@ -268,20 +268,20 @@ describe('Replace Hook', () => {
         assert.strictEqual(result, 'Remove  text');
     });
 
-    it('should handle multiple replace ranges', () => {
+    it('should handle multiple replace spans', () => {
         const result = renderTest(
             '[A] and [B] and [C]',
             'vvv     vvv     vvv',  // var: [A], [B], [C]
             {
                 v: {
-                    replace: ({ rangeText }: any) => {
-                        // Map based on the range text content
+                    replace: ({ spanText }: any) => {
+                        // Map based on the span text content
                         const mapping: Record<string, string> = {
                             '[A]': 'X',
                             '[B]': 'Y',
                             '[C]': 'Z'
                         };
-                        return mapping[rangeText];
+                        return mapping[spanText];
                     }
                 }
             }
@@ -289,7 +289,7 @@ describe('Replace Hook', () => {
         assert.strictEqual(result, 'X and Y and Z');
     });
 
-    it('should use break flag to close and reopen surrounding ranges', () => {
+    it('should use break flag to close and reopen surrounding spans', () => {
         const result = renderTest(
             'Start text [BREAK] more end',
             '      mmmmmmmmmmmmmmmmm',             // mark wraps "text [BREAK] more"
@@ -356,7 +356,7 @@ describe('Replace Hook', () => {
         assert.strictEqual(result, '<mark>word1</mark> [REDACTED] <mark>word3</mark>');
     });
 
-    it('should handle viewport use case - hide ranges between visible segments', () => {
+    it('should handle viewport use case - hide spans between visible segments', () => {
         const result = renderTest(
             'Line 1\nLine 2\nLine 3\nLine 4\nLine 5\nLine 6\n',
             '       hhhhhhhhhhhhhhhhhhhhh       hhhhhhh',  // Hide lines 2-4 and line 6
@@ -375,7 +375,7 @@ describe('Replace Hook', () => {
             '      pppppppp       ppppppppppp         pppppppppppppppp',
             {
                 p: {
-                    replace: ({ range }: any) => '█'.repeat(range.end - range.start)
+                    replace: ({ span }: any) => '█'.repeat(span.end - span.start)
                 }
             }
         );
@@ -414,7 +414,7 @@ describe('Replace Hook', () => {
         assert.strictEqual(result, 'Line 1\nX\nLine 3');
     });
 
-    it('should handle adjacent replace ranges', () => {
+    it('should handle adjacent replace spans', () => {
         const result = renderTest(
             '[A][B][C]',
             'xxxyyyzzz',  // var: [A][B][C] - must use different letters since they're adjacent
@@ -427,8 +427,8 @@ describe('Replace Hook', () => {
         assert.strictEqual(result, '123');
     });
 
-    describe('Replace interactions with surrounding ranges', () => {
-        it('should preserve ranges that start before and end after replace', () => {
+    describe('Replace interactions with surrounding spans', () => {
+        it('should preserve spans that start before and end after replace', () => {
             const result = renderTest(
                 'AAA [REPLACE] BBB',
                 'aaaaaaaaaaaaaaaaa',          // Outer wraps everything
@@ -440,7 +440,7 @@ describe('Replace Hook', () => {
             assert.strictEqual(result, '<a>AAA XXX BBB</a>');
         });
 
-        it('should close ranges that end within replaced content (without break)', () => {
+        it('should close spans that end within replaced content (without break)', () => {
             const result = renderTest(
                 'AAA [REPLACE] BBB',
                 'oooooooo',                    // Outer ends in middle of [REPLACE]
@@ -452,7 +452,7 @@ describe('Replace Hook', () => {
             assert.strictEqual(result, '<o>AAA </o>XXX BBB');
         });
 
-        it('should handle ranges starting within replaced content', () => {
+        it('should handle spans starting within replaced content', () => {
             const result = renderTest(
                 'AAA [REPLACE] BBB',
                 '    xxxxxxxxx',         // Replace [REPLACE]
@@ -464,19 +464,19 @@ describe('Replace Hook', () => {
             assert.strictEqual(result, 'AAA XXX<i> BBB</i>');  // Uses default <i> tags
         });
 
-        it('should skip ranges entirely within replaced content', () => {
+        it('should skip spans entirely within replaced content', () => {
             const result = renderTest(
                 'AAA [NESTED] BBB',
                 '    xxxxxxxx',           // Replace [NESTED]
                 {
                     x: { replace: () => 'XXX' }
                 }
-                // nested range (5-11) would be automatically skipped
+                // nested span (5-11) would be automatically skipped
             );
             assert.strictEqual(result, 'AAA XXX BBB');
         });
 
-        it('should handle multiple ranges with different relationships to replace', () => {
+        it('should handle multiple spans with different relationships to replace', () => {
             const result = renderTest(
                 'START [REPLACE] END',
                 'bbbbb',                        // before: "START" (0-5)
@@ -486,10 +486,10 @@ describe('Replace Hook', () => {
                 {
                     x: { replace: () => 'XXX' }
                 }
-                // inside range would be auto-skipped
+                // inside span would be auto-skipped
             );
             // before wraps "START", spanning wraps from position 2-17
-            // The 'b' range (0-5) and 's' range (2-17) overlap:
+            // The 'b' span (0-5) and 's' span (2-17) overlap:
             //   - At position 0-2: only 'b' is active: "<b>ST</b>"
             //   - At position 2-5: both 'b' and 's' are active: "<s><b>ART</b>"
             //   - At position 5-6: only 's' is active: "<s> </s>"
@@ -500,7 +500,7 @@ describe('Replace Hook', () => {
             assert.strictEqual(result, '<b>ST</b><s><b>ART</b> XXX </s><a><s>E</s>ND</a>');
         });
 
-        it('should handle replace with break flag - closes and reopens spanning ranges', () => {
+        it('should handle replace with break flag - closes and reopens spanning spans', () => {
             const result = renderTest(
                 'AAA [BREAK] BBB',
                 'ooooooooooooooo',              // Outer wraps everything
@@ -515,7 +515,7 @@ describe('Replace Hook', () => {
             assert.strictEqual(result, '<o>AAA </o>XXX<o> BBB</o>');
         });
 
-        it('should handle break with multiple spanning ranges', () => {
+        it('should handle break with multiple spanning spans', () => {
             const result = renderTest(
                 'A B [BREAK] C D',
                 'ooooooooooooooo',              // Outer: wraps everything
@@ -531,7 +531,7 @@ describe('Replace Hook', () => {
             assert.strictEqual(result, '<o>A <m>B </m></o>X<o><m> C</m> D</o>');
         });
 
-        it('should handle break with ranges ending at replace boundary', () => {
+        it('should handle break with spans ending at replace boundary', () => {
             const result = renderTest(
                 'AAA [BREAK] BBB',
                 'bbbbxxxxxxxaaaa',
@@ -545,7 +545,7 @@ describe('Replace Hook', () => {
             assert.strictEqual(result, '<b>AAA </b>X<a> BBB</a>');
         });
 
-        it('should handle replace without break - ranges ending in replaced content still close', () => {
+        it('should handle replace without break - spans ending in replaced content still close', () => {
             const result = renderTest(
                 'AAA [REPLACE] BBB',
                 'eeeeeeee      aaa',
@@ -557,7 +557,7 @@ describe('Replace Hook', () => {
             assert.strictEqual(result, '<e>AAA </e>XXX <a>BBB</a>');
         });
 
-        it('should handle replace with wrap and surrounding ranges', () => {
+        it('should handle replace with wrap and surrounding spans', () => {
             const result = renderTest(
                 'AAA [REPLACE] BBB',
                 'ooooooooooooooooo',  // outer: wraps everything
@@ -575,8 +575,8 @@ describe('Replace Hook', () => {
         });
     });
 
-    describe('Intersecting replace ranges', () => {
-        it('should handle adjacent replace ranges', () => {
+    describe('Intersecting replace spans', () => {
+        it('should handle adjacent replace spans', () => {
             const result = renderTest(
                 '[A][B][C]',
                 'xxxyyyzzz',  // r1: [A], r2: [B], r3: [C]
@@ -589,7 +589,7 @@ describe('Replace Hook', () => {
             assert.strictEqual(result, 'XYZ');
         });
 
-        it('should handle overlapping replace ranges (second nested in first)', () => {
+        it('should handle overlapping replace spans (second nested in first)', () => {
             const result = renderTest(
                 'AAA [OUTER [INNER] END] BBB',
                 '    ooooooooooooooooooo',     // outer: [OUTER [INNER] END]
@@ -602,7 +602,7 @@ describe('Replace Hook', () => {
             assert.strictEqual(result, 'AAA REPLACED_OUTER BBB');
         });
 
-        it('should handle partially overlapping replace ranges', () => {
+        it('should handle partially overlapping replace spans', () => {
             const result = renderTest(
                 'AAA [FIRST [OVERLAP] SECOND] BBB',
                 '    fffffffffffff               ', // first: [FIRST [OVERLAP]
@@ -616,7 +616,7 @@ describe('Replace Hook', () => {
             assert.strictEqual(result, 'AAA R1 BBB');
         });
 
-        it('should handle multiple consecutive replace ranges with surrounding range', () => {
+        it('should handle multiple consecutive replace spans with surrounding span', () => {
             const result = renderTest(
                 'START [A] [B] [C] END',
                 'ooooooooooooooooooooo',  // outer: wraps everything
@@ -631,8 +631,8 @@ describe('Replace Hook', () => {
         });
     });
 
-    describe('Multiple ranges starting within replace and continuing after', () => {
-        it('should handle single range starting in replace and continuing after', () => {
+    describe('Multiple spans starting within replace and continuing after', () => {
+        it('should handle single span starting in replace and continuing after', () => {
             const result = renderTest(
                 'AAA [REPLACE] BBB CCC',
                 '    xxxxxxxxx',           // Replace [REPLACE] (4-13)
@@ -644,7 +644,7 @@ describe('Replace Hook', () => {
             assert.strictEqual(result, 'AAA XXX<a> BBB CCC</a>');  // Uses default <a> tags
         });
 
-        it('should handle multiple ranges starting within replace and continuing after', () => {
+        it('should handle multiple spans starting within replace and continuing after', () => {
             const result = renderTest(
                 'AAA [REPLACE_LONG] BBB CCC DDD',
                 '    xxxxxxxxxxxxxx',      // Replace [REPLACE_LONG]
@@ -655,11 +655,11 @@ describe('Replace Hook', () => {
                     x: { replace: () => 'XXX' }
                 }
             );
-            // All three ranges open at replace.end (18), close at their respective ends
+            // All three spans open at replace.end (18), close at their respective ends
             assert.strictEqual(result, 'AAA XXX<t><s><r> BBB</r> CCC</s> DDD</t>');
         });
 
-        it('should handle ranges starting within replace with different end positions', () => {
+        it('should handle spans starting within replace with different end positions', () => {
             const result = renderTest(
                 'AA [REPLACE] BB CC DD EE',
                 '   xxxxxxxxx',              // Replace [REPLACE]
@@ -675,8 +675,8 @@ describe('Replace Hook', () => {
         });
     });
 
-    describe('Multiple ranges spanning before and after replace', () => {
-        it('should handle multiple ranges starting before and ending after replace', () => {
+    describe('Multiple spans spanning before and after replace', () => {
+        it('should handle multiple spans starting before and ending after replace', () => {
             const result = renderTest(
                 'AAA BBB [REPLACE] CCC DDD',
                 'rrrrrrrrrrrrrrrrrrrrrrrrr',      // r1: spans entire content
@@ -687,12 +687,12 @@ describe('Replace Hook', () => {
                     x: { replace: () => 'XXX' }
                 }
             );
-            // All three spanning ranges stay open through replace
+            // All three spanning spans stay open through replace
             assert.strictEqual(result,
                 '<r>AAA <s>BB<t>B XXX C</t>CC</s> DDD</r>');
         });
 
-        it('should handle mix: ranges spanning + ranges starting in replace', () => {
+        it('should handle mix: spans spanning + spans starting in replace', () => {
             const result = renderTest(
                 'AA BB [REPLACE] CC DD EE',
                 'ssssssssssssssssssssssss',       // spanning1: spans all
@@ -731,8 +731,8 @@ describe('Replace Hook', () => {
         });
     });
 
-    describe('Replace with break and complex range interactions', () => {
-        it('should handle break with ranges starting inside replace', () => {
+    describe('Replace with break and complex span interactions', () => {
+        it('should handle break with spans starting inside replace', () => {
             const result = renderTest(
                 'AA [BREAK] BB CC',
                 'ssssssssssssssss',               // spanning: wraps everything
@@ -750,7 +750,7 @@ describe('Replace Hook', () => {
             assert.strictEqual(result, '<s>AA </s>X<s><i> BB</i> CC</s>');
         });
 
-        it('should handle multiple replace ranges with break flags', () => {
+        it('should handle multiple replace spans with break flags', () => {
             const result = renderTest(
                 'A [B1] C [B2] D',
                 'sssssssssssssss',                // spanning: wraps everything
@@ -799,15 +799,15 @@ describe('Replace Hook', () => {
             //             [REPLACE]: 7-16 (line 2)
             //             Line 3: 17-23 (line 3)
 
-            const ranges = [{ type: 'r', start: 7, end: 18, data: undefined }];
+            const spans = [{ type: 'r', start: 7, end: 18, data: undefined }];
 
-            const capturedContexts: Partial<Record<RangeCallableHook, any>> = {};
+            const capturedContexts: Partial<Record<SpanCallableHook, any>> = {};
             const captureContextHook = (...args: any[]) => {
-                const context = args[args.length - 1] as RangeHookContext;
+                const context = args[args.length - 1] as SpanHookContext;
                 capturedContexts[context.hook] = context.dump();
             };
 
-            render(document, ranges, {
+            render(document, spans, {
                 r: {
                     open: captureContextHook,
                     replace: captureContextHook,
@@ -816,7 +816,7 @@ describe('Replace Hook', () => {
                 }
             });
 
-            // Verify open hook context: should use range.start (7)
+            // Verify open hook context: should use span.start (7)
             assert.deepStrictEqual(capturedContexts.open, {
                 hook: 'open',
                 document,
@@ -825,13 +825,13 @@ describe('Replace Hook', () => {
                 column: 1,
                 start: 7,
                 end: 18,
-                rangeIndex: 0,
-                rangeText: '[REPLACE]\nL',
-                range: ranges[0],
+                spanIndex: 0,
+                spanText: '[REPLACE]\nL',
+                span: spans[0],
                 data: undefined
             });
 
-            // Verify replace hook context: should use range.start (7)
+            // Verify replace hook context: should use span.start (7)
             assert.deepStrictEqual(capturedContexts.replace, {
                 hook: 'replace',
                 document,
@@ -840,13 +840,13 @@ describe('Replace Hook', () => {
                 column: 1,
                 start: 7,
                 end: 18,
-                rangeIndex: 0,
-                rangeText: '[REPLACE]\nL',
-                range: ranges[0],
+                spanIndex: 0,
+                spanText: '[REPLACE]\nL',
+                span: spans[0],
                 data: undefined
             });
 
-            // Verify wrap hook context: should use range.end (16)
+            // Verify wrap hook context: should use span.end (16)
             assert.deepStrictEqual(capturedContexts.wrap, {
                 hook: 'wrap',
                 document,
@@ -855,13 +855,13 @@ describe('Replace Hook', () => {
                 column: 2,
                 start: 7,
                 end: 18,
-                rangeIndex: 0,
-                rangeText: '[REPLACE]\nL',
-                range: ranges[0],
+                spanIndex: 0,
+                spanText: '[REPLACE]\nL',
+                span: spans[0],
                 data: undefined
             });
 
-            // Verify close hook context: should use range.end (16)
+            // Verify close hook context: should use span.end (16)
             assert.deepStrictEqual(capturedContexts.close, {
                 hook: 'close',
                 document,
@@ -870,27 +870,27 @@ describe('Replace Hook', () => {
                 column: 2,
                 start: 7,
                 end: 18,
-                rangeIndex: 0,
-                rangeText: '[REPLACE]\nL',
-                range: ranges[0],
+                spanIndex: 0,
+                spanText: '[REPLACE]\nL',
+                span: spans[0],
                 data: undefined
             });
         });
 
         it('should provide correct context for hooks on same line', () => {
-            const document = 'Start [RANGE] End';
+            const document = 'Start [SPANS] End';
             //             012345 6789012 3456
-            //             [RANGE]: 6-13
+            //             [SPANS]: 6-13
 
-            const ranges = [{ type: 'r', start: 6, end: 13, data: undefined }];
+            const spans = [{ type: 'r', start: 6, end: 13, data: undefined }];
 
-            const capturedContexts: Partial<Record<RangeCallableHook, any>> = {};
+            const capturedContexts: Partial<Record<SpanCallableHook, any>> = {};
             const captureContextHook = (...args: any[]) => {
-                const context = args[args.length - 1] as RangeHookContext;
+                const context = args[args.length - 1] as SpanHookContext;
                 capturedContexts[context.hook] = context.dump();
             };
 
-            render(document, ranges, {
+            render(document, spans, {
                 r: {
                     open: captureContextHook,
                     replace: captureContextHook,
@@ -908,9 +908,9 @@ describe('Replace Hook', () => {
                 column: 7,
                 start: 6,
                 end: 13,
-                rangeIndex: 0,
-                rangeText: '[RANGE]',
-                range: ranges[0],
+                spanIndex: 0,
+                spanText: '[SPANS]',
+                span: spans[0],
                 data: undefined
             });
 
@@ -922,9 +922,9 @@ describe('Replace Hook', () => {
                 column: 7,
                 start: 6,
                 end: 13,
-                rangeIndex: 0,
-                rangeText: '[RANGE]',
-                range: ranges[0],
+                spanIndex: 0,
+                spanText: '[SPANS]',
+                span: spans[0],
                 data: undefined
             });
 
@@ -937,9 +937,9 @@ describe('Replace Hook', () => {
                 column: 14,
                 start: 6,
                 end: 13,
-                rangeIndex: 0,
-                rangeText: '[RANGE]',
-                range: ranges[0],
+                spanIndex: 0,
+                spanText: '[SPANS]',
+                span: spans[0],
                 data: undefined
             });
 
@@ -951,9 +951,9 @@ describe('Replace Hook', () => {
                 column: 14,
                 start: 6,
                 end: 13,
-                rangeIndex: 0,
-                rangeText: '[RANGE]',
-                range: ranges[0],
+                spanIndex: 0,
+                spanText: '[SPANS]',
+                span: spans[0],
                 data: undefined
             });
         });
@@ -989,7 +989,7 @@ describe('Replace Hook', () => {
             assert.strictEqual(result, 'AAA <r:4:13>[XXX]</r:4:13> BBB');
         });
 
-        it('should show correct boundaries for replace inside spanning range', () => {
+        it('should show correct boundaries for replace inside spanning span', () => {
             const result = renderTest(
                 'AAA [REPLACE] BBB',
                 'ooooooooooooooooo',  // outer: 0-17
@@ -1022,7 +1022,7 @@ describe('Replace Hook', () => {
         });
 
 
-        it('should show correct boundaries for spanning range through replace', () => {
+        it('should show correct boundaries for spanning span through replace', () => {
             const result = renderTest(
                 'AAA [REPLACE] BBB',
                 'sssssssssssssssss',     // spanning: entire string (0-17)
@@ -1034,11 +1034,11 @@ describe('Replace Hook', () => {
                     }
                 }
             );
-            // Spanning range stays open through replace (doesn't close/reopen)
+            // Spanning span stays open through replace (doesn't close/reopen)
             assert.strictEqual(result, '<s:0:17>AAA XXX BBB</s:0:17>');
         });
 
-        it('should show correct boundaries for range ending inside replace', () => {
+        it('should show correct boundaries for span ending inside replace', () => {
             const result = renderTest(
                 'AAA [REPLACE] BBB',
                 'eeeeeeee',              // ends: "AAA [REP" (0-8, ends inside replace)
@@ -1050,12 +1050,12 @@ describe('Replace Hook', () => {
                     }
                 }
             );
-            // Range 'e' closes at position 4 (before replace starts) even though its end is 8
+            // Span 'e' closes at position 4 (before replace starts) even though its end is 8
             // The segment end reflects where it was actually closed, not its declared end
             assert.strictEqual(result, '<e:0:4>AAA </e:0:4>XXX BBB');
         });
 
-        it('should show correct boundaries for range starting inside replace', () => {
+        it('should show correct boundaries for span starting inside replace', () => {
             const result = renderTest(
                 'AAA [REPLACE] BBB CCC',
                 '    rrrrrrrrr',         // replace: [REPLACE] (4-13)
@@ -1067,11 +1067,11 @@ describe('Replace Hook', () => {
                     s: boundaryHook('s')
                 }
             );
-            // Range 's' should open after replace ends
+            // Span 's' should open after replace ends
             assert.strictEqual(result, 'AAA XXX<s:13:17> BBB</s:13:17> CCC');
         });
 
-        it('should show correct boundaries for multiple ranges ending/starting in replace', () => {
+        it('should show correct boundaries for multiple spans ending/starting in replace', () => {
             const result = renderTest(
                 'A B [REPLACE] C D E',
                 'eeeeeee',                // ends1: "A B [RE" (0-7, ends inside)
@@ -1089,12 +1089,12 @@ describe('Replace Hook', () => {
                     t: boundaryHook('t')
                 }
             );
-            // Ranges ending inside close before replace at actual close position (not declared end)
+            // SpansSource ending inside close before replace at actual close position (not declared end)
             // e closes at 2, f closes at 4 (before replace), s and t open at 13 (after replace)
             assert.strictEqual(result, '<e:0:2>A </e:0:2><f:2:4><e:2:4>B </e:2:4></f:2:4>XXX<t:13:19><s:13:17> C D</s:13:17> E</t:13:19>');
         });
 
-        it('should show correct boundaries when replace has break and ranges span it', () => {
+        it('should show correct boundaries when replace has break and spans span it', () => {
             const result = renderTest(
                 'A B [BREAK] C D',
                 'sssssssssssssss',       // spanning: entire string (0-15)
@@ -1109,12 +1109,12 @@ describe('Replace Hook', () => {
                     }
                 }
             );
-            // Both spanning ranges close before break at position 4
+            // Both spanning spans close before break at position 4
             // The segment end shows where they're actually closed (4), not their declared end
             assert.strictEqual(result, '<s:0:4>A <m:2:4>B </m:2:4></s:0:4>X<s:11:15><m:11:13> C</m:11:13> D</s:11:15>');
         });
 
-        it('should show correct boundaries for nested replace ranges', () => {
+        it('should show correct boundaries for nested replace spans', () => {
             const result = renderTest(
                 'AAA [OUTER [INNER] END] BBB',
                 '    ooooooooooooooooooo',     // outer: [OUTER [INNER] END] (4-23)

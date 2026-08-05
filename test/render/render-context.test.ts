@@ -1,15 +1,15 @@
 import { strictEqual, deepStrictEqual } from 'assert';
 import { render } from '../../src/index.js';
-import type { GeneratedRange, RangeHookContext } from '../../src/types.js';
+import type { GeneratedSpan, SpanHookContext } from '../../src/types.js';
 
-describe('render range hooks context', () => {
+describe('render span hooks context', () => {
     const document = 'Hello, World!';
     interface TestData {
         idx: number;
         test?: TestData;
     }
-    const ranges = [[1, 5], [1, 2], [4, 8], [3, 5]].map(([start, end], idx) => {
-        const range: GeneratedRange<TestData> = {
+    const spans = [[1, 5], [1, 2], [4, 8], [3, 5]].map(([start, end], idx) => {
+        const span: GeneratedSpan<TestData> = {
             type: 'test',
             start,
             end,
@@ -17,17 +17,17 @@ describe('render range hooks context', () => {
                 idx
             }
         };
-        range.data!.test = range.data;
-        return range;
+        span.data!.test = span.data;
+        return span;
     });
 
-    it('range data', () => {
-        const actual = render(document, ranges, {
+    it('span data', () => {
+        const actual = render(document, spans, {
             test: {
-                open({ data }: RangeHookContext<TestData>) {
+                open({ data }: SpanHookContext<TestData>) {
                     return '[' + (data.test === data ? 'ok' : 'fail') + ']';
                 },
-                close({ data }: RangeHookContext<TestData>) {
+                close({ data }: SpanHookContext<TestData>) {
                     return '[/' + (data.test === data ? 'ok' : 'fail') + ']';
                 }
             }
@@ -39,14 +39,14 @@ describe('render range hooks context', () => {
         );
     });
 
-    it('range start/end', () => {
-        const actual = render(document, ranges, {
+    it('span start/end', () => {
+        const actual = render(document, spans, {
             test: {
-                open({ data, offset, range }: RangeHookContext<TestData>) {
-                    return '[' + (range.start === offset ? 'start' : 'start-continue') + '-' + data.idx + ']';
+                open({ data, offset, span }: SpanHookContext<TestData>) {
+                    return '[' + (span.start === offset ? 'start' : 'start-continue') + '-' + data.idx + ']';
                 },
-                close({ data, offset, range }: RangeHookContext<TestData>) {
-                    return '[/' + (range.end === offset ? 'end' : 'temp-end') + '-' + data.idx + ']';
+                close({ data, offset, span }: SpanHookContext<TestData>) {
+                    return '[/' + (span.end === offset ? 'end' : 'temp-end') + '-' + data.idx + ']';
                 }
             }
         });
@@ -61,18 +61,18 @@ describe('render range hooks context', () => {
         const document = '1\n' +
         '2\r3\r\n' +
         '4';
-        const ranges = document.split('').map((c, idx) => ({
+        const spans = document.split('').map((c, idx) => ({
             type: 'test' as const,
             start: idx,
             end: idx + 1,
             data: {}
         }));
-        const actual = render(document, ranges, {
+        const actual = render(document, spans, {
             test: {
-                open({ offset, line, column }: RangeHookContext<Record<string, never>>) {
+                open({ offset, line, column }: SpanHookContext<Record<string, never>>) {
                     return '[' + [offset, line, column].join(':') + ']';
                 },
-                close({ offset, line, column }: RangeHookContext<Record<string, never>>) {
+                close({ offset, line, column }: SpanHookContext<Record<string, never>>) {
                     return '[/' + [offset, line, column].join(':') + ']';
                 }
             }
@@ -86,65 +86,65 @@ describe('render range hooks context', () => {
         ].join(''));
     });
 
-    describe('rangeIndex', () => {
-        it('should provide correct rangeIndex for simple ranges', () => {
+    describe('spanIndex', () => {
+        it('should provide correct spanIndex for simple spans', () => {
             const document = 'Hello, World!';
-            const ranges = [
+            const spans = [
                 { type: 'test' as const, start: 1, end: 8, data: 'a' },
                 { type: 'test' as const, start: 5, end: 12, data: 'b' }
             ];
 
-            const segments: Array<{ hook: string; rangeIndex: number; start: number; end: number; data: string }> = [];
-            render(document, ranges, {
+            const segments: Array<{ hook: string; spanIndex: number; start: number; end: number; data: string }> = [];
+            render(document, spans, {
                 test: {
-                    open({ rangeIndex, start, end, data }) {
-                        segments.push({ hook: 'open ', rangeIndex, start, end, data });
+                    open({ spanIndex, start, end, data }) {
+                        segments.push({ hook: 'open ', spanIndex, start, end, data });
                     },
-                    close({ rangeIndex, start, end, data }) {
-                        segments.push({ hook: 'close', rangeIndex, start, end, data });
+                    close({ spanIndex, start, end, data }) {
+                        segments.push({ hook: 'close', spanIndex, start, end, data });
                     },
-                    wrap(content, { rangeIndex, start, end, data }) {
-                        segments.push({ hook: 'wrap ', rangeIndex, start, end, data });
+                    wrap(content, { spanIndex, start, end, data }) {
+                        segments.push({ hook: 'wrap ', spanIndex, start, end, data });
                         return content;
                     }
                 }
             });
 
             deepStrictEqual(segments, [
-                { hook: 'open ', data: 'a', rangeIndex: 0, start: 1, end: 5 },
-                { hook: 'wrap ', data: 'a', rangeIndex: 0, start: 1, end: 5 },
-                { hook: 'close', data: 'a', rangeIndex: 0, start: 1, end: 5 },
-                { hook: 'open ', data: 'b', rangeIndex: 1, start: 5, end: 12 },
-                { hook: 'open ', data: 'a', rangeIndex: 0, start: 5, end: 8 },
-                { hook: 'wrap ', data: 'a', rangeIndex: 0, start: 5, end: 8 },
-                { hook: 'close', data: 'a', rangeIndex: 0, start: 5, end: 8 },
-                { hook: 'wrap ', data: 'b', rangeIndex: 1, start: 5, end: 12 },
-                { hook: 'close', data: 'b', rangeIndex: 1, start: 5, end: 12 }
+                { hook: 'open ', data: 'a', spanIndex: 0, start: 1, end: 5 },
+                { hook: 'wrap ', data: 'a', spanIndex: 0, start: 1, end: 5 },
+                { hook: 'close', data: 'a', spanIndex: 0, start: 1, end: 5 },
+                { hook: 'open ', data: 'b', spanIndex: 1, start: 5, end: 12 },
+                { hook: 'open ', data: 'a', spanIndex: 0, start: 5, end: 8 },
+                { hook: 'wrap ', data: 'a', spanIndex: 0, start: 5, end: 8 },
+                { hook: 'close', data: 'a', spanIndex: 0, start: 5, end: 8 },
+                { hook: 'wrap ', data: 'b', spanIndex: 1, start: 5, end: 12 },
+                { hook: 'close', data: 'b', spanIndex: 1, start: 5, end: 12 }
             ]);
         });
     });
 
     describe('segment start/end', () => {
-        const renderWithBoundaries = (document: string, ranges: GeneratedRange[]) => {
-            return render(document, ranges, {
+        const renderWithBoundaries = (document: string, spans: GeneratedSpan[]) => {
+            return render(document, spans, {
                 test: {
-                    open: ({ start, end, data }: RangeHookContext<any>) => `<${data.id}:${start}:${end}>\n`,
-                    close: ({ start, end, data }: RangeHookContext<any>) => `</${data.id}:${start}:${end}>\n`,
+                    open: ({ start, end, data }: SpanHookContext<any>) => `<${data.id}:${start}:${end}>\n`,
+                    close: ({ start, end, data }: SpanHookContext<any>) => `</${data.id}:${start}:${end}>\n`,
                     text: (text) => `${text}\n`,
-                    wrap: (content: any, { start, end, data }: RangeHookContext<any>) => {
+                    wrap: (content: any, { start, end, data }: SpanHookContext<any>) => {
                         return `${content}<${data.id}:wrap:${start}:${end}/>\n`;
                     }
                 }
             });
         };
 
-        it('should provide correct segment boundaries for simple range', () => {
+        it('should provide correct segment boundaries for simple span', () => {
             const document = 'Hello, World!';
-            const ranges = [
+            const spans = [
                 { type: 'test' as const, start: 1, end: 8, data: { id: 'a' } }
             ];
 
-            const result = renderWithBoundaries(document, ranges);
+            const result = renderWithBoundaries(document, spans);
 
             strictEqual(result,
                 'H<a:1:8>\n' +
@@ -155,14 +155,14 @@ describe('render range hooks context', () => {
             );
         });
 
-        it('should provide correct segment boundaries for nested ranges', () => {
+        it('should provide correct segment boundaries for nested spans', () => {
             const document = 'Hello, World!';
-            const ranges = [
+            const spans = [
                 { type: 'test' as const, start: 1, end: 8, data: { id: 'a' } },
                 { type: 'test' as const, start: 3, end: 4, data: { id: 'b' } }
             ];
 
-            const result = renderWithBoundaries(document, ranges);
+            const result = renderWithBoundaries(document, spans);
 
             strictEqual(result,
                 'H<a:1:8>\n' +
@@ -178,14 +178,14 @@ describe('render range hooks context', () => {
             );
         });
 
-        it('should provide correct segment boundaries for interrupted range', () => {
+        it('should provide correct segment boundaries for interrupted span', () => {
             const document = 'Hello, World!';
-            const ranges = [
+            const spans = [
                 { type: 'test' as const, start: 1, end: 8, data: { id: 'a' } },
                 { type: 'test' as const, start: 5, end: 10, data: { id: 'b' } }
             ];
 
-            const result = renderWithBoundaries(document, ranges);
+            const result = renderWithBoundaries(document, spans);
 
             strictEqual(result,
                 'H<a:1:5>\n' +
@@ -204,15 +204,15 @@ describe('render range hooks context', () => {
             );
         });
 
-        it('should provide correct segment boundaries for complex nested and interrupted ranges', () => {
+        it('should provide correct segment boundaries for complex nested and interrupted spans', () => {
             const document = 'Hello, World!';
-            const ranges = [
+            const spans = [
                 { type: 'test' as const, start: 1, end: 8, data: { id: 'a' } },
                 { type: 'test' as const, start: 5, end: 10, data: { id: 'b' } },
                 { type: 'test' as const, start: 3, end: 4, data: { id: 'c' } }
             ];
 
-            const result = renderWithBoundaries(document, ranges);
+            const result = renderWithBoundaries(document, spans);
 
             strictEqual(result,
                 'H<a:1:5>\n' +
@@ -236,15 +236,15 @@ describe('render range hooks context', () => {
             );
         });
 
-        it('should handle multiple nested ranges', () => {
+        it('should handle multiple nested spans', () => {
             const document = '0123456789';
-            const ranges = [
+            const spans = [
                 { type: 'test' as const, start: 0, end: 10, data: { id: 'a' } },
                 { type: 'test' as const, start: 2, end: 4, data: { id: 'b' } },
                 { type: 'test' as const, start: 6, end: 8, data: { id: 'c' } }
             ];
 
-            const result = renderWithBoundaries(document, ranges);
+            const result = renderWithBoundaries(document, spans);
 
             strictEqual(result,
                 '<a:0:10>\n' +
@@ -264,16 +264,16 @@ describe('render range hooks context', () => {
             );
         });
 
-        it('should handle ranges without content hook', () => {
+        it('should handle spans without content hook', () => {
             const document = 'Hello';
-            const ranges = [
+            const spans = [
                 { type: 'test' as const, start: 1, end: 4, data: { id: 'a' } }
             ];
 
-            const result = render(document, ranges, {
+            const result = render(document, spans, {
                 test: {
-                    open: ({ start, end, data }: RangeHookContext<any>) => `<${data.id}:${start}:${end}>\n`,
-                    close: ({ start, end, data }: RangeHookContext<any>) => `</${data.id}:${start}:${end}>\n`,
+                    open: ({ start, end, data }: SpanHookContext<any>) => `<${data.id}:${start}:${end}>\n`,
+                    close: ({ start, end, data }: SpanHookContext<any>) => `</${data.id}:${start}:${end}>\n`,
                     text: (text) => `${text}\n`
                 }
             });
@@ -286,17 +286,17 @@ describe('render range hooks context', () => {
             );
         });
 
-        it('should compute correct segment end for inner range when outer range is interrupted', () => {
+        it('should compute correct segment end for inner span when outer span is interrupted', () => {
             const document = '0123456789ABCDEF';
-            const ranges = [
+            const spans = [
                 { type: 'test' as const, start: 0, end: 10, data: { id: 'outer' } },     // Outer: 0-10
                 { type: 'test' as const, start: 2, end: 8, data: { id: 'inner' } },      // Inner: 2-8 (nested)
                 { type: 'test' as const, start: 5, end: 16, data: { id: 'interrupt' } }  // Interrupts outer at 5
             ];
 
-            const result = renderWithBoundaries(document, ranges);
+            const result = renderWithBoundaries(document, spans);
 
-            // The inner range [2,8] is nested inside outer[0,10].
+            // The inner span [2,8] is nested inside outer[0,10].
             // When interrupt[5,16] starts, it interrupts outer, which causes inner to also be interrupted.
             // Note: inner's first segment shows end=5 in open because that's where it will actually close,
             // not end=8 (its natural end). This is correct - segment boundaries show actual rendering positions.
@@ -328,16 +328,16 @@ describe('render range hooks context', () => {
     describe('createBuffer', () => {
         it('should provide createBuffer method in context', () => {
             const document = 'Hello';
-            const ranges = [
+            const spans = [
                 { type: 'test' as const, start: 1, end: 4, data: null }
             ];
 
             let createBufferExists = false;
             let bufferType = 'unknown';
 
-            render(document, ranges, {
+            render(document, spans, {
                 test: {
-                    open({ createBuffer }: RangeHookContext<null>) {
+                    open({ createBuffer }: SpanHookContext<null>) {
                         createBufferExists = typeof createBuffer === 'function';
                         if (createBufferExists) {
                             const buffer = createBuffer();
@@ -355,21 +355,21 @@ describe('render range hooks context', () => {
 
         it('should allow building complex content with buffer in open hook', () => {
             const document = 'Hello, World!';
-            const ranges = [
+            const spans = [
                 { type: 'test' as const, start: 0, end: 5, data: { prefix: '[', suffix: ']' } },
                 { type: 'test' as const, start: 7, end: 12, data: { prefix: '(', suffix: ')' } }
             ];
 
-            const result = render(document, ranges, {
+            const result = render(document, spans, {
                 test: {
-                    open({ createBuffer, data }: RangeHookContext<{ prefix: string; suffix: string }>) {
+                    open({ createBuffer, data }: SpanHookContext<{ prefix: string; suffix: string }>) {
                         const buffer = createBuffer();
                         buffer.append(data.prefix);
                         buffer.append('open');
                         buffer.append(data.suffix);
                         return buffer.emit();
                     },
-                    close({ createBuffer, data }: RangeHookContext<{ prefix: string; suffix: string }>) {
+                    close({ createBuffer, data }: SpanHookContext<{ prefix: string; suffix: string }>) {
                         const buffer = createBuffer();
                         buffer.append(data.prefix);
                         buffer.append('close');
@@ -384,13 +384,13 @@ describe('render range hooks context', () => {
 
         it('should allow building content with buffer in wrap hook', () => {
             const document = 'Hello';
-            const ranges = [
+            const spans = [
                 { type: 'test' as const, start: 0, end: 5, data: null }
             ];
 
-            const result = render(document, ranges, {
+            const result = render(document, spans, {
                 test: {
-                    wrap(content, { createBuffer }: RangeHookContext<null>) {
+                    wrap(content, { createBuffer }: SpanHookContext<null>) {
                         const buffer = createBuffer();
                         buffer.append('<div>');
                         buffer.append(content);
@@ -405,16 +405,16 @@ describe('render range hooks context', () => {
 
         it('should allow building content with buffer in replace hook', () => {
             const document = 'Hello, World!';
-            const ranges = [
+            const spans = [
                 { type: 'test' as const, start: 5, end: 7, data: null }
             ];
 
-            const result = render(document, ranges, {
+            const result = render(document, spans, {
                 test: {
-                    replace({ createBuffer, rangeText }: RangeHookContext<null>) {
+                    replace({ createBuffer, spanText }: SpanHookContext<null>) {
                         const buffer = createBuffer();
                         buffer.append(' [replaced: "');
-                        buffer.append(rangeText);
+                        buffer.append(spanText);
                         buffer.append('"] ');
                         return buffer.emit();
                     }
@@ -426,7 +426,7 @@ describe('render range hooks context', () => {
 
         it('should work with custom renderer buffer types', () => {
             const document = 'test';
-            const ranges = [
+            const spans = [
                 { type: 'test' as const, start: 0, end: 4, data: null }
             ];
 
@@ -443,9 +443,9 @@ describe('render range hooks context', () => {
                 }
             }
 
-            const result = render(document, ranges, {
+            const result = render(document, spans, {
                 test: {
-                    open({ createBuffer }: RangeHookContext<null, string, string>) {
+                    open({ createBuffer }: SpanHookContext<null, string, string>) {
                         const buffer = createBuffer();
                         buffer.append('a');
                         buffer.append('b');
@@ -461,21 +461,21 @@ describe('render range hooks context', () => {
 
         it('should handle nested buffer creation in different hooks', () => {
             const document = 'ABC';
-            const ranges = [
+            const spans = [
                 { type: 'test' as const, start: 0, end: 3, data: { id: 'outer' } },
                 { type: 'test' as const, start: 1, end: 2, data: { id: 'inner' } }
             ];
 
-            const result = render(document, ranges, {
+            const result = render(document, spans, {
                 test: {
-                    open({ createBuffer, data }: RangeHookContext<{ id: string }>) {
+                    open({ createBuffer, data }: SpanHookContext<{ id: string }>) {
                         const buffer = createBuffer();
                         buffer.append('<');
                         buffer.append(data.id);
                         buffer.append('>');
                         return buffer.emit();
                     },
-                    close({ createBuffer, data }: RangeHookContext<{ id: string }>) {
+                    close({ createBuffer, data }: SpanHookContext<{ id: string }>) {
                         const buffer = createBuffer();
                         buffer.append('</');
                         buffer.append(data.id);
@@ -490,15 +490,15 @@ describe('render range hooks context', () => {
 
         it('should support building multi-part content conditionally', () => {
             const document = 'one two three';
-            const ranges = [
+            const spans = [
                 { type: 'test' as const, start: 0, end: 3, data: { highlight: true } },
                 { type: 'test' as const, start: 4, end: 7, data: { highlight: false } },
                 { type: 'test' as const, start: 8, end: 13, data: { highlight: true } }
             ];
 
-            const result = render(document, ranges, {
+            const result = render(document, spans, {
                 test: {
-                    wrap(content, { createBuffer, data }: RangeHookContext<{ highlight: boolean }>) {
+                    wrap(content, { createBuffer, data }: SpanHookContext<{ highlight: boolean }>) {
                         if (!data.highlight) {
                             return content;
                         }
@@ -517,13 +517,13 @@ describe('render range hooks context', () => {
 
         it('should allow empty buffer usage', () => {
             const document = 'test';
-            const ranges = [
+            const spans = [
                 { type: 'test' as const, start: 0, end: 4, data: null }
             ];
 
-            const result = render(document, ranges, {
+            const result = render(document, spans, {
                 test: {
-                    open({ createBuffer }: RangeHookContext<null>) {
+                    open({ createBuffer }: SpanHookContext<null>) {
                         const buffer = createBuffer();
                         // Don't append anything
                         return buffer.emit();
@@ -536,13 +536,13 @@ describe('render range hooks context', () => {
 
         it('should handle buffer operations with special characters', () => {
             const document = 'test';
-            const ranges = [
+            const spans = [
                 { type: 'test' as const, start: 0, end: 4, data: null }
             ];
 
-            const result = render(document, ranges, {
+            const result = render(document, spans, {
                 test: {
-                    wrap(content, { createBuffer }: RangeHookContext<null>) {
+                    wrap(content, { createBuffer }: SpanHookContext<null>) {
                         const buffer = createBuffer();
                         buffer.append('"');
                         buffer.append(content);

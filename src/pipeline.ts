@@ -1,6 +1,6 @@
 import type { PipelineNode, PipelineLayer, CreateRenderHooks } from './types.js';
-import { generateRangesFromLayers } from './ranges.js';
-import { createRangeHooksMapFromLayers, resolveRangeHooksMap } from './range-hooks-map.js';
+import { generateSpansFromLayers } from './spans.js';
+import { createSpanHooksMapFromLayers, resolveSpanHooksMap } from './span-hooks-map.js';
 import { render } from './render.js';
 import { createLineBoundaries } from './utils/line-boundaries.js';
 
@@ -17,32 +17,32 @@ export function createPipelineNode<RenderOptions, T, R = T, HC = undefined>(
     return {
         createRenderHooks,
         layers,
-        addLayer(ranges, rangeHooks = null, name = `layer${layers.length}`) {
+        addLayer(spans, spanHooks = null, name = `layer${layers.length}`) {
             const newLayer: PipelineLayer<RenderOptions, any, T, R, HC> = {
                 name,
                 marker: Symbol(name),
-                ranges,
-                rangeHooks
+                spans,
+                spanHooks
             };
 
             return createPipelineNode(createRenderHooks, layers.concat(newLayer));
         },
-        ranges(document, renderOptions) {
-            return generateRangesFromLayers(document, layers, renderOptions, createLineBoundaries(document));
+        spans(document, renderOptions) {
+            return generateSpansFromLayers(document, layers, renderOptions, createLineBoundaries(document));
         },
-        rangeHooksDefinitionMap() {
-            return createRangeHooksMapFromLayers(layers);
+        spanHooksDefinitionMap() {
+            return createSpanHooksMapFromLayers(layers);
         },
-        rangeHooksMap() {
-            return resolveRangeHooksMap(createRangeHooksMapFromLayers(layers), createRenderHooks());
+        spanHooksMap() {
+            return resolveSpanHooksMap(createSpanHooksMapFromLayers(layers), createRenderHooks());
         },
         render(document, renderOptions) {
             const lineBoundaries = createLineBoundaries(document);
-            const ranges = generateRangesFromLayers(document, layers, renderOptions, lineBoundaries);
-            const rangeHooksMap = createRangeHooksMapFromLayers(layers);
+            const spans = generateSpansFromLayers(document, layers, renderOptions, lineBoundaries);
+            const spanHooksMap = createSpanHooksMapFromLayers(layers);
             const renderHooks = createRenderHooks();
 
-            return render(document, ranges, rangeHooksMap, renderHooks, lineBoundaries);
+            return render(document, spans, spanHooksMap, renderHooks, lineBoundaries);
         }
     };
 }

@@ -1,5 +1,5 @@
 import { strictEqual } from 'assert';
-import { rangesForMatch, tty } from '../../src/index.js';
+import { spansFromMatch, tty } from '../../src/index.js';
 
 describe('TTY renderer', () => {
     describe('basic styling', () => {
@@ -33,7 +33,7 @@ describe('TTY renderer', () => {
             strictEqual(result, '\u001b[37m\u001b[44mt\u001b[39m\u001b[49mest');
         });
 
-        it('should handle multiple non-overlapping styled ranges', () => {
+        it('should handle multiple non-overlapping styled spans', () => {
             const result = tty()
                 .addLayer([
                     { start: 0, end: 1 }
@@ -54,7 +54,7 @@ describe('TTY renderer', () => {
     });
 
     describe('nested styles', () => {
-        it('should handle nested ranges with style inheritance', () => {
+        it('should handle nested spans with style inheritance', () => {
             const result = tty()
                 .addLayer([
                     { start: 0, end: 5 }
@@ -64,11 +64,11 @@ describe('TTY renderer', () => {
                 ], tty.createStyle('white'))
                 .render('Hello');
 
-            // Background should continue through nested range
+            // Background should continue through nested span
             strictEqual(result, '\u001b[44mH\u001b[37mell\u001b[39mo\u001b[49m');
         });
 
-        it('should properly restore styles after nested ranges', () => {
+        it('should properly restore styles after nested spans', () => {
             const result = tty()
                 .addLayer([
                     { start: 0, end: 6 }
@@ -144,9 +144,9 @@ describe('TTY renderer', () => {
             strictEqual(result, '\u001b[31m1\u001b[32m2\u001b[39m');
         });
 
-        it('should work with rangesForMatch', () => {
+        it('should work with spansFromMatch', () => {
             const result = tty()
-                .addLayer(rangesForMatch(/error|warning/g), tty.createStyleMap({
+                .addLayer(spansFromMatch(/error|warning/g), tty.createStyleMap({
                     'error': ['red', 'bgWhite'],
                     'warning': ['yellow', 'bgBlack']
                 }))
@@ -187,20 +187,20 @@ describe('TTY renderer', () => {
             strictEqual(result, '\u001b[31ma\u001b[39mbc');
         });
 
-        it('should handle empty ranges without styling', () => {
+        it('should handle empty spans without styling', () => {
             const result = tty()
                 .addLayer([
                     { start: 0, end: 0 }
                 ], tty.createStyle('red'))
                 .render('test');
 
-            // Empty range at position 0
+            // Empty span at position 0
             strictEqual(result, 'test');
         });
     });
 
     describe('overlapping styles', () => {
-        it('should handle overlapping color ranges', () => {
+        it('should handle overlapping color spans', () => {
             const result = tty()
                 .addLayer([
                     { start: 0, end: 3 }
@@ -242,7 +242,7 @@ describe('TTY renderer', () => {
             strictEqual(result, 'plain text');
         });
 
-        it('should handle ranges outside document boundaries', () => {
+        it('should handle spans outside document boundaries', () => {
             const result = tty()
                 .addLayer([
                     { start: -5, end: 2 },
@@ -322,7 +322,7 @@ describe('TTY renderer', () => {
                 .addLayer([
                     { start: 0, end: 5 }
                 ], {
-                    createRangeHooks: ({ pushStyle, popStyle }) => ({
+                    createSpanHooks: ({ pushStyle, popStyle }) => ({
                         open() {
                             pushStyle({ color: '\u001b[31m' }); // Red
                             return '';
@@ -338,12 +338,12 @@ describe('TTY renderer', () => {
             strictEqual(result, '\u001b[31mHello\u001b[39m world');
         });
 
-        it('should handle multiple push/pop operations in nested ranges', () => {
+        it('should handle multiple push/pop operations in nested spans', () => {
             const result = tty()
                 .addLayer([
                     { start: 0, end: 7 }
                 ], {
-                    createRangeHooks: ({ pushStyle, popStyle }) => ({
+                    createSpanHooks: ({ pushStyle, popStyle }) => ({
                         open() {
                             pushStyle({ color: '\u001b[34m' }); // Blue
                             return '';
@@ -357,7 +357,7 @@ describe('TTY renderer', () => {
                 .addLayer([
                     { start: 2, end: 5 }
                 ], {
-                    createRangeHooks: ({ pushStyle, popStyle }) => ({
+                    createSpanHooks: ({ pushStyle, popStyle }) => ({
                         open() {
                             pushStyle({ bgColor: '\u001b[43m' }); // Yellow bg
                             return '';

@@ -11,7 +11,7 @@ describe('JSX renderer', () => {
         strictEqual(html, 'Hello, world!');
     });
 
-    it('should render with range hook', () => {
+    it('should render with span hook', () => {
         const result = jsx()
             .addLayer([
                 { start: 0, end: 5 }
@@ -24,7 +24,7 @@ describe('JSX renderer', () => {
         strictEqual(html, '<span class="test">Hello</span>, world!');
     });
 
-    it('should render nested ranges', () => {
+    it('should render nested spans', () => {
         const result = jsx()
             .addLayer([
                 { start: 0, end: 12 }
@@ -72,7 +72,7 @@ describe('JSX renderer', () => {
         strictEqual(html, '<div><span class="test">Hello</span>, world!</div>');
     });
 
-    it('should handle multiple ranges', () => {
+    it('should handle multiple spans', () => {
         const result = jsx()
             .addLayer([
                 { start: 0, end: 5 },

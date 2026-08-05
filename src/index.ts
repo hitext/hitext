@@ -11,29 +11,29 @@ export {
     createPipelineNode
 } from './pipeline.js';
 export {
-    generateRangesFromLayers,
-    generateRanges,
-    processRanges
-} from './ranges.js';
+    generateSpansFromLayers,
+    generateSpans,
+    processSpans
+} from './spans.js';
 export {
-    createRangeHooksMapFromLayers,
-    resolveRangeHooksMap,
-    resolveRangeHooksDefinition
-} from './range-hooks-map.js';
+    createSpanHooksMapFromLayers,
+    resolveSpanHooksMap,
+    resolveSpanHooksDefinition
+} from './span-hooks-map.js';
 
-// Range sources: generators and combiners
+// Span sources: generators and combiners
 export {
-    rangesCompose,
-    rangesConcat,
-    rangesForLines,
-    rangesForMatch,
-    rangesFrom,
-    rangesFromLayer,
-    rangesFromOptions,
-    rangesWithFallback
-} from './range-sources/index.js';
+    spansCompose,
+    spansConcat,
+    spansFromLines,
+    spansFromMatch,
+    spansFrom,
+    spansFromLayer,
+    spansFromOptions,
+    spansWithFallback
+} from './span-sources/index.js';
 
-// Range transformers: curried functions for composition
+// Span transformers: curried functions for composition
 export {
     applyAppend,
     applyAugment,
@@ -51,11 +51,11 @@ export {
     applyResetOrigin,
     applySort,
     applyTake
-} from './range-compose/index.js';
+} from './span-compose/index.js';
 
 export {
-    rangeHooksHide
-} from './range-hooks/index.js';
+    spanHooksHide
+} from './span-hooks/index.js';
 
 // Utils
 export {
