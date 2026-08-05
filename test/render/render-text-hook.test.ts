@@ -1,4 +1,4 @@
-import { strictEqual } from 'assert';
+import { deepStrictEqual, strictEqual } from 'assert';
 import { SpanHooks, render } from '../../src/index.js';
 // import type { SpanHookText } from '../src/index.js';
 
@@ -49,6 +49,36 @@ describe('render / text hook', () => {
             }),
             'xxxxxxxxxx'
         );
+    });
+
+    it('should provide the text hook owner in context when inherited', () => {
+        const outer = { type: 'outer', start: 0, end: 3, data: 'outer' };
+        const inner = { type: 'inner', start: 1, end: 2, data: 'inner' };
+        const contexts: Array<Record<string, unknown>> = [];
+
+        render('abc', [outer, inner], {
+            outer: {
+                text(documentChunk, context) {
+                    contexts.push({
+                        documentChunk,
+                        hook: context.hook,
+                        offset: context.offset,
+                        start: context.start,
+                        end: context.end,
+                        span: context.span,
+                        data: context.data
+                    });
+                    return documentChunk;
+                }
+            },
+            inner: {}
+        });
+
+        deepStrictEqual(contexts, [
+            { documentChunk: 'a', hook: 'text', offset: 0, start: 0, end: 1, span: outer, data: 'outer' },
+            { documentChunk: 'b', hook: 'text', offset: 1, start: 1, end: 2, span: outer, data: 'outer' },
+            { documentChunk: 'c', hook: 'text', offset: 2, start: 2, end: 3, span: outer, data: 'outer' }
+        ]);
     });
 
     it('should not ignore text hook when defined', () => {

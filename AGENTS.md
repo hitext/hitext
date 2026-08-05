@@ -50,7 +50,7 @@ createRenderPipeline(createRenderHooks) â†’ .addLayer(spans, spanHooks, name?) â
 ### Glossary
 
 **Spans:**
-- **Span** - Text fragment of document with `start`/`end` offsets (zero-based, end-exclusive), optional `data`/`origin`
+- **Span** - Text fragment of document with integer `start`/`end` offsets (zero-based, end-exclusive), optional `data`/`origin`
 - **Span Data** - Custom metadata (match results, diagnostics, token types); hook context exposes the declared `Data` type, so include `undefined` in `Data` when layer spans may omit data
 - **Span Origin** - Reference to source span(s) that produced a derivative (tracks transformation lineage)
 - **Span Input** - Various forms: record `{start, end, data?, origin?}` or tuple `[start, end, data?, origin?]`
@@ -78,7 +78,8 @@ createRenderPipeline(createRenderHooks) â†’ .addLayer(spans, spanHooks, name?) â
 
 **Hooks:**
 - **Span Hooks** - Render functions applied to each span segment: `open`, `close`, `wrap`, `text`, `replace`, `break` flag
-- **Hook Context** - Data passed to hooks: `hook`, `document`, `lines`, `offset`, `line`, `column`, `start`, `end`, `spanIndex`, `spanText`, `span`, `data`, `createBuffer`, `dump`
+- **Hook Context** - Data passed to hooks: `hook`, `document`, `lines`, `offset`, `line`, `column`, `start`, `end`, `spanIndex`, `spanText`, `span`, `data`, `createBuffer`, `dump`; span-level `text` hooks receive the context of the span that owns the selected hook
+- **Renderer Hook Context** - Renderer-level `open`, `text`, and `close` hooks use a synthetic span covering the document with `data: undefined` and `spanIndex: -1`; `text` hook `start`/`end` describe the current document chunk
 - **Generation Context** - Optional generation state: `renderOptions`, `marker`, `spans`, `spansByMarker`, `spansByName`, `lines`; pipeline generation supplies all except caller-provided `spans`
 - **Operation Context** - Data passed to operation callbacks: `document`, `lines`, `renderOptions`, `spans`, `index`
 

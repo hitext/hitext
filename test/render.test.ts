@@ -108,6 +108,8 @@ describe('render', () => {
                     { type: 'test', start: 8, end: false as any, data: 'c' },
                     { type: 'test', start: 8, end: '1' as any, data: 'c' },
                     { type: 'test', start: NaN, end: NaN, data: 'd' },
+                    { type: 'test', start: 1.5, end: 2, data: 'f' },
+                    { type: 'test', start: 7, end: 8.5, data: 'g' },
                     { type: 'test', start: 3, end: 6, data: 'e' }
                 ],
                 testHooks
@@ -133,6 +135,18 @@ describe('render', () => {
             render('123', [b, a], hooks),
             '1<a><b>2</b></a>3'
         );
+    });
+
+    it('should order numeric span markers independently of generator order', () => {
+        const hooks = {
+            1: (content: string) => `<1>${content}</1>`,
+            2: (content: string) => `<2>${content}</2>`
+        };
+        const one: GeneratedSpan = { type: 1, start: 1, end: 2 };
+        const two: GeneratedSpan = { type: 2, start: 1, end: 2 };
+
+        strictEqual(render('123', [one, two], hooks), '1<1><2>2</2></1>3');
+        strictEqual(render('123', [two, one], hooks), '1<1><2>2</2></1>3');
     });
 
     it('should be fine when open/close is omitted in printer span hook', () => {

@@ -34,15 +34,31 @@ export function render<T, R = T, HC = unknown>(
 
     // Get hooks map from definitions
     const spanHooksMap = resolveSpanHooksMap(spanHooksDefinitionMap || {}, renderHooks);
-    const spanPriority: SpanMarker[] = ownKeys(spanHooksMap);
-    const spanWeight = new Map<SpanMarker, number>(
-        spanPriority.map((marker) => [marker,
+    const spanMarkers = ownKeys(spanHooksMap);
+    const spanPriority = new Map<string | symbol, number>(
+        spanMarkers.map((marker, index) => [marker, index])
+    );
+    const spanWeight = new Map<string | symbol, number>(
+        spanMarkers.map((marker) => [marker,
             (spanHooksMap[marker].break ? 2 : 0) +
             (spanHooksMap[marker].replace ? 1 : 0)
         ])
     );
 
-    // Create renderer context with options
+    // Create hook context state
+    const rootSpan: GeneratedSpan = {
+        type: Symbol('root'),
+        start: 0,
+        end: document.length,
+        data: undefined
+    };
+    let renderedOffset = 0;
+    let segmentStart = 0;
+    let segmentEnd = document.length;
+    let currentSpanIndex = 0;
+    let currentSpanHook: SpanCallableHook = 'open';
+    let currentSpan = rootSpan;
+
     const spanIndexMap = new Map<GeneratedSpan, number>();
     const spanHookContext: SpanHookContext<any, T, R> = defineProperties(createNoProtoObject(), {
         hook: { get: () => currentSpanHook },
@@ -58,14 +74,11 @@ export function render<T, R = T, HC = unknown>(
         span: { get: () => currentSpan },
         data: { get: () => currentSpan.data },
         createBuffer: { value: createBuffer },
-        dump: { value: () => (fromEntries(ownKeys(spanHookContext)
+        dump: { value: () => fromEntries(ownKeys(spanHookContext)
             .map((key) => [key, (spanHookContext as any)[key]])
             .filter(key => key[0] !== 'dump' && key[0] !== 'lines' && key[0] !== 'createBuffer')
-        )) }
+        ) }
     } satisfies Record<keyof SpanHookContext<any>, PropertyDescriptor>);
-    let renderedOffset = 0;
-    let segmentStart = 0;
-    let segmentEnd = -1;
 
     // Track buffer nesting for spans with a wrap hook
     const bufferStack: ReturnType<typeof createBuffer>[] = [];
@@ -76,13 +89,6 @@ export function render<T, R = T, HC = unknown>(
     const spanStack: Array<GeneratedSpan> = [];
     const spanStackSegmentStarts: number[] = []; // Parallel array to spanStack
     let spanStackOpenIndex = 0;
-    let currentSpanHook: SpanCallableHook = 'open';
-    let currentSpan: GeneratedSpan = {
-        type: Symbol('root'),
-        start: 0,
-        end: document.length,
-        data: undefined
-    };
 
     // Filter and sort spans (avoid input mutation)
     // Remove spans without hooks and invalid spans upfront
@@ -90,21 +96,21 @@ export function render<T, R = T, HC = unknown>(
         .filter(span =>
             hasOwn(spanHooksMap, span.type) &&
             span.start <= span.end &&
-            Number.isFinite(span.start) &&
-            Number.isFinite(span.end)
+            Number.isInteger(span.start) &&
+            Number.isInteger(span.end)
         )
         .sort(
             (a, b) =>
                 a.start - b.start ||
-                spanWeight.get(b.type)! - spanWeight.get(a.type)! ||
+                spanWeight.get(toSpanMarkerKey(b.type))! - spanWeight.get(toSpanMarkerKey(a.type))! ||
                 b.end - a.end ||
-                spanPriority.indexOf(a.type) - spanPriority.indexOf(b.type)
+                spanPriority.get(toSpanMarkerKey(a.type))! - spanPriority.get(toSpanMarkerKey(b.type))!
         );
 
     // Call renderer open hook
+    setRootContext('open');
     appendToBuffer(renderOpenHook?.(spanHookContext));
 
-    let currentSpanIndex = 0;
     for (; currentSpanIndex < spans.length; currentSpanIndex++) {
         const span = spans[currentSpanIndex];
         const hook = spanHooksMap[span.type];
@@ -161,6 +167,7 @@ export function render<T, R = T, HC = unknown>(
     }
 
     // Finish rendering - call renderer close hook
+    setRootContext('close');
     appendToBuffer(renderCloseHook?.(spanHookContext));
 
     // Final output
@@ -174,7 +181,22 @@ export function render<T, R = T, HC = unknown>(
         return lineBoundaries || (lineBoundaries = createLineBoundaries(document));
     }
 
+    function toSpanMarkerKey(marker: SpanMarker): string | symbol {
+        return typeof marker === 'number' ? String(marker) : marker;
+    }
+
+    function setRootContext(hook: SpanCallableHook) {
+        currentSpanHook = hook;
+        currentSpan = rootSpan;
+        segmentStart = 0;
+        segmentEnd = document.length;
+    }
+
     function getSpanIndex(): number {
+        if (currentSpan === rootSpan) {
+            return -1;
+        }
+
         let spanIndex = spanIndexMap.get(currentSpan);
 
         if (spanIndex === undefined) {
@@ -286,10 +308,12 @@ export function render<T, R = T, HC = unknown>(
         // Find the text hook by walking up the stack of opened spans
         // to inherit text transformation from parent spans
         let textHook: SpanHookText<any, T, R> = renderTextHook;
-        for (let i = spanStack.length - 1; i >= 0; i--) {
+        let textHookSpan = rootSpan;
+        for (let i = spanStackOpenIndex - 1; i >= 0; i--) {
             const spanTextHook = spanHooksMap[spanStack[i].type].text;
             if (spanTextHook !== null) {
                 textHook = spanTextHook;
+                textHookSpan = spanStack[i];
                 break;
             }
         }
@@ -297,6 +321,9 @@ export function render<T, R = T, HC = unknown>(
         // Append to current buffer
         const substring = document.slice(renderedOffset, offset);
         currentSpanHook = 'text';
+        currentSpan = textHookSpan;
+        segmentStart = renderedOffset;
+        segmentEnd = offset;
         appendToBuffer(textHook(substring, spanHookContext));
 
         renderedOffset = offset;

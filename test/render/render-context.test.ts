@@ -21,6 +21,70 @@ describe('render span hooks context', () => {
         return span;
     });
 
+    it('should provide a stable root context to renderer hooks', () => {
+        const rootContexts: Array<Record<string, unknown>> = [];
+        const spanIndices: number[] = [];
+        let rootSpan: GeneratedSpan | undefined;
+
+        const result = render('abc', [
+            { type: 'test', start: 1, end: 2 }
+        ], {
+            test: {
+                open({ spanIndex }) {
+                    spanIndices.push(spanIndex);
+                }
+            }
+        }, {
+            open(context) {
+                rootSpan = context.span;
+                rootContexts.push({
+                    hook: context.hook,
+                    offset: context.offset,
+                    start: context.start,
+                    end: context.end,
+                    spanIndex: context.spanIndex,
+                    span: context.span,
+                    data: context.data
+                });
+                return '<root>';
+            },
+            text(documentChunk, context) {
+                rootContexts.push({
+                    hook: context.hook,
+                    offset: context.offset,
+                    start: context.start,
+                    end: context.end,
+                    spanIndex: context.spanIndex,
+                    span: context.span,
+                    data: context.data
+                });
+                return documentChunk;
+            },
+            close(context) {
+                rootContexts.push({
+                    hook: context.hook,
+                    offset: context.offset,
+                    start: context.start,
+                    end: context.end,
+                    spanIndex: context.spanIndex,
+                    span: context.span,
+                    data: context.data
+                });
+                return '</root>';
+            }
+        });
+
+        strictEqual(result, '<root>abc</root>');
+        deepStrictEqual(rootContexts, [
+            { hook: 'open', offset: 0, start: 0, end: 3, spanIndex: -1, span: rootSpan, data: undefined },
+            { hook: 'text', offset: 0, start: 0, end: 1, spanIndex: -1, span: rootSpan, data: undefined },
+            { hook: 'text', offset: 1, start: 1, end: 2, spanIndex: -1, span: rootSpan, data: undefined },
+            { hook: 'text', offset: 2, start: 2, end: 3, spanIndex: -1, span: rootSpan, data: undefined },
+            { hook: 'close', offset: 3, start: 0, end: 3, spanIndex: -1, span: rootSpan, data: undefined }
+        ]);
+        deepStrictEqual(spanIndices, [0]);
+    });
+
     it('span data', () => {
         const actual = render(document, spans, {
             test: {

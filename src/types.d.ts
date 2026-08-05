@@ -138,8 +138,10 @@ export type SpanHookContext<Data = unknown, T = unknown, R = T> = {
     column: number;
     start: number;
     end: number;
+    /** Zero-based index of the generated span, or -1 in renderer-level hooks. */
     spanIndex: number;
     spanText: string;
+    /** The hook owner, or the synthetic document span in renderer-level hooks. */
     span: GeneratedSpan<Data>;
     /** Include `undefined` in `Data` when spans in the layer may omit data. */
     data: Data;
@@ -154,8 +156,11 @@ export type SpanHookContext<Data = unknown, T = unknown, R = T> = {
 export interface RenderHooks<T, R = T, HC = unknown> {
     createBuffer(): RenderBuffer<T, R>;
 
+    /** Called with a synthetic span covering the entire document. */
     open(context: SpanHookContext<any, T, R>): T | null;
+    /** Called with a synthetic span covering the entire document. */
     close(context: SpanHookContext<any, T, R>): T | null;
+    /** Called with the synthetic document span as the hook owner. */
     text: SpanHookText<any, T, R> | null;
 
     spanHooksContext?: HC;
