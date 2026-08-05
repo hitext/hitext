@@ -7,6 +7,8 @@ import { GenerateSpans } from '../types.js';
  * For RegExp patterns, respects the 'g' (global) flag:
  * - With 'g' flag: finds all matches
  * - Without 'g' flag: finds only the first match
+ * Zero-width patterns produce point spans and advance between repeated matches.
+ * RegExp state is isolated from the supplied pattern and reset for each generation.
  *
  * @param pattern - String literal or RegExp to search for
  * @returns A GenerateSpans function that creates spans for each match
@@ -30,12 +32,13 @@ export function spansFromMatch<RenderOptions>(
     pattern: RegExp | string
 ): GenerateSpans<any, RenderOptions> {
     if (pattern instanceof RegExp) {
-        const isGlobal = pattern.flags.includes('g');
-
         return function(document, createSpan) {
+            const regexp = new RegExp(pattern.source, pattern.flags);
+            const isGlobal = regexp.global;
+            const isUnicode = regexp.flags.includes('u') || regexp.flags.includes('v');
             let match: ReturnType<RegExp['exec']>;
 
-            while (match = pattern.exec(document)) {
+            while (match = regexp.exec(document)) {
                 createSpan(
                     match.index,
                     match.index + match[0].length,
@@ -45,6 +48,11 @@ export function spansFromMatch<RenderOptions>(
                 if (!isGlobal) {
                     break;
                 }
+
+                if (match[0].length === 0) {
+                    const codePoint = document.codePointAt(regexp.lastIndex);
+                    regexp.lastIndex += isUnicode && codePoint !== undefined && codePoint > 0xFFFF ? 2 : 1;
+                }
             }
         };
     }
@@ -52,6 +60,14 @@ export function spansFromMatch<RenderOptions>(
     const patternStr = String(pattern);
 
     return function(document, createSpan) {
+        if (patternStr.length === 0) {
+            for (let index = 0; index <= document.length; index++) {
+                createSpan(index, index, patternStr);
+            }
+
+            return;
+        }
+
         let index = -1;
 
         while (true) {

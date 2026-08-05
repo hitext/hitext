@@ -46,6 +46,15 @@ describe('spansFromMatch', () => {
             deepStrictEqual(spans, []);
         });
 
+        it('should match an empty string at every document offset', () => {
+            const spans = gen('ab', '');
+            deepStrictEqual(startEndData(spans), [
+                [0, 0, ''],
+                [1, 1, ''],
+                [2, 2, '']
+            ]);
+        });
+
         it('should handle special regex characters as literal', () => {
             const spans = gen('2 + 2 = 4', '+');
             deepStrictEqual(startEndData(spans), [
@@ -110,6 +119,35 @@ describe('spansFromMatch', () => {
         it('should handle no matches', () => {
             const spans = gen('Hello world!', /\d+/);
             deepStrictEqual(spans, []);
+        });
+
+        it('should advance after zero-width global matches', () => {
+            const spans = gen('first\nsecond', /^/gm);
+            deepStrictEqual(spans.map(({ start, end }) => [start, end]), [
+                [0, 0],
+                [6, 6]
+            ]);
+        });
+
+        it('should advance by code point for zero-width Unicode matches', () => {
+            const spans = gen('\u{1F600}', /(?=)/gu);
+            deepStrictEqual(spans.map(({ start, end }) => [start, end]), [
+                [0, 0],
+                [2, 2]
+            ]);
+        });
+
+        it('should isolate RegExp state between generator runs', () => {
+            const pattern = /Hello/y;
+            pattern.lastIndex = 6;
+            const source = spansFromMatch(pattern);
+
+            const first = generateSpans('Hello world', source);
+            const second = generateSpans('Hello again', source);
+
+            deepStrictEqual(first.map(({ start, end }) => [start, end]), [[0, 5]]);
+            deepStrictEqual(second.map(({ start, end }) => [start, end]), [[0, 5]]);
+            deepStrictEqual(pattern.lastIndex, 6);
         });
     });
 

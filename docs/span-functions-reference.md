@@ -185,6 +185,11 @@ spansFromMatch(pattern: string): GenerateSpans<string, RenderOptions>
 
 **Data:** Full `RegExpExecArray` (includes capture groups) for RegExp, matched string for string literal
 
+**Matching behavior:**
+- Zero-width matches produce point spans. Repeated RegExp matches advance by code point in Unicode mode and by code unit otherwise.
+- An empty string matches every document offset, including the end offset.
+- Each generation uses a fresh copy of the RegExp starting at `lastIndex = 0`; the supplied RegExp is not mutated.
+
 **Use cases:**
 - Syntax highlighting
 - Finding diagnostic markers
