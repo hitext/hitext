@@ -49,8 +49,8 @@ export function applyMap<InputData, OutputData, RenderOptions>(
         createSpan: (start: number, end: number, data?: OutputData) => void,
         opContext: SpanOperationContext<InputData, RenderOptions>
     ) => void
-): TransformSpans<OutputData, RenderOptions> {
-    return ((input: SpansSource<InputData, RenderOptions>) => {
+): TransformSpans<InputData, RenderOptions, OutputData> {
+    return (input: SpansSource<InputData, RenderOptions>) => {
         return (
             document: string,
             createSpan: CreateSpan<OutputData>,
@@ -70,12 +70,12 @@ export function applyMap<InputData, OutputData, RenderOptions>(
                         end: number,
                         data?: OutputData
                     ) => {
-                        createSpan(start, end, data, origin as any);
+                        createSpan(start, end, data, origin);
                     };
 
                     mapper(span, createSpanWithOrigin, opContext);
                 }
             });
         };
-    }) as any;
+    };
 }

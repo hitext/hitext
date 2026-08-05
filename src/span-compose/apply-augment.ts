@@ -34,20 +34,20 @@ import { processSpansWithContext } from '../utils/span-operation-context.js';
  *   })
  * )
  */
-export function applyAugment<Data, RenderOptions>(
+export function applyAugment<Data, RenderOptions, AdditionalData = Data>(
     augmenter: (
         span: SpanRecord<Data>,
-        createSpan: (start: number, end: number, data?: Data) => void,
+        createSpan: (start: number, end: number, data?: AdditionalData) => void,
         opContext: SpanOperationContext<Data, RenderOptions>
     ) => void
-): TransformSpans<Data, RenderOptions> {
+): TransformSpans<Data, RenderOptions, Data | AdditionalData> {
     return (input: SpansSource<Data, RenderOptions>) => {
         return (
             document: string,
-            createSpan: CreateSpan<Data>,
-            context: GenerateSpansContext<Data, RenderOptions> | undefined
+            createSpan: CreateSpan<Data | AdditionalData>,
+            context: GenerateSpansContext<Data | AdditionalData, RenderOptions> | undefined
         ) => {
-            processSpansWithContext(document, input, context, (spans, opContext) => {
+            processSpansWithContext(document, input, context as any, (spans, opContext) => {
                 for (let i = 0; i < spans.length; i++) {
                     const span = spans[i];
                     opContext.index = i;
@@ -62,9 +62,9 @@ export function applyAugment<Data, RenderOptions>(
                     const createSpanWithOrigin = (
                         start: number,
                         end: number,
-                        data?: Data
+                        data?: AdditionalData
                     ) => {
-                        createSpan(start, end, data, origin as any);
+                        createSpan(start, end, data, origin);
                     };
 
                     // Emit any additional spans from user

@@ -1,4 +1,4 @@
-import type { GenerateSpans, SpansSource, SpanRecord, SpanOperationContext } from '../types.js';
+import type { SpansSource, SpanRecord, SpanOperationContext, TransformSpans } from '../types.js';
 import { processSpansWithContext } from '../utils/span-operation-context.js';
 
 /**
@@ -32,7 +32,7 @@ export function applyDataMap<Data, NewData, RenderOptions>(
         span: SpanRecord<Data>,
         opContext: SpanOperationContext<Data, RenderOptions>
     ) => NewData
-): (input: SpansSource<Data, RenderOptions>) => GenerateSpans<NewData, RenderOptions> {
+): TransformSpans<Data, RenderOptions, NewData> {
     return (input: SpansSource<Data, RenderOptions>) => {
         return (document, createSpan, context) => {
             processSpansWithContext(document, input, context as any, (spans, opContext) => {

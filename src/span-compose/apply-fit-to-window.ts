@@ -45,8 +45,8 @@ export function applyFitToWindow<Data, RenderOptions>(
                 document,
                 input,
                 (start, end, data, origin) => {
+                    const spanOrigin = origin || { start, end, data };
                     let windowStart = start;
-                    let windowEnd = end;
 
                     // Check if span spans multiple lines
                     const spanStartLine = lineBoundaries.getLine(start);
@@ -57,6 +57,8 @@ export function applyFitToWindow<Data, RenderOptions>(
                     if (isMultiline) {
                         end = lineBoundaries.getLineContentEnd(start);
                     }
+
+                    let windowEnd = end;
 
                     // Find the line containing this span (now guaranteed to be single-line)
                     const lineStart = lineBoundaries.getLineStart(start);
@@ -95,20 +97,6 @@ export function applyFitToWindow<Data, RenderOptions>(
                         windowEnd = start + size;
                     } else {
                         // Case 3: Span is larger but trimming disabled - keep as is
-                    }
-
-                    const trimmedStart = Math.max(start, windowStart);
-                    const trimmedEnd = Math.min(end, windowEnd);
-                    let spanOrigin = origin || { start, end, data };
-
-                    // If trimming occurred, update origin to reflect trimmed span
-                    if (trimmedStart !== start || trimmedEnd !== end) {
-                        spanOrigin = {
-                            start: trimmedStart,
-                            end: trimmedEnd,
-                            data,
-                            origin: spanOrigin
-                        };
                     }
 
                     createSpan(windowStart, windowEnd, data, spanOrigin);

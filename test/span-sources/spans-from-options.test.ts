@@ -84,6 +84,20 @@ describe('spansFromOptions', () => {
         deepStrictEqual(spanWithoutMarker(result), []);
     });
 
+    it('should preserve falsy render options', () => {
+        let received: boolean | undefined;
+        generateSpans(
+            'hello world',
+            spansFromOptions<unknown, boolean>((options) => {
+                received = options;
+                return [];
+            }),
+            { renderOptions: false }
+        );
+
+        deepStrictEqual(received, false);
+    });
+
     it('should work in pipeline with callback', () => {
         const result = string<{ spans?: any[] }>()
             .addLayer(spansFromOptions((opts) => opts.spans), null)

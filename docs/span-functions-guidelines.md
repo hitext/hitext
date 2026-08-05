@@ -256,7 +256,7 @@ applyMap((span, createSpan, context) => {
 
 **Filenames:** kebab-case conversion from camelCase
 - `applyExpandTo` → `apply-expand-to.ts`
-- `spansFromMatch` → `spans-for-match.ts`
+- `spansFromMatch` → `spans-from-match.ts`
 
 **Exports:**
 - `src/span-sources/index.ts` or `src/span-compose/index.ts` (barrel exports)
@@ -408,7 +408,7 @@ export function spansFromSomething(param: Type): GenerateSpans<Data, RenderOptio
 **Currying for transformers:**
 ```typescript
 // Transformers return a function that accepts input and returns GenerateSpans
-export function applyTransform(param: Type): TransformSpans {
+export function applyTransform(param: Type): TransformSpans<InputData, RenderOptions, OutputData> {
     return (input: SpansSource) => {
         return (document, createSpan, context) => {
             // Transform input spans, calling createSpan for each output
@@ -416,6 +416,8 @@ export function applyTransform(param: Type): TransformSpans {
     };
 }
 ```
+
+Use the third `TransformSpans` generic when output data differs from input data. Origin data remains `unknown` because a derivative may preserve a root created before a data-changing transformation.
 
 **Predicates must follow consistent signatures:**
 

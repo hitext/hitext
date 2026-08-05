@@ -1,5 +1,6 @@
-import { strictEqual } from 'assert';
+import { deepStrictEqual, strictEqual } from 'assert';
 import { applyPadLines, generateSpans } from '../../src/index.js';
+import type { LineBoundaries } from '../../src/types.js';
 
 describe('applyPadLines()', () => {
     it('should create padding span for original line and lines after', () => {
@@ -33,5 +34,31 @@ describe('applyPadLines()', () => {
                 strictEqual(span.origin.data, 'orig');
             }
         });
+    });
+
+    it('should preserve an existing root origin', () => {
+        const origin = { start: 10, end: 15, data: 'root' };
+        const spans = generateSpans(
+            'hello',
+            applyPadLines(0, 10)([{ start: 0, end: 5, data: 'derived', origin }])
+        );
+
+        deepStrictEqual(spans[0].origin, origin);
+    });
+
+    it('should reuse line boundaries from the generation context', () => {
+        const lines = {
+            getLineStart: () => 1,
+            getLineContentEnd: () => 3
+        } as unknown as LineBoundaries;
+        const spans = generateSpans(
+            'abcd',
+            applyPadLines(0, 4)([[0, 1]]),
+            { lines }
+        );
+
+        strictEqual(spans[0].start, 1);
+        strictEqual(spans[0].end, 3);
+        strictEqual(spans[0].data, 2);
     });
 });

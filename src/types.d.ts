@@ -32,13 +32,15 @@ export type SpansSource<Data = unknown, RenderOptions = unknown> =
     | SpansIterable<Data>
     | GenerateSpans<Data, RenderOptions>;
 export type SpansIterable<Data> = Iterable<SpanTuple<Data> | SpanRecord<Data>>;
-export type SpanOrigin<Data> = SpanRecord<Data> | SpanRecord<Data>[];
-export type SpanTuple<Data = unknown> = [start: number, end: number, data?: Data, origin?: SpanOrigin<Data>];
-export type SpanRecord<Data = unknown> = { start: number, end: number, data?: Data, origin?: SpanOrigin<Data> };
-export type CreateSpan<Data = unknown> = (start: number, end: number, data?: Data, origin?: SpanOrigin<Data>) => void;
-export type TransformSpans<Data = unknown, RenderOptions = unknown> = (
-    input: SpansSource<Data, RenderOptions>
-) => GenerateSpans<Data, RenderOptions>;
+/** Root source span(s); data is unknown because transformers may change data types. */
+export type SpanOrigin = SpanRecord<unknown> | SpanRecord<unknown>[];
+export type SpanTuple<Data = unknown> = [start: number, end: number, data?: Data, origin?: SpanOrigin];
+export type SpanRecord<Data = unknown> = { start: number, end: number, data?: Data, origin?: SpanOrigin };
+export type CreateSpan<Data = unknown> = (start: number, end: number, data?: Data, origin?: SpanOrigin) => void;
+/** A curried span transformation from InputData to OutputData. */
+export type TransformSpans<InputData = unknown, RenderOptions = unknown, OutputData = InputData> = (
+    input: SpansSource<InputData, RenderOptions>
+) => GenerateSpans<OutputData, RenderOptions>;
 export type GenerateSpans<Data = unknown, RenderOptions = unknown> = (
     document: string,
     createSpan: CreateSpan<Data>,
@@ -71,7 +73,7 @@ export interface GeneratedSpan<Data = unknown> {
     start: number;
     end: number;
     data?: Data;
-    origin?: SpanRecord<Data> | SpanRecord<Data>[];
+    origin?: SpanOrigin;
 }
 
 //

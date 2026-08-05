@@ -33,7 +33,7 @@ export function spansFromOptions<Data = unknown, RenderOptions = unknown>(
         createSpan: CreateSpan<Data>,
         context?: GenerateSpansContext<Data, RenderOptions>
     ) {
-        const spans = getSpans(context?.renderOptions || {} as RenderOptions);
+        const spans = getSpans(context?.renderOptions ?? {} as RenderOptions);
 
         if (spans) {
             processSpans(document, spans, createSpan, context);

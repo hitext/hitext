@@ -1,4 +1,4 @@
-import type { GenerateSpans, SpansSource, SpanRecord } from '../types.js';
+import type { SpansSource, SpanRecord, TransformSpans } from '../types.js';
 import { processSpans } from '../spans.js';
 import { createLineBoundaries } from '../utils/line-boundaries.js';
 
@@ -24,7 +24,7 @@ import { createLineBoundaries } from '../utils/line-boundaries.js';
 export function applyPadLines<Data, RenderOptions>(
     lines: number | [number, number],
     size: number
-): (input: SpansSource<Data, RenderOptions>) => GenerateSpans<number, RenderOptions> {
+): TransformSpans<Data, RenderOptions, number> {
     return (input: SpansSource<Data, RenderOptions>) => {
         return (document, createSpan, genContext) => {
             const spans: Array<SpanRecord<Data>> = [];
@@ -36,7 +36,7 @@ export function applyPadLines<Data, RenderOptions>(
                 return;
             }
 
-            const lineBoundaries = createLineBoundaries(document);
+            const lineBoundaries = genContext?.lines || createLineBoundaries(document);
             const [linesBefore, linesAfter] = typeof lines === 'number' ? [0, lines] : lines;
 
             for (const origSpan of spans) {
@@ -47,7 +47,12 @@ export function applyPadLines<Data, RenderOptions>(
                     const spanEnd = Math.min(lineStart + size, lineEnd);
                     const paddingNeeded = size - (spanEnd - spanStart);
 
-                    createSpan(spanStart, spanEnd, paddingNeeded, origSpan as any);
+                    createSpan(
+                        spanStart,
+                        spanEnd,
+                        paddingNeeded,
+                        origSpan.origin || { start: origSpan.start, end: origSpan.end, data: origSpan.data }
+                    );
                 }
             }
         };

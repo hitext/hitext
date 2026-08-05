@@ -28,7 +28,7 @@ type SkippedLinesValue<V> = V | SkippedLinesHook<V>;
  *   - A static value (string, T, or R)
  *   - A function receiving 'start' | 'middle' | 'end' indicating trim position
  *     ('middle' is for same-line cuts like `foo bar baz` -> `foo...baz` to avoid double markers)
- *   Default: '...'
+ *   Default: '…'
  * @param options.skippedLines - Content for completely skipped lines. Can be:
  *   - A static value (string, T, or R)
  *   - A function receiving 'before' | 'after' | 'both' indicating newline placement

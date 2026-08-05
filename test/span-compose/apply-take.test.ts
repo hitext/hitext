@@ -138,6 +138,20 @@ describe('applyTake', () => {
     });
 
     describe('with predicate', () => {
+        it('should take zero spans without evaluating the predicate', () => {
+            let callCount = 0;
+            const spans = generateSpans(
+                'abcde',
+                applyTake<number, unknown>(0, () => {
+                    callCount++;
+                    return true;
+                })(input)
+            );
+
+            deepStrictEqual(spans, []);
+            deepStrictEqual(callCount, 0);
+        });
+
         it('should take first N matching spans', () => {
             const spans = generateSpans(
                 'abcde',

@@ -507,6 +507,14 @@ describe('Span Generation Helpers', () => {
     });
 
     describe('integration', () => {
+        it('should preserve falsy span markers', () => {
+            const zeroMarker = generateSpans('a', [[0, 1]], { marker: 0 });
+            const emptyMarker = generateSpans('a', [[0, 1]], { marker: '' });
+
+            deepStrictEqual(zeroMarker[0].type, 0);
+            deepStrictEqual(emptyMarker[0].type, '');
+        });
+
         it('should work with built-in generators', () => {
             const spans = generateSpans(
                 'ERROR: Something went wrong. WARNING: Check logs.',

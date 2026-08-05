@@ -66,6 +66,8 @@ Span Transformers:
 - **Cleared** - Sets to `undefined` (data transformations create new semantic meaning)
 - **Preserves existing** - Keeps whatever origin was in source spans
 
+Origin records expose `data` as `unknown`, since data-changing transformers may preserve a root with a different data type.
+
 ---
 
 ## Span Sources
@@ -75,10 +77,10 @@ Span Transformers:
 Compose a span generator with multiple transformers (left-to-right).
 
 ```typescript
-spansCompose<Data, RenderOptions>(
-    spanInput: SpansSource<Data, RenderOptions>,
-    ...transformers: Array<(input: SpansSource) => GenerateSpans>
-): GenerateSpans<Data, RenderOptions>
+spansCompose<InputData, OutputData, RenderOptions>(
+    spanInput: SpansSource<InputData, RenderOptions>,
+    ...transformers: Array<TransformSpans>
+): GenerateSpans<OutputData, RenderOptions>
 ```
 
 **Parameters:**
@@ -381,13 +383,13 @@ spansCompose(
 Pass through original spans unchanged, add derived spans.
 
 ```typescript
-applyAugment<Data, RenderOptions, NewData = Data>(
+applyAugment<Data, RenderOptions, AdditionalData = Data>(
     callback: (
         span: SpanRecord<Data>,
-        createSpan: CreateSpan<NewData>,
+        createSpan: CreateSpan<AdditionalData>,
         context: SpanOperationContext<Data, RenderOptions>
     ) => void
-): TransformSpans<Data | NewData, RenderOptions>
+): TransformSpans<Data, RenderOptions, Data | AdditionalData>
 ```
 
 **Parameters:**
@@ -462,9 +464,12 @@ spansCompose(
 Transform span data while preserving positions. **Clears `origin` tracking** (data transformation creates new semantic meaning).
 
 ```typescript
-applyDataMap<Data, NewData>(
-    mapper: (span, index, context) => NewData
-): TransformSpans<Data, NewData>
+applyDataMap<Data, NewData, RenderOptions>(
+    mapper: (
+        span: SpanRecord<Data>,
+        context: SpanOperationContext<Data, RenderOptions>
+    ) => NewData
+): TransformSpans<Data, RenderOptions, NewData>
 ```
 
 **Parameters:**
@@ -671,9 +676,9 @@ spansCompose(
 Fork the pipeline: pass through originals, apply sub-pipeline, append transformed copies.
 
 ```typescript
-applyFork<Data, RenderOptions>(
-    ...transformers: Array<TransformSpans<Data, RenderOptions>>
-): TransformSpans<Data, RenderOptions>
+applyFork<Data, OutputData, RenderOptions>(
+    ...transformers: Array<TransformSpans>
+): TransformSpans<Data, RenderOptions, Data | OutputData>
 ```
 
 **Parameters:**
@@ -738,13 +743,13 @@ spansCompose(
 Core 1-to-N primitive for span transformation. Creates derivative spans with automatic origin tracking.
 
 ```typescript
-applyMap<Data, RenderOptions, NewData = Data>(
+applyMap<InputData, OutputData, RenderOptions>(
     callback: (
-        span: SpanRecord<Data>,
-        createSpan: CreateSpan<NewData>,
-        context: SpanOperationContext<Data, RenderOptions>
+        span: SpanRecord<InputData>,
+        createSpan: CreateSpan<OutputData>,
+        context: SpanOperationContext<InputData, RenderOptions>
     ) => void
-): TransformSpans<NewData, RenderOptions>
+): TransformSpans<InputData, RenderOptions, OutputData>
 ```
 
 **Parameters:**
@@ -818,10 +823,10 @@ spansCompose(
 Add padding spans around lines.
 
 ```typescript
-applyPadLines(
+applyPadLines<Data, RenderOptions>(
     lines: number | [before: number, after: number],
     size: number
-): TransformSpans
+): TransformSpans<Data, RenderOptions, number>
 ```
 
 **Parameters:**

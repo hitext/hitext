@@ -1,5 +1,5 @@
 import { deepStrictEqual, strictEqual } from 'assert';
-import { spansCompose, generateSpans } from '../../src/index.js';
+import { applyDataMap, applyFilter, spansCompose, generateSpans } from '../../src/index.js';
 import type { GenerateSpans, SpansSource } from '../../src/types.js';
 import { startEndData } from '../utils.js';
 
@@ -7,9 +7,11 @@ describe('spansCompose', () => {
     describe('Basic composition', () => {
         it('should work with no transformers (pass-through)', () => {
             const document = 'Hello world';
+            const source = spansCompose([[0, 5], [6, 11]]);
+            strictEqual(typeof source, 'function');
             const spans = generateSpans(
                 document,
-                spansCompose([[0, 5], [6, 11]])
+                source
             );
 
             deepStrictEqual(startEndData(spans), [
@@ -247,6 +249,17 @@ describe('spansCompose', () => {
     });
 
     describe('Type safety', () => {
+        it('should infer data from the last transformer', () => {
+            const source: GenerateSpans<number, unknown> = spansCompose(
+                [{ start: 0, end: 4, data: 'test' }],
+                applyDataMap<string, number, unknown>((span) => span.data!.length),
+                applyFilter<number, unknown>((span) => span.data === 4)
+            );
+            const spans = generateSpans('test', source);
+
+            strictEqual(spans[0].data, 4);
+        });
+
         it('should preserve type information through composition', () => {
             const document = 'test';
 

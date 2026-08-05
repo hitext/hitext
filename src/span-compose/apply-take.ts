@@ -50,7 +50,9 @@ export function applyTake<Data, RenderOptions>(
                 const count = n === 'first' ? 1 : n === 'last' ? -1 : n;
                 let taken: SpanRecord<Data>[] = [];
 
-                if (!predicate) {
+                if (count === 0) {
+                    return;
+                } else if (!predicate) {
                     // No filter: simple slice
                     taken = count >= 0 ? spans.slice(0, count) : spans.slice(count);
                 } else {

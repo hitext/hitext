@@ -52,14 +52,14 @@ createRenderPipeline(createRenderHooks) â†’ .addLayer(spans, spanHooks, name?) â
 **Spans:**
 - **Span** - Text fragment of document with integer `start`/`end` offsets (zero-based, end-exclusive), optional `data`/`origin`
 - **Span Data** - Custom metadata (match results, diagnostics, token types); hook context exposes the declared `Data` type, so include `undefined` in `Data` when layer spans may omit data
-- **Span Origin** - Reference to source span(s) that produced a derivative (tracks transformation lineage)
+- **Span Origin** - Reference to source span(s) that produced a derivative (tracks transformation lineage); origin data is `unknown` because data-changing transformers can preserve roots with a different data type
 - **Span Input** - Various forms: record `{start, end, data?, origin?}` or tuple `[start, end, data?, origin?]`
 - **Span Set** - Collection of spans
 - **Span Source** - Iterable of Span Inputs, or a function producing spans
 - **Span Normalization** - Converting input forms to standard record format `{start, end, data, origin}` during span generation
 - **Span Segment** - Portion of span between interruptions; spans split into segments during rendering for intersection/conflict resolution
 - **Span Generator** - Function producing spans via `createSpan(start, end, data?, origin?)` callback
-- **Span Transformer** - Curried function taking span input, returning new generator (enables composition)
+- **Span Transformer** - Curried function taking span input, returning a generator; `TransformSpans<InputData, RenderOptions, OutputData>` tracks data changes through composition
 - **Span Derivative** - Span created from another span
 
 **Text:**

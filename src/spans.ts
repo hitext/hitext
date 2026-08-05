@@ -85,7 +85,7 @@ export function generateSpans<Data, RenderOptions>(
     input: SpansSource<Data, RenderOptions>,
     context?: GenerateSpansContext<Data, RenderOptions>
 ): GeneratedSpan<Data>[] {
-    const marker = context?.marker || Symbol();
+    const marker = context?.marker ?? Symbol();
     const spans: GeneratedSpan<Data>[] = [];
 
     processSpans(

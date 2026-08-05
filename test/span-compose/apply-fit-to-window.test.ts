@@ -102,6 +102,17 @@ describe('applyFitToWindow', () => {
         deepStrictEqual(windows, ['Line 1 with ERROR1']);
     });
 
+    it('should trim multiline spans to the first line when trimming is disabled', () => {
+        const spans = generateSpans(
+            'abcdefghij\nsecond',
+            applyFitToWindow(5, false)([{ start: 0, end: 17, data: 'test' }])
+        );
+
+        deepStrictEqual(spanWithoutMarker(spans), [
+            [0, 10, 'test', { start: 0, end: 17, data: 'test' }]
+        ]);
+    });
+
     it('should handle line with leading whitespace', () => {
         const input = [{ start: 8, end: 13 }]; // "ERROR"
         const windows = renderSpans(
@@ -136,7 +147,7 @@ describe('applyFitToWindow', () => {
         ]);
     });
 
-    it('should wrap origin when span is trimmed', () => {
+    it('should preserve root origin when span is trimmed', () => {
         const input = [
             { start: 20, end: 30, data: 'test1' },
             { start: 10, end: 30, data: 'test2' }
@@ -148,12 +159,7 @@ describe('applyFitToWindow', () => {
 
         deepStrictEqual(spanWithoutMarker(spans), [
             [17, 33, 'test1', { start: 20, end: 30, data: 'test1' }],
-            [10, 26, 'test2', {
-                start: 10,
-                end: 26,
-                data: 'test2',
-                origin: { start: 10, end: 30, data: 'test2' }
-            }]
+            [10, 26, 'test2', { start: 10, end: 30, data: 'test2' }]
         ]);
     });
 });

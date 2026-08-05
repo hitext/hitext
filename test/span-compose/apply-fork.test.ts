@@ -1,5 +1,6 @@
 import { deepStrictEqual } from 'assert';
 import { applyFork, applyCollapseTo, applyDataMap, generateSpans } from '../../src/index.js';
+import type { GenerateSpans } from '../../src/types.js';
 import { startEndData } from '../utils.js';
 
 describe('applyFork', () => {
@@ -21,6 +22,18 @@ describe('applyFork', () => {
             [6, 11, 'world'],     // original
             [0, 5, 'transformed'], // transformed
             [6, 11, 'transformed'] // transformed
+        ]);
+    });
+
+    it('should infer a union of original and transformed data', () => {
+        const source: GenerateSpans<string | number, unknown> = applyFork(
+            applyDataMap<string, number, unknown>(() => 1)
+        )([{ start: 0, end: 5, data: 'test' }]);
+        const spans = generateSpans('hello', source);
+
+        deepStrictEqual(startEndData(spans), [
+            [0, 5, 'test'],
+            [0, 5, 1]
         ]);
     });
 
@@ -50,6 +63,24 @@ describe('applyFork', () => {
         );
 
         deepStrictEqual(spans, []);
+    });
+
+    it('should process a one-shot iterable once for both branches', () => {
+        function* input() {
+            yield({ start: 0, end: 5, data: 'test' });
+        }
+
+        const spans = generateSpans(
+            'hello',
+            applyFork<string, unknown>(
+                applyCollapseTo('start')
+            )(input())
+        );
+
+        deepStrictEqual(startEndData(spans), [
+            [0, 5, 'test'],
+            [0, 0, 'test']
+        ]);
     });
 
     it('should preserve origins in originals', () => {
