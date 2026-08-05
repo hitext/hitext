@@ -1,5 +1,6 @@
 import { deepStrictEqual } from 'assert';
 import { applyMerge, generateSpans } from '../../src/index.js';
+import type { GenerateSpans } from '../../src/types.js';
 import { renderSpans, spanWithoutMarker } from '../utils.js';
 
 describe('applyMerge', () => {
@@ -50,12 +51,17 @@ describe('applyMerge', () => {
     });
 
     it('should include origins with merged spans', () => {
-        const spans = generateSpans('Hello world', applyMerge()([[0, 5], [3, 8], [6, 11]]));
+        const source: GenerateSpans<undefined, unknown> = applyMerge<string, unknown>()([
+            [0, 5, 'first'],
+            [3, 8, 'second'],
+            [6, 11, 'third']
+        ]);
+        const spans = generateSpans('Hello world', source);
         deepStrictEqual(spanWithoutMarker(spans), [
             [0, 11, undefined, [
-                { start: 0, end: 5, data: undefined, origin: undefined },
-                { start: 3, end: 8, data: undefined, origin: undefined },
-                { start: 6, end: 11, data: undefined, origin: undefined }
+                { start: 0, end: 5, data: 'first', origin: undefined },
+                { start: 3, end: 8, data: 'second', origin: undefined },
+                { start: 6, end: 11, data: 'third', origin: undefined }
             ]]
         ]);
     });

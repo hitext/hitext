@@ -8,9 +8,8 @@ import { processSpansWithContext } from '../utils/span-operation-context.js';
 
 /**
  * Takes first or last N spans from the input, with optional filtering (curried transformer).
- * Combines positional limiting with filtering - evaluates spans in order and stops
- * when limit is reached. This is more efficient than applyFilter when you need a fixed
- * number of results, as it stops processing early.
+ * The complete input is materialized first. Predicate evaluation stops when the
+ * requested number matches, and last-N results retain their original input order.
  *
  * Supports:
  * - Positive number: Take first N spans (that match predicate if provided)

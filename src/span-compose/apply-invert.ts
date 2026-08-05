@@ -3,11 +3,11 @@ import { generateSpans } from '../spans.js';
 import { applyMerge } from './apply-merge.js';
 
 /**
- * Inverts spans (curried transformer) - returns spans covering all areas NOT included in the input spans.
+ * Emits gaps between sorted, merged input spans (curried transformer).
+ * Empty input produces no spans. Outputs have undefined data and no origin.
  *
- * @param exact - If true, inverted spans are bounded by [0, document.length].
- *                If false (default), inverted spans extend to [0, document.length + 1]
- *                to ensure edge content can be replaced in viewports.
+ * @param exact - Whether a trailing gap ends at document.length. When false
+ * (default), an existing trailing gap ends at document.length + 1.
  * @returns A transformer function that accepts spans and returns inverted spans
  *
  * @example
@@ -18,7 +18,7 @@ import { applyMerge } from './apply-merge.js';
  */
 export function applyInvert<Data, RenderOptions>(
     exact = false
-): TransformSpans<Data, RenderOptions> {
+): TransformSpans<Data, RenderOptions, undefined> {
     return (input: SpansSource<Data, RenderOptions>) => {
         return (document, createSpan, context) => {
             const spans = generateSpans(document, applyMerge<Data, RenderOptions>()(input), context);

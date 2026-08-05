@@ -1,146 +1,124 @@
 # Span Functions Guidelines
 
-This document specifies implementation requirements and procedures for span functions, and provides detailed guidelines on implementing, testing, and documenting span functions.
+This document defines the contracts and workflow for implementing, testing, and documenting span sources and transformers.
 
-See [Span Functions Reference](span-functions-reference.md) for the complete API reference for span functions, including signatures, parameters, return types, use cases, and examples.
+See [Span Functions Reference](span-functions-reference.md) for public signatures, output semantics, edge behavior, and examples.
 
 ## Table of Contents
 
-- [Core Concepts](#core-concepts)
+- [Core Contracts](#core-contracts)
 - [Design Principles](#design-principles)
 - [Implementation Requirements](#implementation-requirements)
 - [Implementation Procedure](#implementation-procedure)
 
-## Core Concepts
+## Core Contracts
 
-**Span structure:**
-- `start` - Starting offset in document text
-- `end` - Ending offset in document text  
-- `data` - Optional metadata (match results, diagnostics, custom info)
-- `origin` - Optional transformation lineage tracking (see Origin Tracking below)
+### Span Geometry and Data
 
-**Origin tracking:**
-- Type: `SpanRecord<Data> | SpanRecord<Data>[] | undefined`
-- Purpose: Maintain reference to **root source span(s)**, not intermediate transformation steps
-- **Points to transformation root** - Origin tracks the original span that started the transformation chain, not the previous step. The pattern `origin || { start, end, data }` preserves the root through multiple transformations.
-- **Set only for derivative spans** - Original spans from sources have `origin: undefined`
-- Use cases:
-  - **Injection context** - When collapsing to insertion points, origin shows what span triggered the injection and its original position/data
-  - **Content generation** - Access source data when generating summaries, TOCs, or derived content (e.g., merged headers → TOC entries with original header data)
-  - **Viewport understanding** - Know which part of original span is visible after framing/fitting operations
-  - **Root access** - Direct access to transformation root without traversing chain
-- Automatically managed by transformers according to transformation semantics (see Design Principle #7)
+A span describes a half-open document interval `[start, end)`:
 
-**Function categories:**
-- **Span Sources** (`spans*`) - Generate/provide spans, return `GenerateSpans<Data, RenderOptions>`
-- **Span Transformers** (`apply*`) - Transform spans, curried, return `(input: SpansSource) => GenerateSpans`
+- `start` and `end` are integer offsets measured in UTF-16 code units, matching JavaScript string indexing.
+- `start === end` represents a point span used for insertions and markers.
+- `data` is optional application metadata. Include `undefined` in the declared data type when downstream code must model missing data explicitly.
+- `origin` optionally identifies the root span or root spans from which a derivative was produced.
 
-**Context objects:**
-- `GenerateSpansContext` - Available in span source/transformer implementation: `{renderOptions, marker, spans, spansByMarker, spansByName, lines}`
-- `SpanOperationContext` - Available in predicate callbacks (filter, map, sort): `{document, lines, renderOptions, spans, index}` where `index` is a lazy getter for the current span's zero-based position
-- Both provide access to `lines` (LineBoundaries) for on-demand metric computation
+`SpanOrigin` is `SpanRecord<unknown> | SpanRecord<unknown>[]`. Its data is `unknown` because a transformer may change the current span's data type while preserving a root created with another type. Raw span inputs may already contain an origin; sources preserve it unless their contract says otherwise.
+
+### Sources, Generators, and Transformers
+
+```typescript
+type SpansSource<Data, RenderOptions> =
+    | SpansIterable<Data>
+    | GenerateSpans<Data, RenderOptions>;
+
+type TransformSpans<InputData, RenderOptions, OutputData = InputData> = (
+    input: SpansSource<InputData, RenderOptions>
+) => GenerateSpans<OutputData, RenderOptions>;
+```
+
+- **Sources** use `spans*` names and produce or combine spans.
+- **Generators** emit spans through `createSpan`; they do not return arrays.
+- **Transformers** use `apply*` names, are curried, and may change both geometry and data type.
+- **Composers** such as `spansCompose()` connect transformer output to the next transformer input from left to right.
+
+### Contexts
+
+`GenerateSpansContext` is available inside generators and contains generation state: `renderOptions`, `marker`, previously generated spans by marker or layer name, and shared `lines`.
+
+`SpanOperationContext` is passed to operation callbacks and contains `document`, `lines`, `renderOptions`, the materialized input `spans`, and `index`. For single-span callbacks, `index` is the current span's zero-based position. A comparison callback receives the shared context; `index` does not identify either comparator argument.
+
+Reuse `context.lines` instead of constructing another `LineBoundaries` instance. This keeps all operations in a generation pass on the same document metrics.
 
 ---
 
 ## Design Principles
 
-### 1. Composability First
+### 1. Composition and Naming
 
-Functions work together via `spansCompose()` for left-to-right composition. Enables readable pipelines.
+Span functions should compose without adapters:
 
-### 2. Currying for Transformers
+- Use `spans*` for sources, combiners, and composers.
+- Use `apply*` for curried transformers.
+- Bind transformer configuration before the input source: `applyExpandTo('line', 2)(input)`.
+- Make data-changing output explicit with `TransformSpans<InputData, RenderOptions, OutputData>`.
+- Prefer parameters that expose meaningful behavior over implicit mode changes.
 
-Transformers use currying to enable parameter binding before composition:
-```typescript
-applyExpandTo('line', 2)  // Returns function ready for composition
-```
+### 2. Immutability
 
-### 3. Semantic Naming
-
-- `spans*` = sources (generate/provide spans)
-- `apply*` = transformers (modify existing spans)
-- Clear, descriptive parameter names
-
-### 4. Explicit over Implicit
-
-Function behavior is obvious from name and parameters.
-
-### 5. Immutability
-
-Input spans are never mutated. Transformations always create new span objects, preserving the original as `origin`:
+Never mutate input span records or their origin chains. Emit output through `createSpan` and apply the transformer's documented origin policy:
 
 ```typescript
-// ✅ Correct: Create new span with origin
+// Create a positional derivative and preserve its root
 createSpan(newStart, newEnd, span.data, span.origin || span)
 
-// ❌ Wrong: Mutate input span
+// Wrong: mutate input
 span.start = newStart;
 span.end = newEnd;
 ```
 
-**Why:** Enables safe composition, predictable behavior, and transformation tracking.
+Filtering, sorting, and taking spans preserve the existing origin without creating a new one because they do not derive new geometry.
 
-### 6. Memory Efficiency for 1-to-1 Transformers
+### 3. Streaming and Materialization
 
-Transformers that maintain 1-to-1 input-output mapping should stream spans without creating temporary arrays:
+Use `processSpans()` for one-pass operations that do not need the complete input:
 
 ```typescript
-// ✅ Correct: Stream through processSpans wrapper
 return (document, createSpan, context) => {
     processSpans(document, input, (start, end, data, origin) => {
         createSpan(newStart, newEnd, data, origin || { start, end, data });
     }, context);
 };
-
-// ❌ Wrong: Collect all spans in memory
-const spans: Array<SpanRecord<Data>> = [];
-processSpans(document, input, (start, end, data, origin) => {
-    spans.push({ start, end, data, origin });
-}, context);
-spans.forEach(span => createSpan(...));
 ```
 
-**Exception:** Functions with predicate callbacks need temporary arrays to provide stable `context.spans` parameter (e.g., `applyFilter`, `applyDataMap`, `applySort`).
+Use `processSpansWithContext()` when callbacks need stable `context.spans` and `context.index`. It materializes the complete input before invoking the callback. This applies to `applyFilter`, `applyDataMap`, `applyMap`, `applyAugment`, `applySort`, and `applyTake`.
 
-**Why:** Avoids memory overhead for large span sets, enables true streaming pipelines.
+Materialization may also be required by semantics, such as sorting, merging, inversion, padding, or branching over a one-shot iterable. Do not describe a function as streaming merely because it emits output through `createSpan`.
 
-### 7. Origin Tracking
+### 4. Origin and Data Propagation
 
-Transformations preserve span lineage via `origin` field, which points to the **transformation root**, not intermediate steps. **Original spans from sources have `origin: undefined`** - only derivative spans carry origin references.
+Choose one origin policy and document it in JSDoc and the reference:
 
-**The root preservation pattern:**
+| Policy | Implementation | Typical functions |
+| --- | --- | --- |
+| Preserve | Pass the existing `origin` unchanged | filter, sort, take, append |
+| Derive | `origin || { start, end, data }` | collapse, expand, fit, map, augment, pad |
+| Clear | Emit `origin: undefined` to establish a new root | data map, reset origin |
+| Merge | Emit an array of merged input spans | merge |
+| None | Emit no origin because output is not a derivative | invert |
+
+For positional derivatives, preserve the root rather than creating `origin.origin` chains:
+
 ```typescript
-// ✅ Correct: Preserve root through chain
 createSpan(newStart, newEnd, data, origin || { start, end, data });
-
-// This means:
-// - If origin exists → keep it (points to root)
-// - If no origin → current span becomes root
-// Never creates origin.origin.origin... chains
 ```
 
-**Transformer origin behaviors:**
+`applyDataMap()` is intentionally different: changing data establishes a new semantic root, so it clears origin. Carry old data into the new data structure explicitly when it remains relevant.
 
-- **Inherits (most transformers):** Uses pattern above - `origin || { start, end, data }` preserves root through transformation chain (e.g., `applyExpandTo`, `applyCollapseTo`, `applyFilter`)
-
-- **Cleared (data transformations):** Sets `origin = undefined` - the transformed span becomes a new root. Used when data is semantically transformed and the result IS the new source of truth. Example: `applyDataMap()` creates new data with same position as origin - keeping origin would point to obsolete data. If original data is needed, carry it forward explicitly in new data structure.
-
-- **Array (merge operations):** Origin is array of all merged source spans - enables access to individual items when multiple spans combine into one (e.g., `applyMerge()` for generating summaries from merged headers)
-
-- **None (inversions):** No origin - output spans have no relationship to input spans (e.g., `applyInvert()` returns gaps, not derivatives)
-
-**Why preserve root, not previous step:**
-- Enables direct access to transformation source without traversing chain
-- Use cases: access original match data after expansion, know source position after viewport fitting, generate content from root data
-- Memory efficient: single reference vs linked list
-
-This enables access to source spans for functional composition (e.g., generating TOC from merged headers via `span.origin.map(...)`).
-
-### 8. Consistent Callback Signatures
+### 5. Callback Signatures
 
 Functions accepting callbacks follow consistent parameter patterns for predictable APIs:
 
-**Single span operations (filter, pick, data transforms):**
+**Single-span operations:**
 ```typescript
 (span: SpanRecord<Data>, context: SpanOperationContext) => result
 ```
@@ -158,7 +136,7 @@ Functions accepting callbacks follow consistent parameter patterns for predictab
 Where:
 - `span` - Full span object `{start, end, data, origin}`
 - `createSpan` - Function to emit output spans (for mapping operations)
-- `context` - `{document, lines, renderOptions, spans, index}` where `index` is a lazy getter
+- `context` - `{document, lines, renderOptions, spans, index}`
 - Returns: appropriate type for operation (boolean for filter, data for map, number for sort, void for createSpan)
 
 **Examples:**
@@ -188,12 +166,9 @@ applySort((a, b, { lines }) =>
 )
 ```
 
-**Parameter ordering rationale:**
-- `span` first - the subject of operation
-- `createSpan` before `context` - primary tool for result emission (mapping operations)
-- `context` last - supplementary information, often destructured
+Keep the subject first, the emission callback second when present, and shared context last. Destructure context at the call site when only one or two fields are needed.
 
-### 9. Compute Metrics On-Demand
+### 6. Compute Metrics On Demand
 
 Avoid storing line boundary metrics (line numbers, columns) in `span.data` unless absolutely required. Compute on-demand from `context.lines`:
 - **Span sources/transformers**: `GenerateSpans` callback receives `context` with `lines`
@@ -202,49 +177,15 @@ Avoid storing line boundary metrics (line numbers, columns) in `span.data` unles
 
 **Why:** Line calculations are fast. Storing bloats data and creates redundancy.
 
-**❌ Avoid:**
+Avoid storing values that can be derived from `context.lines` during the same generation pass:
 ```typescript
-applyDataMap((span, index, { lines }) => ({
+applyDataMap((span, { lines }) => ({
     ...span.data,
-    line: lines.getLine(span.start),      // Unnecessary
-    column: lines.getColumn(span.start)   // Unnecessary
+    line: lines.getLine(span.start)
 }))
 ```
 
-**Exception:** Store only when serializing outside render pipeline (API responses, external tools).
-
----
-
-### 10. Mapping Functions: `createSpan` Pattern
-
-Mapping functions (1-to-N transforms) receive `createSpan` callback for emitting output spans. This pattern avoids array allocation overhead and provides ergonomic conditional logic.
-
-**Pattern:**
-```typescript
-applyMap((span, createSpan, context) => {
-    // Emit 0, 1, or many spans by calling createSpan
-    if (condition) createSpan(start1, end1, data1);
-    if (other) createSpan(start2, end2, data2);
-    // Origin automatically set to: span.origin || span
-})
-```
-
-**Benefits:**
-- **No garbage collection overhead** - No intermediate arrays created
-- **Ergonomic conditionals** - Natural if/else without array manipulation
-- **Automatic origin tracking** - All emitted spans automatically get `origin = span.origin || span`
-- **Streaming friendly** - SpansSource flow through pipeline without buffering
-
-**Specialized wrappers:**
-- `applyAugment()` - Convenience wrapper that automatically emits original span first, then calls user function for additional spans
-- `applyDataMap()` - 1-to-1 data transform that preserves positions, clears origin (new semantic root)
-
-**Why automatic origin:**
-- All mapped outputs ARE derivatives of input - that's the semantic of mapping
-- Prevents user errors (forgetting or incorrectly setting origin)
-- User focus on transformation logic, not plumbing
-
----
+Store derived metrics only when they leave the render pipeline, are expensive to recompute across passes, or are part of the intended external data contract.
 
 ## Implementation Requirements
 
@@ -268,8 +209,7 @@ applyMap((span, createSpan, context) => {
 /**
  * Brief one-line summary of function purpose.
  * 
- * Optional longer description explaining behavior, edge cases, or important details.
- * Use this section to clarify non-obvious aspects.
+ * Explain non-obvious geometry, data, origin, ordering, or evaluation behavior.
  *
  * @param paramName - Description of parameter, including:
  *   - Valid values/types
@@ -278,66 +218,49 @@ applyMap((span, createSpan, context) => {
  * @returns Description of return value
  *
  * @example
- * // Concise semantic reference showing call pattern
+ * // Concise example showing the function's distinguishing behavior
  * spansCompose(..., functionName(args))
  */
 ```
 
-**Required:**
-- Brief summary (imperative mood: "Creates...", "Filters...", "Merges...")
-- ALL parameters documented
-- Return value described
-- **One or more `@example` blocks showing semantic usage** (see below)
-- Important behaviors noted (origin tracking, memory, edge cases)
+JSDoc must document every parameter, the return value, and the behaviors a caller cannot infer from the signature. As applicable, state:
 
-**CRITICAL - Example Requirements:**
+- whether offsets are clamped, rejected, or allowed outside document bounds;
+- whether input order is retained or normalized;
+- whether all input is materialized before callbacks or output;
+- how `data` and `origin` are produced;
+- how empty input, point spans, overlaps, and one-shot iterables behave.
 
-Examples are **quick semantic reference** (shown in tooltips), NOT tutorials or documentation:
+Examples appear in editor tooltips, so keep them semantic and self-contained. Use `...` when the input source is irrelevant:
 
-- ✅ **Minimal examples** - typically one, occasionally 2-3 if showing truly unique semantics
-- ✅ **Use `...` for irrelevant context** - replace parts that don't contribute to understanding
-- ✅ **Multiline format for transforms** - always use multiline format for readability
-- ✅ **Show semantic meaning** - what the function does, not implementation variations
-- ✅ **Concise** - typically 3-5 lines per example
-
-**When to use `...` vs named variables:**
-
-✅ **Good - use `...` when source doesn't matter:**
 ```typescript
 spansCompose(
-  ...,
-  applyFilter((span, { lines }) =>
-    lines.getLine(span.start) < 10
-  )
+    ...,
+    applyFilter((span, { lines }) =>
+        lines.getLine(span.start) < 10
+    )
 )
 ```
 
-✅ **Good - keep named variable when it provides semantic context:**
+Keep a concrete source when its data is essential to the example:
+
 ```typescript
 spansCompose(
-  spansFromMatch(/\w+/g),
-  applyFilter((span) => span.data[0] === 'hello')  // uses match data
+    spansFromMatch(/\w+/g),
+    applyFilter((span) => span.data[0] === 'hello')
 )
 ```
 
-❌ **Bad - keeps source but doesn't use its specific data:**
-```typescript
-spansCompose(
-  spansFromMatch(/\w+/g),  // ❌ irrelevant - match data not used
-  applyFilter((span, { lines }) =>
-    lines.getLine(span.start) < 10
-  )
-)
-```
+Add another example only when an overload, parameter form, or option changes the function's semantics. Different regexes, field names, or input sources do not need separate examples.
 
-**When to add multiple examples:**
+Do not shorten an example merely to reduce line count. In the public reference, prefer a complete, named recipe over an isolated call when the surrounding source or composition explains how the function is used. Preserve comments that explain:
 
-- ✅ **Different parameter types** (e.g., `applyPick('first')` vs `applyPick(predicate)`)
-- ✅ **Different parameter forms** (e.g., `applyExpandTo('line', 2)` vs `applyExpandTo('line', [1, 3])`)
-- ✅ **Optional parameters with significant behavior change** (e.g., `applySort()` vs `applySort(comparator)`)
-- ❌ **NOT for using different span properties** (data vs lines vs index - all show same pattern)
-- ❌ **NOT for parameter value variations** (different regex, different field names, different numbers)
-- ❌ **NOT for different input sources** (unless source provides semantic context)
+- why a source or transformer appears at that point in the pipeline;
+- what a non-obvious argument changes;
+- which output, ordering, data, or origin behavior the example relies on;
+- how two examples differ when they demonstrate distinct modes.
+
+Comments should describe semantic intent, not restate syntax. For example, `// Coalesce overlapping context windows` is useful before `applyMerge()`, while `// Call applyMerge` is not. Use representative data types when a callback reads `span.data`, so the example can be followed without assuming `unknown` has particular fields.
 
 ### Test Structure
 
@@ -346,48 +269,43 @@ spansCompose(
 
 **Imports:** Public API only (`src/index.ts` or `src/types.d.ts`)
 
-**Template:**
+**Typical runtime test:**
 ```typescript
 import { deepStrictEqual } from 'assert';
-import { functionName, generateSpans } from '../../src/index.js';  // Public API only
-import { renderSpans, startEnd, startEndData, spanWithoutMarker } from '../utils.js';
+import { functionName, generateSpans } from '../../src/index.js';
+import { startEnd } from '../utils.js';
 
 describe('functionName', () => {
-    // Test isolated behavior only - don't test general patterns
-    
-    it('should handle basic case', () => {
-        // Using generateSpans - assert exact start/end positions
+    it('transforms the relevant geometry', () => {
         const document = 'Hello World';
         const spans = generateSpans(document, fn());
+
         deepStrictEqual(startEnd(spans), [
             [0, 5],
             [10, 15]
         ]);
     });
-    
-    it('should transform correctly', () => {
-        // Using renderSpans - assert by rendered text (more descriptive)
-        const document = 'Hello World';
-        const output = renderSpans(document, fn());
-        deepStrictEqual(output, [
-            'Hello',
-            'World'
-        ]);
-    });
-    
-    // More specific cases...
 });
 ```
 
-**Required coverage:**
-- Edge cases: `[]`, `[[0, 5]]`, `[[5, 5]]`, document boundaries
-- Enum parameters: Each value tested (dedicated `describe()` or grouped)
-- Predicate functions: All parameters verified (single test)
-- Single assertion for span sets (preferred)
-- Focus on function-specific logic only
+Choose coverage from the function's contract rather than copying a fixed list:
+
+| Contract surface | Tests to add when applicable |
+| --- | --- |
+| Geometry | empty input, point spans, document boundaries, overlaps, adjacent spans |
+| Ordering/cardinality | input order, sorted order, duplicates, zero/one/many outputs |
+| Callbacks | callback arguments, `context.index`, stable `context.spans`, render options |
+| Data/origin | exact output data, root preservation, clearing, merged origin arrays |
+| Source evaluation | generator invocation count, reusable and one-shot iterables |
+| Parameters | every enum mode, defaults, tuple/scalar forms, invalid values |
+| Types | inferred callback data and output data through `spansCompose()` |
+
+Assert the complete output span set when practical. This exposes accidental extra output and ordering changes. Use a rendered-text assertion only when it communicates the behavior more clearly than offsets.
+
+For a transformer that accepts arbitrary `SpansSource`, include a one-shot iterable regression whenever the implementation evaluates or branches over input more than once. For data-changing functions and composer overloads, add compile-time assertions in the existing type-test style.
 
 **Helper utilities** (`test/utils.ts`):
-- `generateSpans()` - Assert `start`/`end`/`data`/`origin`
+- public `generateSpans()` - Generate normalized spans for exact assertions
 - `renderSpans()` - Assert by text output
 - `startEnd()` / `startEndData()` - Simplified assertions
 - `spanWithoutMarker()` - Ignore markers
@@ -409,7 +327,7 @@ export function spansFromSomething(param: Type): GenerateSpans<Data, RenderOptio
 ```typescript
 // Transformers return a function that accepts input and returns GenerateSpans
 export function applyTransform(param: Type): TransformSpans<InputData, RenderOptions, OutputData> {
-    return (input: SpansSource) => {
+    return (input: SpansSource<InputData, RenderOptions>) => {
         return (document, createSpan, context) => {
             // Transform input spans, calling createSpan for each output
         };
@@ -419,121 +337,122 @@ export function applyTransform(param: Type): TransformSpans<InputData, RenderOpt
 
 Use the third `TransformSpans` generic when output data differs from input data. Origin data remains `unknown` because a derivative may preserve a root created before a data-changing transformation.
 
-**Predicates must follow consistent signatures:**
-
-```typescript
-// Single span operations (filter, pick, data transforms)
-(span: SpanRecord<Data>, context: SpanOperationContext) => result
-
-// Span mapping (1-to-N with createSpan)
-(span: SpanRecord<Data>, createSpan: CreateSpan, context: SpanOperationContext) => void
-
-// Span comparisons (sort)
-(spanA: SpanRecord<Data>, spanB: SpanRecord<Data>, context: SpanOperationContext) => number
-```
+Use the callback signatures from [Design Principles](#5-callback-signatures). Do not add positional callback parameters for values already available in `SpanOperationContext`.
 
 ### Documentation Sync
 
-When adding, updating, removing, or renaming a span function, the following sections of this document must be kept in sync:
+Keep the public [Span Functions Reference](span-functions-reference.md) synchronized with source and tests:
 
-**For new/updated functions:**
+1. Update the quick-reference row: category/cardinality, concise behavior, data behavior, origin policy, and evaluation strategy.
+2. Update the function section: current signatures and overloads, parameters and defaults, output ordering and geometry, data/origin behavior, edge semantics, and a distinguishing example.
+3. Repair incoming links and examples when a function is renamed or removed.
+4. Update this document only when the change introduces or revises a shared implementation contract.
+5. Update `AGENTS.md` immediately when a code change contradicts its architecture, terminology, public API, or validation requirements.
 
-1. **Quick Reference Table** (either "Span Sources" or "Span Transformers")
-   - Add/update row with: function name (linked to section), type, description, modifies data flag, origin behavior, implementation pattern
-   - Ensure correct category: Source, Combiner, Composer, or Transformer
-   - Specify transform type: 1-to-1, 1-to-N, N-to-1, N-to-N, N-to-M
-   - Implementation: Streaming, Temp array, Temp array*, Wrapper
-
-2. **Function Section** (either "Span Sources" or "Span Transformers")
-   - Add/update complete documentation:
-     - Section heading with function name and parameters
-     - TypeScript signature (all overloads)
-     - Parameters section (all valid values, defaults, behaviors)
-     - Data field description (what's stored)
-     - Origin behavior explanation
-     - Use cases (rational number of bullet points)
-     - Examples in fenced code blocks
-
-3. **Design Principles** (if applicable)
-   - Add new principle if function introduces fundamental pattern
-   - Update existing principles if behavior/recommendations change
-
-4. **Core Concepts** (if applicable)
-   - Update if function introduces new concepts, types, or patterns
-
-**For removed functions:**
-- Remove from Quick Reference Table
-- Remove function section
-- Review Design Principles and Core Concepts for outdated references
-
-**For renamed functions:**
-- Update all occurrences throughout document
-- Update Quick Reference Table (name and link)
-- Update function section heading
-- Check all code examples in other sections
+Avoid repeating generic use-case lists in every function section. Prefer details that affect a caller's decision or prevent a bug: point-span behavior, overlap rules, ordering, materialization, one-shot inputs, regex state, option defaults, and type-inference limits.
 
 ---
 
 ## Implementation Procedure
 
-Follow these steps when creating or updating span functions.
+Follow these steps when creating or changing a span function. Do not postpone tests and documentation until the implementation is otherwise complete; each stage checks a different part of the public contract.
 
-### 1. Create Implementation File
+### 1. Define the Contract
 
-1. Choose location based on function type:
-   - **Source** → `src/span-sources/<function-name>.ts`
-   - **Transformer** → `src/span-compose/<function-name>.ts`
-2. Convert camelCase to kebab-case for filename
-3. Implement with proper signature pattern (see Implementation Requirements)
-4. Add JSDoc following template (see Implementation Requirements)
+Write down the behavior that the implementation and tests must agree on:
 
-### 2. Update Exports
+1. Choose the category and name:
+    - source, combiner, or composer: `spans*`;
+    - curried transformer: `apply*`.
+2. Define input and output data types. Use the third `TransformSpans` generic when they differ.
+3. Define cardinality and ordering: can one input emit zero, one, or many outputs; can output be reordered or deduplicated?
+4. Define geometry: which boundaries move, whether point spans are valid, and how document and line boundaries are handled.
+5. Choose the origin policy from [Origin and Data Propagation](#4-origin-and-data-propagation): preserve, derive, clear, merge, or none.
+6. Choose the evaluation strategy:
+    - use `processSpans()` when each input can be handled independently;
+    - use `processSpansWithContext()` when an operation callback needs stable `context.spans` or `context.index`;
+    - materialize explicitly when sorting, merging, inversion, branching, or another whole-input operation requires it.
+7. If the function accepts a callback, use one of the signatures in [Callback Signatures](#5-callback-signatures).
 
-1. Add to barrel export: `src/span-sources/index.ts` or `src/span-compose/index.ts`
-2. Add to public API: `src/index.ts` (if part of public API)
+These decisions should be visible in the function's type, JSDoc, tests, and reference entry. If one of them cannot be stated precisely, resolve that ambiguity before adding implementation branches.
 
-### 3. Write Tests
+### 2. Create the Implementation
 
-1. Create test file mirroring source location: `test/<category>/<function-name>.test.ts`
-2. Import only from public API (`src/index.ts`)
-3. Follow test template (see Implementation Requirements)
-4. Cover required edge cases
-5. Run tests: `npm test`
+1. Create or update the file that owns the behavior:
+    - source: `src/span-sources/<function-name>.ts`;
+    - transformer: `src/span-compose/<function-name>.ts`.
+2. Add the public generic signature before implementation details. Verify that output data inference matches runtime data, especially when output data is replaced or becomes `undefined`.
+3. Implement generation through `createSpan()` without mutating input records.
+4. Apply the origin policy chosen in step 1 consistently to every output path.
+5. Add JSDoc using the template above. Document defaults, ordering, materialization, data/origin behavior, and edge cases that are not obvious from the signature.
+6. Add a semantic `@example`; add another only for a genuinely different mode or parameter form.
 
-### 4. Validate Code Quality
+Run the source tests immediately after the first working implementation:
 
-Run validation commands:
 ```bash
-npm test              # Run source unit tests
-npm run lint:fix      # Lint with autofix
-npm run typecheck     # TypeScript type check
+npm test
 ```
 
-### 5. Update Documentation
+### 3. Update Public Exports
 
-1. [**Quick Reference Table**](span-functions-reference.md#quick-reference)
-   - Add row with: name (linked), type, description, modifies data, origin behavior, implementation
-   - Category: Source, Combiner, Composer, or Transformer
-   - Transform type: 1-to-1, N-to-1, N-to-N, N-to-M, 1-to-N
-   - Implementation: Streaming, Temp array, Temp array*, Wrapper
+1. Export the function from its category barrel:
+    - `src/span-sources/index.ts`; or
+    - `src/span-compose/index.ts`.
+2. Export it from `src/index.ts` so tests and consumers exercise the public API.
+3. Export any new public types from the same public type surface used by related functions.
 
-2. **Function Section** ([Span Sources](span-functions-reference.md#span-sources) or [Span Transformers](span-functions-reference.md#span-transformers))
-   - TypeScript signature with all overloads
-   - Parameters (all valid values, defaults, behaviors)
-   - Origin behavior explanation
-   - Use cases (3-4 bullet points)
-   - Examples in fenced code blocks
+Do not import an implementation file directly from tests to work around a missing export.
 
-3. [**Design Principles**](span-functions-guidelines.md#design-principles) (if applicable)
-   - Add new principle if introducing fundamental pattern
-   - Update existing if behavior changes
+### 4. Add Focused Tests
 
-4. [**Core Concepts**](span-functions-guidelines.md#core-concepts) (if applicable)
-   - Update if introducing new concepts or types
+1. Mirror the source path:
+    - `src/span-sources/spans-example.ts` → `test/span-sources/spans-example.test.ts`;
+    - `src/span-compose/apply-example.ts` → `test/span-compose/apply-example.test.ts`.
+2. Import runtime functions from `src/index.ts` and public types from `src/types.d.ts`.
+3. Add a basic contract test that asserts the complete output span set.
+4. Select relevant cases from the [test matrix](#test-structure), including geometry, ordering, callback context, data, origin, and parameter modes.
+5. If input may be evaluated more than once, add a one-shot iterable test that verifies the intended consumption behavior.
+6. If data changes or the function participates in composition, add a compile-time assignment that verifies inferred input and output data types.
+7. Keep tests specific to this function; do not retest normalization or rendering behavior owned by another module.
 
-### 6. Final Validation
+Run the focused test while iterating, then the complete source suite and type checker:
 
-Before committing, run full validation:
+```bash
+npx mocha --import=tsx --conditions=test test/<category>/<function-name>.test.ts
+npm test
+npm run typecheck
+```
+
+### 5. Synchronize Documentation
+
+1. Update the function's row in the [Quick Reference](span-functions-reference.md#quick-reference):
+    - category or cardinality;
+    - concise behavior;
+    - data behavior;
+    - origin policy;
+    - evaluation strategy.
+2. Update its full reference section with:
+    - all public signatures and meaningful overloads;
+    - every parameter, valid form, and default;
+    - output geometry, ordering, and cardinality;
+    - data and origin behavior;
+    - materialization and one-shot iterable implications;
+    - empty-input, point-span, overlap, or boundary semantics where relevant;
+    - commented examples that show realistic usage and explain the semantic role of each non-obvious step.
+3. Update shared contracts in this guide only when the function introduces or changes a reusable implementation rule.
+4. Update `AGENTS.md` immediately if the change contradicts its API, terminology, architecture, responsibilities, test structure, or validation requirements.
+5. For a rename or removal, update incoming links and examples throughout both documents.
+
+### 6. Validate the Change
+
+Run fast validation after implementation, tests, exports, and docs agree:
+
+```bash
+npm run fast-check    # lint + source tests + typecheck
+```
+
+Fix failures at this stage before building generated outputs. Before committing, run the full validation:
+
 ```bash
 npm run check         # Full validation:
                       # - Lint with autofix
@@ -543,3 +462,5 @@ npm run check         # Full validation:
                       # - Run tests for ESM/CJS builds
                       # - Test bundles
 ```
+
+Finally, review the diff for accidental generated-file churn, stale terminology, broken Markdown links, and examples that no longer match the public callback signatures.

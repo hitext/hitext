@@ -1,5 +1,6 @@
 import { deepStrictEqual, strictEqual } from 'assert';
 import { applyInvert, generateSpans } from '../../src/index.js';
+import type { GenerateSpans } from '../../src/types.js';
 import { renderSpans, startEnd } from '../utils.js';
 
 describe('applyInvert', () => {
@@ -72,7 +73,12 @@ describe('applyInvert', () => {
     });
 
     it('should not create origin for inverted spans', () => {
-        const spans = generateSpans('Hello world', applyInvert()([[0, 5]]));
+        const source: GenerateSpans<undefined, unknown> = applyInvert<string, unknown>()([
+            [0, 5, 'excluded']
+        ]);
+        const spans = generateSpans('Hello world', source);
+
+        strictEqual(spans[0].data, undefined);
         strictEqual(spans[0].origin, undefined);
     });
 });

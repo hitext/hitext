@@ -2,13 +2,10 @@ import type { SpansSource, TransformSpans } from '../types.js';
 import { generateSpans } from '../spans.js';
 
 /**
- * Merges overlapping or adjacent spans into continuous regions (curried transformer).
+ * Sorts spans and merges each overlapping or adjacent group (curried transformer).
  *
- * Preserves the array of merged spans in the origin field, which allows you to
- * access the individual spans that were combined. This is useful for:
- * - Generating summaries (e.g., table of contents from merged headers)
- * - Tracking what was merged together for further processing
- * - Maintaining data from individual spans after merging positions
+ * Each output has undefined data and an origin array containing the normalized
+ * input records in its group.
  *
  * @returns A transformer function that accepts spans and returns merged spans
  *
@@ -19,10 +16,10 @@ import { generateSpans } from '../spans.js';
  *   applyMerge()
  * )
  */
-export function applyMerge<Data, RenderOptions>(): TransformSpans<Data, RenderOptions> {
+export function applyMerge<Data, RenderOptions>(): TransformSpans<Data, RenderOptions, undefined> {
     return (input: SpansSource<Data, RenderOptions>) => {
         return (document, createSpan, context) => {
-            const sortedSpans = generateSpans(document, input, context)
+            const sortedSpans = generateSpans(document, input, context as any)
                 .sort((a, b) => a.start - b.start || a.end - b.end);
 
             let firstIndex = 0;

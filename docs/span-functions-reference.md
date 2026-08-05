@@ -1,12 +1,13 @@
 # Span Functions Reference
 
-Complete API reference for span functions, including signatures, parameters, return types, use cases, and examples.
+Public API reference for creating and transforming spans. Offsets are zero-based, end-exclusive UTF-16 code-unit positions, matching JavaScript string indexing.
 
 See [Span Functions Guidelines](span-functions-guidelines.md) for implementation requirements, design principles, and procedures.
 
 ## Table of Contents
 
 - [Quick Reference](#quick-reference)
+- [Example Data Types](#example-data-types)
 - [Span Sources](#span-sources)
 - [Span Transformers](#span-transformers)
 
@@ -14,59 +15,101 @@ See [Span Functions Guidelines](span-functions-guidelines.md) for implementation
 
 Span Sources:
 
-| Function | Type | Description | Origin Behavior |
-|----------|------|-------------|-----------------|
-| [`spansCompose`](#spanscomposespaninput-transformers) | Composer | Pipeline composition | Per transformer |
-| [`spansConcat`](#spansconcatinputs) | Combiner | Combine sources | Preserves existing |
-| [`spansFromLines`](#spansfromlinestype) | Source | Line boundaries | None (new spans) |
-| [`spansFromMatch`](#spansfrommatchpattern) | Source | Pattern matching | None (new spans) |
-| [`spansFrom`](#spansfrominput) | Source | Raw data conversion & document keywords | None (new spans) |
-| [`spansFromLayer`](#spansfromlayername) | Source | Layer reference | Preserves existing |
-| [`spansFromOptions`](#spansfromoptionskey) | Source | User options | Preserves existing |
-| [`spansWithFallback`](#spanswithfallbackinputs) | Combiner | First non-empty | Preserves existing |
+| Function | Type | Description | Evaluation |
+| --- | --- | --- | --- |
+| [`spansCompose`](#spanscomposespaninput-transformers) | Composer | Apply transformers left to right | Per transformer |
+| [`spansConcat`](#spansconcatinputs) | Combiner | Emit every source in argument order | Sequential |
+| [`spansFromLines`](#spansfromlinestype) | Source | Generate line-boundary spans | Direct |
+| [`spansFromMatch`](#spansfrommatchpattern) | Source | Generate string or RegExp matches | Direct |
+| [`spansFrom`](#spansfrominput) | Source | Normalize span inputs and document keywords | Direct |
+| [`spansFromLayer`](#spansfromlayername) | Source | Read a previously generated named layer | Context lookup |
+| [`spansFromOptions`](#spansfromoptionsspaninput) | Source | Resolve a source from render options | Deferred |
+| [`spansWithFallback`](#spanswithfallbackinputs) | Combiner | Emit the first non-empty source | Sequential fallback |
 
 Span Transformers:
 
-| Function | Transform Type | Description | Modifies Data | Origin | Implementation |
-|----------|----------------|-------------|---------------|--------|----------------|
-| [`applyAppend`](#applyappendsources) | N-to-N | Append sources | No | Preserves | Wrapper |
-| [`applyAugment`](#applyaugmentcallback) | 1-to-N | Add derivatives | No | Creates new | Temp array* |
-| [`applyCollapseTo`](#applycollapsetoposition) | 1-to-1 | Zero-width markers | No | Inherits | Streaming |
-| [`applyDataMap`](#applydatamapmapper) | 1-to-1 | Data transformation | Yes | Cleared | Temp array* |
-| [`applyExpandTo`](#applyexpandtoposition-lines) | 1-to-1 | Expand boundaries | No | Inherits | Streaming |
-| [`applyFallback`](#applyfallbackfallbacks) | N-to-N | Provide fallback | No | From source | Wrapper |
-| [`applyFilter`](#applyfilterpredicate) | N-to-N | Conditional selection | No | Inherits | Temp array* |
-| [`applyFitToWindow`](#applyfittowindowsize-allowtrimming) | 1-to-1 | Horizontal viewport | No | Inherits | Streaming |
-| [`applyFork`](#applyforktransformers) | N-to-N | Fork sub-pipeline | No | Preserves | Wrapper |
-| [`applyInvert`](#applyinvertexact) | N-to-M | Negate spans | No | None | Temp array |
-| [`applyMap`](#applymapcallback) | 1-to-N | Transform spans | No | Creates new | Temp array* |
-| [`applyMerge`](#applymerge) | N-to-1 | Merge overlapping | No | Array of merged | Temp array |
-| [`applyPadLines`](#applypadlineslines-size) | 1-to-N | Add padding | No | Inherits | Temp array |
-| [`applyResetOrigin`](#applyresetorigin) | 1-to-1 | Clear origins | No | Cleared | Streaming |
-| [`applySort`](#applysortcomparator) | N-to-N | Custom ordering | No | Inherits | Temp array* |
-| [`applyTake`](#applytaken-predicate) | N-to-N | Take first/last N + filter | No | Inherits | Temp array |
+| Function | Cardinality | Description | Data | Origin | Evaluation |
+| --- | --- | --- | --- | --- | --- |
+| [`applyAppend`](#applyappendsources) | N-to-M | Append independent sources | Preserved | Preserved | Sequential |
+| [`applyAugment`](#applyaugmentcallback) | 1-to-many | Pass through inputs and add derivatives | Union | Preserve/derive | Materialized |
+| [`applyCollapseTo`](#applycollapsetoposition) | 1-to-1 | Collapse to point spans | Preserved | Derive | Streaming |
+| [`applyDataMap`](#applydatamapmapper) | 1-to-1 | Replace data | Replaced | Clear | Materialized |
+| [`applyExpandTo`](#applyexpandtoposition-lines) | 1-to-1 | Expand boundaries | Preserved | Derive | Streaming |
+| [`applyFallback`](#applyfallbackfallbacks) | N-to-M | Use fallbacks for empty input | Preserved | Preserved | Sequential fallback |
+| [`applyFilter`](#applyfilterpredicate) | N-to-M | Select by predicate | Preserved | Preserved | Materialized |
+| [`applyFitToWindow`](#applyfittowindowsize-allowtrimming) | 1-to-1 | Fit horizontal windows | Preserved | Derive | Streaming |
+| [`applyFork`](#applyforktransformers) | N-to-M | Emit inputs plus a transformed branch | Union | Per branch | Materialized once |
+| [`applyInvert`](#applyinvertexact) | N-to-M | Emit gaps between covered regions | `undefined` | None | Materialized |
+| [`applyMap`](#applymapcallback) | 1-to-many | Emit custom derivatives | Replaced | Derive | Materialized |
+| [`applyMerge`](#applymerge) | N-to-M | Merge contiguous groups | `undefined` | Merge array | Materialized/sorted |
+| [`applyPadLines`](#applypadlineslines-size) | 1-to-many | Emit selected line-width spans | Missing width | Derive | Materialized |
+| [`applyResetOrigin`](#applyresetorigin) | 1-to-1 | Clear roots | Preserved | Clear | Streaming |
+| [`applySort`](#applysortcomparator) | N-to-N | Reorder spans | Preserved | Preserved | Materialized |
+| [`applyTake`](#applytaken-predicate) | N-to-M | Select first or last matches | Preserved | Preserved | Materialized |
 
-**Implementation notes:**
-- **Streaming** - Processes spans one-by-one without collecting in memory (1-to-1 transforms)
-- **Temp array*** - Required for predicate callbacks to provide stable `context.spans` parameter
-- **Temp array** - Required for complex logic (merging, inverting, windowing, padding)
-- **Wrapper** - Delegates to other span functions (composition helper)
+**Cardinality:**
 
-**Transform types:**
-- **1-to-1** - Each input span produces exactly one output span
-- **1-to-N** - Each input span may produce multiple output spans
-- **N-to-1** - Multiple input spans combined into one output span
-- **N-to-N** - Variable number of output spans (filtering, windowing)
-- **N-to-M** - Complete transformation (inversion)
+- **1-to-1** - Every input span produces exactly one output span.
+- **1-to-many** - Every input span may produce zero, one, or multiple output spans.
+- **N-to-N** - The complete input set is reordered without changing its size.
+- **N-to-M** - The number of outputs depends on the complete input set or additional sources.
 
-**Origin behavior:**
-- **Inherits** - Passes through existing origin, or creates new from input span
-- **Array of merged** - Creates array of all merged spans (enables access to individuals)
-- **None** - No relationship between input and output (inversions)
-- **Cleared** - Sets to `undefined` (data transformations create new semantic meaning)
-- **Preserves existing** - Keeps whatever origin was in source spans
+**Data:**
 
-Origin records expose `data` as `unknown`, since data-changing transformers may preserve a root with a different data type.
+- **Preserved** - Output spans retain input data unchanged.
+- **Replaced** - A callback produces a new output data type.
+- **Union** - Output may contain original data and data produced by a branch or callback.
+- **Missing width** - Output data is the number of UTF-16 code units missing from the requested line width.
+- **`undefined`** - The operation creates regions that do not have one meaningful input data value.
+
+**Origin:**
+
+- **Preserved** - Passes through the existing origin unchanged.
+- **Derive** - Preserves an existing root, or records the input span as the root when no origin exists.
+- **Preserve/derive** - Preserves original spans while assigning derivative outputs to their input roots.
+- **Clear** - Emits `origin: undefined`, making the output a new root.
+- **Merge array** - Records every normalized input span in a merged group.
+- **None** - Output regions are not derivatives of individual input spans.
+- **Per branch** - Original and transformed branches follow their respective origin policies.
+
+Origin records expose `data` as `unknown` because the root may predate a data-changing transformer.
+
+**Evaluation:**
+
+- **Direct** - Generates spans directly from the document.
+- **Sequential** - Reads sources in argument order without materializing the complete combined result.
+- **Deferred** - Resolves the source when generation starts.
+- **Context lookup** - Reads spans generated by an earlier named layer.
+- **Sequential fallback** - Fully checks empty sources in order and emits the first non-empty source.
+- **Streaming** - Can emit each result as it reads an input span.
+- **Materialized** - Reads the complete input before producing output; operation callbacks receive that stable array as `context.spans`.
+- **Materialized once** - Reads a source once and reuses the normalized records for multiple branches.
+- **Materialized/sorted** - Reads and sorts the complete input before producing output.
+- **Per transformer** - Each composed transformer follows its own evaluation strategy.
+
+Evaluation strategy matters for memory use and for one-shot iterable sources.
+
+### Example Data Types
+
+Examples use the following representative application types. API functions and public types are assumed to be imported from the package root.
+
+```typescript
+interface Diagnostic {
+    severity: 'error' | 'warning' | 'info';
+    message: string;
+}
+
+interface Selection {
+    primary: boolean;
+}
+
+interface ExampleRenderOptions {
+    diagnostics?: SpansSource<Diagnostic, ExampleRenderOptions>;
+    selections?: SpansSource<Selection, ExampleRenderOptions>;
+    userInsertPoint?: SpansSource<undefined, ExampleRenderOptions>;
+    pattern?: RegExp;
+}
+```
 
 ---
 
@@ -77,29 +120,45 @@ Origin records expose `data` as `unknown`, since data-changing transformers may 
 Compose a span generator with multiple transformers (left-to-right).
 
 ```typescript
-spansCompose<InputData, OutputData, RenderOptions>(
+spansCompose<Data, RenderOptions>(
+    spanInput: SpansSource<Data, RenderOptions>
+): GenerateSpans<Data, RenderOptions>
+
+spansCompose<InputData, Data1, RenderOptions>(
     spanInput: SpansSource<InputData, RenderOptions>,
-    ...transformers: Array<TransformSpans>
-): GenerateSpans<OutputData, RenderOptions>
+    transform1: TransformSpans<InputData, RenderOptions, Data1>
+): GenerateSpans<Data1, RenderOptions>
+
+// Equivalent overloads preserve each intermediate data type through five transforms.
+// Longer pipelines use the variadic any fallback.
 ```
 
 **Parameters:**
-- `spanInput` - Initial span generator
+- `spanInput` - Initial iterable or generator
 - `transformers` - Transformation functions to apply in sequence
 
+With no transformers, the function still returns a `GenerateSpans` wrapper around the input. Data inference is preserved through five transformers. Beyond five, the variadic fallback returns `GenerateSpans<any, RenderOptions>`; split a longer pipeline or annotate its boundary when retaining static data types matters.
+
+**Origin:** Determined by each transformer in the composition. With no transformers, input origins are preserved unchanged.
+
 **Use cases:**
-- Building transformation pipelines
-- Combining multiple transformations
-- Creating reusable compositions
+
+- Build readable left-to-right transformation pipelines.
+- Package a reusable source plus its normalization and selection steps.
+- Track data-type changes through a sequence of transformers.
 
 **Example:**
 ```typescript
-// Multi-step pipeline
-spansCompose(
-    spansFromLayer('diagnostics'),
+// Build one viewport span for each group of nearby error diagnostics.
+const errorWindows = spansCompose(
+    spansFromLayer<Diagnostic>('diagnostics'),
+    // Keep errors before changing their geometry.
     applyFilter(span => span.data.severity === 'error'),
+    // Include two context lines around every error.
     applyExpandTo('line', 2),
+    // Coalesce overlapping context windows.
     applyMerge(),
+    // Limit each merged region to a practical horizontal viewport.
     applyFitToWindow(1000)
 )
 ```
@@ -118,18 +177,23 @@ spansConcat<Data, RenderOptions>(
 **Parameters:**
 - `inputs` - One or more span sources to combine
 
+Inputs are evaluated once in argument order. Their spans are emitted unchanged and are not sorted, merged, or deduplicated. No inputs produce an empty generator.
+
+**Origin:** Preserves the origin supplied by every input source.
+
 **Use cases:**
-- Multi-pattern matching
-- Combining different source types
-- Layer aggregation
+
+- Combine independent patterns into one layer.
+- Aggregate parser, diagnostic, or layer sources without merging their spans.
+- Preserve source ordering when later transforms depend on it.
 
 **Example:**
 ```typescript
-// Collect multiple severity levels
-spansConcat(
-    spansFromMatch(/ERROR/g),
-    spansFromMatch(/WARNING/g),
-    spansFromLayer('diagnostics')
+// Emit ERROR matches first, followed by WARNING matches.
+// The two sets remain separate even when their spans overlap.
+const logLevels = spansConcat(
+    spansFromMatch(/\bERROR\b/g),
+    spansFromMatch(/\bWARNING\b/g)
 )
 ```
 
@@ -156,19 +220,23 @@ spansFromLines(
 
 **Data:** Line number (1-indexed)
 
+The source recognizes `\n`, `\r`, and `\r\n`; a CRLF pair is one newline. It represents the final logical line even when it is empty. Consequently, an empty document produces one line span or point span for every mode except `'newline'`, which only emits actual newline sequences.
+
+**Origin:** None. Every line span is a new source span.
+
 **Use cases:**
-- Line numbering
-- Line-based highlighting
-- Inserting line prefixes/suffixes
-- Git diff styling
 
-**Example:**
+- Wrap or style complete lines or line content.
+- Insert line numbers, diff markers, or controls at line boundaries.
+- Select newline sequences independently from line content.
+
+**Examples:**
 ```typescript
-// Add line numbers
-spansFromLines('line-start')
+// Select complete lines, including their trailing newline sequences.
+const lines = spansFromLines('line')
 
-// Highlight full lines
-spansFromLines('line')
+// Create insertion points for prefixes such as line numbers or diff markers.
+const lineStarts = spansFromLines('line-start')
 ```
 
 ---
@@ -183,27 +251,31 @@ spansFromMatch(pattern: string): GenerateSpans<string, RenderOptions>
 ```
 
 **Parameters:**
-- `pattern` - RegExp (with `g` flag) or string to match
+- `pattern` - RegExp or literal string to match
 
 **Data:** Full `RegExpExecArray` (includes capture groups) for RegExp, matched string for string literal
 
 **Matching behavior:**
+- A global RegExp emits every non-overlapping match; a non-global RegExp emits only its first match.
 - Zero-width matches produce point spans. Repeated RegExp matches advance by code point in Unicode mode and by code unit otherwise.
 - An empty string matches every document offset, including the end offset.
 - Each generation uses a fresh copy of the RegExp starting at `lastIndex = 0`; the supplied RegExp is not mutated.
 
+**Origin:** None. Every match is a new source span.
+
 **Use cases:**
-- Syntax highlighting
-- Finding diagnostic markers
-- Extracting structured patterns
 
-**Example:**
+- Highlight literal tokens or regular-expression matches.
+- Capture structured text for later `applyDataMap()` processing.
+- Generate point spans from lookahead or other zero-width patterns.
+
+**Examples:**
 ```typescript
-// Find function declarations with capture groups
-spansFromMatch(/function\s+(\w+)/gi)
+// Find every function declaration; span.data[1] contains the function name.
+const functionDeclarations = spansFromMatch(/function\s+(\w+)/gi)
 
-// Simple string matching
-spansFromMatch('TODO')
+// Find exact TODO markers without RegExp capture data.
+const todos = spansFromMatch('TODO')
 ```
 
 ---
@@ -225,35 +297,36 @@ spansFrom<Data>(
   - `'document'` - Full document span `[0, document.length]`
   - `'document-start'` - Zero-length span at position 0
   - `'document-end'` - Zero-length span at `document.length`
-  - Iterable of tuples `[start, end, data?]` or objects `{start, end, data?}`
+  - Iterable of tuples `[start, end, data?, origin?]` or records `{start, end, data?, origin?}`
   - Generator function `(document, renderOptions?) => SpansSource`
 
 **Data:** `undefined` for document keywords, otherwise preserves input data
 
+Inputs are normalized to span records when generated. Existing `data` and `origin` are preserved. An iterable object is captured as supplied: arrays and reusable iterables can be generated repeatedly, but a one-shot generator iterable is exhausted after the first generation. Pass a factory when each render needs fresh input.
+
+**Origin:** Preserves an origin supplied by a tuple or record. Document-keyword spans and inputs without origin remain source spans with `origin: undefined`.
+
 **Use cases:**
-- Document-level operations (wrap entire content, document boundaries)
-- Integrating external tools (linters, parsers)
-- Converting custom formats
-- Testing with fixtures
-- Dynamic span generation based on document
 
-**Example:**
+- Adapt parser, linter, or test-fixture output to `SpansSource`.
+- Create full-document or document-boundary spans.
+- Generate document-dependent spans through a reusable factory.
+
+**Examples:**
 ```typescript
-// Full document span
-spansFrom('document')
+// Cover the complete document for a document-level wrapper.
+const documentSpan = spansFrom('document')
 
-// Document boundary insertion point
-spansFrom('document-start')
+// Normalize spans produced by an external parser or language service.
+const diagnostics = spansFrom([
+    [0, 5, { severity: 'error' }],
+    { start: 12, end: 19, data: { severity: 'warning' } }
+])
 
-// From external linter
-const diagnostics = await linter.lint(document);
-spansFrom(diagnostics)
-
-// From tuple array
-spansFrom([[0, 5], [10, 15]])
-
-// From generator function
-spansFrom((document) => document.length > 100 ? [[0, 100]] : [])
+// Use a factory when the source depends on the current document or must be reusable.
+const firstHundredCharacters = spansFrom((document) => [
+    [0, Math.min(document.length, 100), { truncated: document.length > 100 }]
+])
 ```
 
 ---
@@ -269,15 +342,33 @@ spansFromLayer<Data>(name: string): GenerateSpans<Data, RenderOptions>
 **Parameters:**
 - `name` - Layer name to reference
 
+The named layer must have been generated earlier in the same pipeline render. Its normalized spans, including data and origin, are emitted in their stored order. A missing name produces no spans.
+
+**Origin:** Preserves the origins stored on the referenced layer spans.
+
 **Use cases:**
-- Building dependent layers
-- Applying different styles to same spans
-- Cross-layer filtering
+
+- Derive presentation layers from an earlier analytical layer.
+- Reuse expensive generated spans without running the source again.
+- Apply different geometry or hooks to the same named span set.
 
 **Example:**
 ```typescript
-// Use diagnostics from another layer
-spansFromLayer('diagnostics')
+const pipeline = html()
+    // Name the source layer so later layers can reuse its generated spans.
+    .addLayer(
+        spansFromMatch(/\berror\b/gi),
+        content => `<mark>${content}</mark>`,
+        'errors'
+    )
+    // Derive full-line regions from the already generated error spans.
+    .addLayer(
+        spansCompose(
+            spansFromLayer<RegExpExecArray>('errors'),
+            applyExpandTo('line')
+        ),
+        content => `<div class="error-line">${content}</div>`
+    )
 ```
 
 ---
@@ -295,19 +386,25 @@ spansFromOptions<Data>(
 **Parameters:**
 - `spanInput` - Either a callback function that receives render options and returns spans, or a field name (shortcut for accessing a property)
 
+Resolution is deferred until generation. If no render options were provided, the callback receives an empty object. A supplied falsy options value is preserved rather than replaced. Returning `null` or `undefined`, or resolving a missing field, produces no spans.
+
+**Origin:** Preserves origins from the source selected through render options.
+
 **Use cases:**
-- User-configurable highlighting
-- Editor selections
-- Custom span inputs
-- Conditional span generation
 
-**Example:**
+- Accept caller-provided selections, diagnostics, or insertion points.
+- Enable or configure a source per render.
+- Derive a source from several render-option fields.
+
+**Examples:**
 ```typescript
-// Using field name shortcut
-spansFromOptions('tocInsertPoint')
+// Read a caller-provided source directly from a render-options field.
+const selections = spansFromOptions<Selection, ExampleRenderOptions>('selections')
 
-// Using callback for conditional logic
-spansFromOptions(({ pattern }) => pattern && spansFromMatch(pattern))
+// Build a source conditionally from several option values.
+const searchMatches = spansFromOptions<RegExpExecArray, ExampleRenderOptions>(({ pattern }) =>
+    pattern ? spansFromMatch(pattern) : null
+)
 ```
 
 ---
@@ -325,16 +422,22 @@ spansWithFallback<Data, RenderOptions>(
 **Parameters:**
 - `inputs` - Span sources to try in order
 
+Each input is evaluated at most once. Empty inputs are consumed while searching; every span from the first non-empty input is emitted, and later inputs are not evaluated. One-shot iterable candidates therefore cannot be retried after this generation.
+
+**Origin:** Preserves origins from the first non-empty source.
+
 **Use cases:**
-- Graceful degradation
-- Default values when no matches
-- Progressive pattern matching
+
+- Choose an explicit insertion point before applying convention-based defaults.
+- Fall back from precise matches to broader matches.
+- Guarantee a preferred result when earlier sources may be empty.
 
 **Example:**
 ```typescript
-// Find best insertion point with fallbacks
-spansWithFallback(
-    spansFromOptions('userInsertPoint'),
+// Prefer an explicit insertion point, then an existing marker,
+// and finally fall back to the start of the document.
+const tocInsertionPoint = spansWithFallback(
+    spansFromOptions<undefined, ExampleRenderOptions>('userInsertPoint'),
     spansFromMatch(/<!-- TOC -->/),
     spansFrom('document-start')
 )
@@ -357,18 +460,23 @@ applyAppend<Data, RenderOptions>(
 **Parameters:**
 - `sources` - Span sources to append (iterables, generators, keywords)
 
-**Origin:** Preserves existing origins from all sources
+The input is emitted first, followed by each source in argument order. Records are passed through without sorting or deduplication, so their existing data and origin are preserved. Unlike `spansConcat()`, this transformer can be inserted midway through a composition and later transformers see the combined output.
+
+**Origin:** Preserves origins from the pipeline input and every appended source.
 
 **Use cases:**
-- Add document boundary markers
-- Add line numbers for all lines
-- Combine pipeline output with independent spans
+
+- Add document or line boundary markers mid-pipeline.
+- Combine transformed spans with an independent source before later processing.
+- Append metadata or decoration spans without deriving them from each input span.
 
 **Example:**
 ```typescript
-// Pass through matched errors, append document boundaries
-spansCompose(
-    spansFromMatch(/error/g),
+// Assume a linter supplied error offsets without per-span data.
+// Add document boundary insertion points to that set.
+// Later transformers receive both the matches and the appended points.
+const errorsWithBoundaries = spansCompose(
+    spansFrom([[6, 11], [24, 29]]),
     applyAppend(
         spansFrom('document-start'),
         spansFrom('document-end')
@@ -398,20 +506,24 @@ applyAugment<Data, RenderOptions, AdditionalData = Data>(
   - `createSpan` - Function to create derivative spans
   - `context` - Operation context with `{ document, lines, renderOptions, spans, index }`
 
-**Origin:** Original span keeps its origin unchanged, derivatives get automatic origin tracking
+The complete input is materialized before callbacks run. For each input, the original is emitted first and then callback emissions are added in call order. `context.spans` is the complete input and `context.index` is the current input index. Additional spans use `span.origin || span` as their root and may use a different data type from the originals.
+
+**Origin:** Original spans preserve their existing origins. Additional spans preserve the input root, or use the input span as their root when it has no origin.
 
 **Use cases:**
-- Add line-start markers for diagnostics
-- Add margin decorations while preserving original spans
-- Create visual guides alongside content spans
+
+- Add gutter markers while retaining the original diagnostic spans.
+- Emit related insertion points, labels, or decorations beside each input.
+- Extend a layer with derivative data without replacing its original data.
 
 **Example:**
 ```typescript
-// Pass through errors, add line-start marker for each
-spansCompose(
-    spansFromOptions('diagnostics'),
+// Keep every diagnostic span and add a related gutter marker at its line start.
+const diagnosticsWithMarkers = spansCompose(
+    spansFromOptions<Diagnostic, ExampleRenderOptions>('diagnostics'),
     applyAugment((span, createSpan, { lines }) => {
         const lineStart = lines.getLineStart(span.start);
+        // The emitted marker automatically derives from the current diagnostic.
         createSpan(lineStart, lineStart, { type: 'error-marker' });
     })
 )
@@ -441,19 +553,28 @@ applyCollapseTo(
   - `'document-start'` - Start of document (0)
   - `'document-end'` - End of document (`document.length`)
 
-**Origin:** Inherits from input span (direct connection)
+Every input produces one point span and retains its data. The output preserves an existing root or records the input as its root. For a non-empty multiline input, `'line-start'` uses the line containing `start`, while `'line-end'` and `'line-content-end'` use the line containing `end - 1`; this avoids treating an end-exclusive boundary at the next line as part of the span.
+
+**Origin:** Derives every point span from the input root. If the input has no origin, the input span becomes the root.
 
 **Use cases:**
-- Creating insertion points
-- Line/document markers
-- Icon/decoration placement
 
-**Example:**
+- Convert ranges into insertion points for prefixes, suffixes, or icons.
+- Place markers at line or document boundaries related to a match.
+- Collapse several spans to a shared point before merging them.
+
+**Examples:**
 ```typescript
-// Insert markers at match start
-spansCompose(
+// Convert each match into an insertion point immediately before the match.
+const matchStarts = spansCompose(
     spansFromMatch(/error/g),
     applyCollapseTo('start')
+)
+
+// Convert diagnostics into markers at the content end of their final lines.
+const diagnosticLineEnds = spansCompose(
+    spansFromLayer<Diagnostic>('diagnostics'),
+    applyCollapseTo('line-content-end')
 )
 ```
 
@@ -475,31 +596,34 @@ applyDataMap<Data, NewData, RenderOptions>(
 **Parameters:**
 - `mapper` - Transformation function receiving:
   - `span` - Full span object
-  - `index` - Zero-based position
-  - `context` - Operation context
+  - `context` - Operation context with `{ document, lines, renderOptions, spans, index }`
 
-**Origin:** Cleared (`undefined`) - new semantic meaning
+The complete input is materialized first. Geometry and order are unchanged; `context.spans` contains that complete input and `context.index` identifies the current span. Because mapped data is the new semantic root, outputs do not retain an old origin. Include old data explicitly in `NewData` when it is still needed.
+
+**Origin:** Cleared. Every mapped span becomes a new source root with `origin: undefined`.
 
 **Use cases:**
-- Adding computed properties
-- Enriching external data
-- Normalizing data formats
+
+- Convert RegExp capture arrays into domain objects.
+- Normalize parser or diagnostic metadata while preserving geometry.
+- Add computed identifiers or fields to span data.
 
 **Example:**
 ```typescript
-// Parse match data
-spansCompose(
+// Replace RegExpExecArray data with the domain data used by render hooks.
+const assignments = spansCompose(
     spansFromMatch(/(\w+)=(\w+)/g),
     applyDataMap(span => {
         const [, key, value] = span.data;
+        // The old match data is not retained unless it is included here.
         return { key, value };
     })
 )
 
-// Add sequential IDs
-spansCompose(
-    spans,
-    applyDataMap((span, index) => ({
+// Add stable IDs while retaining the existing domain fields explicitly.
+const indexedDiagnostics = spansCompose(
+    spansFromLayer<Diagnostic>('diagnostics'),
+    applyDataMap((span, { index }) => ({
         ...span.data,
         id: `item-${index}`
     }))
@@ -526,23 +650,26 @@ applyExpandTo(
   - Number: same count before and after (e.g., `2` = 2 before, 2 after)
   - Tuple: `[before, after]` for asymmetric context (e.g., `[1, 3]`)
 
-**Origin:** Inherits from input span (direct connection)
+Every input produces one derivative with unchanged data. Existing roots are preserved. A scalar `lines` value applies symmetrically; a tuple controls each side. Context counts apply only to line-based positions and line lookups use `end - 1` for non-empty spans, respecting end-exclusive geometry. Document positions ignore `lines`.
+
+**Origin:** Derives expanded spans from the input root. If the input has no origin, the input span becomes the root.
 
 **Use cases:**
-- Context highlighting
-- Code block expansion
-- Snippet extraction with context
 
-**Example:**
+- Expand diagnostics or matches to complete lines.
+- Build snippets with symmetric or asymmetric context lines.
+- Promote local matches to document-level regions.
+
+**Examples:**
 ```typescript
-// Expand to full lines with 2 lines context
-spansCompose(
+// Include two complete context lines on both sides of each error.
+const symmetricContext = spansCompose(
     spansFromMatch(/error/g),
     applyExpandTo('line', 2)
 )
 
-// Asymmetric context: show function body
-spansCompose(
+// Include no line before a declaration and five lines after it.
+const functionPreviews = spansCompose(
     spansFromMatch(/^function/gm),
     applyExpandTo('line', [0, 5])
 )
@@ -563,70 +690,74 @@ applyFallback<Data, RenderOptions>(
 **Parameters:**
 - `fallbacks` - Fallback span sources to try in order if input is empty
 
-**Origin:** Depends on which source provides spans (input or fallback)
+The input is tried first, then each fallback once in argument order. Every span from the first non-empty source is emitted unchanged; later sources are not evaluated. Empty one-shot inputs are consumed by the check.
+
+**Origin:** Preserves origins from whichever source, input or fallback, first produces spans.
 
 **Use cases:**
-- Graceful degradation
-- Default values when primary source is empty
-- Ensuring non-empty results
+
+- Fall back from errors to warnings when the primary pipeline is empty.
+- Supply a default viewport or insertion point.
+- Keep fallback selection inside an existing composition.
 
 **Example:**
 ```typescript
-// Show errors, or warnings if no errors
-spansCompose(
+// Use errors when present, otherwise warnings, otherwise the first text preview.
+// Every candidate produces RegExpExecArray data, as required by the transformer.
+const mostImportantMessages = spansCompose(
     spansFromMatch(/error/gi),
     applyFallback(
         spansFromMatch(/warning/gi),
-        [[0, 100]]  // Show first 100 chars if nothing found
-    )
-)
-
-// Insert TOC with fallback positions
-spansCompose(
-    spansFromOptions('tocInsertPoint'),
-    applyFallback(
-        spansFromMatch(/^(?=#[^#])/m),  // Before first H1
-        [[0, 0]]  // Document start
+        spansFromMatch(/[\s\S]{1,100}/) // Used only when both prior sources are empty.
     )
 )
 ```
+
+---
+
 ### `applyFilter(predicate)`
 
 Filter spans using a predicate function.
 
 ```typescript
-applyFilter(
-    predicate: (span, index, context) => boolean
-): TransformSpans
+applyFilter<Data, RenderOptions>(
+    predicate: (
+        span: SpanRecord<Data>,
+        context: SpanOperationContext<Data, RenderOptions>
+    ) => boolean
+): TransformSpans<Data, RenderOptions>
 ```
 
 **Parameters:**
 - `predicate` - Function receiving:
   - `span` - Full span object `{start, end, data, origin}`
-  - `index` - Zero-based position in sequence
-  - `context` - `{document, lines, renderOptions, spans}`
+  - `context` - Operation context with `{ document, lines, renderOptions, spans, index }`
 
-**Origin:** Inherits from input span (direct connection)
+The complete input is materialized before predicate evaluation. Selected records retain their geometry, data, origin, and input order. `context.spans` includes selected and rejected inputs; `context.index` is the current input index.
+
+**Origin:** Preserves each selected span's existing origin unchanged.
 
 **Use cases:**
-- Conditional highlighting
-- Severity filtering
-- Position-based selection
 
-**Example:**
+- Select diagnostics by severity or metadata.
+- Keep spans that satisfy document or line-based conditions.
+- Select by input position through `context.index`.
+
+**Examples:**
 ```typescript
-// Filter single-line spans only
-spansCompose(
-    spansFromMatch(/\w+/g),
-    applyFilter((span, i, { lines }) =>
+// Keep only diagnostics that are errors and stay on one line.
+const singleLineErrors = spansCompose(
+    spansFromLayer<Diagnostic>('diagnostics'),
+    applyFilter((span, { lines }) =>
+        span.data.severity === 'error' &&
         lines.getLine(span.start) === lines.getLine(span.end)
     )
 )
 
-// Filter by data property
-spansCompose(
-    diagnostics,
-    applyFilter(span => span.data.severity === 'error')
+// Use context.index rather than a positional callback argument.
+const alternatingMatches = spansCompose(
+    spansFromMatch(/\w+/g),
+    applyFilter((_span, { index }) => index % 2 === 0)
 )
 ```
 
@@ -644,26 +775,29 @@ applyFitToWindow(
 ```
 
 **Parameters:**
-- `size` - Maximum window width in characters (default: `80`)
+- `size` - Maximum window width in UTF-16 code units (default: `80`)
 - `allowTrimming` - Allow trimming spans to fit (default: `true`)
 
-**Origin:** Inherits from input span (direct connection)
+Each input emits one derivative on the line containing its start. Multiline inputs are first reduced to that line's content. A span shorter than `size` expands toward both sides without crossing line-content boundaries; unused room on one side is reassigned to the other. A longer span is trimmed from the right when `allowTrimming` is true and otherwise remains longer than the requested window. Data and root origin are preserved.
+
+**Origin:** Derives each fitted viewport from the input root. If the input has no origin, the input span becomes the root.
 
 **Use cases:**
-- Preview generation
-- Horizontal viewport fitting
-- Performance optimization
 
-**Example:**
+- Create horizontally bounded search or diagnostic previews.
+- Center short matches within available line context.
+- Trim multiline or oversized spans for viewport rendering.
+
+**Examples:**
 ```typescript
-// Fit into 80-char window (default)
-spansCompose(
+// Expand a short match into an excerpt no wider than the default 80 units.
+const defaultPreviews = spansCompose(
     spansFromMatch(/error/g),
     applyFitToWindow()
 )
 
-// Custom size with no trimming
-spansCompose(
+// Use a wider viewport and preserve matches that are already wider than it.
+const untrimmedPreviews = spansCompose(
     spansFromMatch(/error/g),
     applyFitToWindow(120, false)
 )
@@ -676,28 +810,33 @@ spansCompose(
 Fork the pipeline: pass through originals, apply sub-pipeline, append transformed copies.
 
 ```typescript
-applyFork<Data, OutputData, RenderOptions>(
-    ...transformers: Array<TransformSpans>
+applyFork<Data, RenderOptions, OutputData>(
+    transform1: TransformSpans<Data, RenderOptions, OutputData>
 ): TransformSpans<Data, RenderOptions, Data | OutputData>
+
+// Typed overloads preserve intermediate data through three transforms.
 ```
 
 **Parameters:**
 - `transformers` - Sub-pipeline transformers to apply to input spans
 
-**Origin:** Preserves existing origins from all sources (originals unchanged, transformed copies follow their transformer semantics)
+The input is materialized once, which makes a one-shot iterable safe to use for both branches. All originals are emitted first in input order, followed by the sub-pipeline output. With no transformers, the materialized inputs are emitted twice. Original origins are preserved; transformed origins follow each transformer's policy. Data is inferred as a union of original and branch output through three transformers, then falls back to `any` for a longer branch.
+
+**Origin:** Per branch. Original spans preserve their origins; transformed copies follow the origin policy of each transformer in the branch.
 
 **Use cases:**
-- Add derivative spans alongside originals (markers, icons, decorations)
-- Show content + metadata (diagnostics + gutter icons)
-- Parallel transformations (matches + line indicators)
-- Pipeline branching for multi-purpose output
+
+- Keep original matches while adding transformed markers or decorations.
+- Apply a secondary transformation path without duplicating source evaluation.
+- Produce a union of original and branch-specific data in one layer.
 
 **Example:**
 ```typescript
-// Show error matches + line-start markers
-spansCompose(
+// Emit the error matches first, followed by line-start marker derivatives.
+const errorsAndMarkers = spansCompose(
     spansFromMatch(/error/g),
     applyFork(
+        // This sub-pipeline runs only for the appended branch.
         applyCollapseTo('line-start'),
         applyDataMap(() => ({ type: 'marker' }))
     )
@@ -711,27 +850,34 @@ spansCompose(
 Invert spans - returns everything NOT in input spans. **Output spans have no origin** (no direct connection to input).
 
 ```typescript
-applyInvert(exact?: boolean): TransformSpans
+applyInvert<Data, RenderOptions>(
+    exact?: boolean
+): TransformSpans<Data, RenderOptions, undefined>
 ```
 
 **Parameters:**
 - `exact` - Boundary behavior:
-  - `true` - Bound to `[0, document.length]`
-  - `false` (default) - Extend to `[0, document.length + 1]`
+  - `true` - A trailing gap ends at `document.length`
+  - `false` (default) - A trailing gap ends at `document.length + 1`
 
-**Origin:** None (no connection between input and output)
+Input spans are sorted and merged before gaps are calculated. Empty input produces no output rather than a full-document span. Internal and leading gaps use the adjacent input boundaries. The extra `document.length + 1` endpoint applies only when a trailing gap exists; input coverage ending at the document end produces no trailing gap. Outputs have `data: undefined` and no origin.
+
+**Origin:** None. Gap spans are complements of the input set, not derivatives of individual input spans.
 
 **Use cases:**
-- Creating viewport gaps
-- Collapsible content
-- Negative highlighting
+
+- Find omitted regions between visible context windows.
+- Build negative highlighting or exclusion layers.
+- Generate collapsible gaps between retained document regions.
 
 **Example:**
 ```typescript
-// Create gaps between headers for collapsing
-spansCompose(
-    spansFromMatch(/^#{1,6}\s/gm),
-    applyExpandTo('line'),
+// Derive the regions omitted between visible diagnostic context windows.
+// A renderer can replace these complement spans with separators or ellipses.
+const omittedRegions = spansCompose(
+    spansFromLayer<Diagnostic>('diagnostics'),
+    applyExpandTo('line', 1),
+    applyMerge(),
     applyInvert()
 )
 ```
@@ -758,28 +904,44 @@ applyMap<InputData, OutputData, RenderOptions>(
   - `createSpan` - Function to create derivative spans
   - `context` - Operation context with `{ document, lines, renderOptions, spans, index }`
 
-**Origin:** Automatically tracks to input span (preserves transformation lineage)
+The complete input is materialized before callbacks run. A callback may emit zero, one, or many outputs; outputs appear in input order and then callback call order. `context.spans` is the complete input and `context.index` is current. Every emitted span uses `span.origin || span` as its root. Unlike `applyDataMap()`, geometry and cardinality are unrestricted.
+
+**Origin:** Derives every emitted span from the input root. If the input has no origin, the input span becomes the root.
 
 **Use cases:**
-- Split matched lines into words
-- Extract regex capture groups
-- Transform one span into multiple derivatives
-- Custom span decomposition
 
-**Example:**
+- Split one match into several independently rendered parts.
+- Conditionally emit zero or more spans for each input.
+- Implement custom geometry and output-data transformations.
+
+**Examples:**
 ```typescript
-// Split lines into words
-spansCompose(
+// Split each log token into independently renderable prefix and severity spans.
+const logTokenParts = spansCompose(
     spansFromMatch(/(?:(\w+) )?(ERROR|WARNING|INFO)/g),
-    applyMap((span, createSpan, { document }) => {
-        const prefix = span.data[1]; // optional prefix
+    applyMap((span, createSpan) => {
+        const prefix = span.data[1];
         let labelStart = span.start;
+
         if (prefix !== undefined) {
-            createSpan(span.start, span.start + prefix.length, 'prefix');  // opening prefix
-            labelStart += prefix.length + 1; // +1 for space
+            // Emit the optional prefix as the first derivative.
+            createSpan(span.start, span.start + prefix.length, 'prefix');
+            labelStart += prefix.length + 1; // Skip the separating space.
         }
-        createSpan(labelStart, span.end, span.data[2]); // label
-   })
+
+        // Emit the severity label as the second derivative.
+        createSpan(labelStart, span.end, span.data[2]);
+    })
+)
+
+// Emitting nothing for a callback input is a valid 1-to-0 mapping.
+const longWords = spansCompose(
+    spansFromMatch(/\w+/g),
+    applyMap((span, createSpan, { document }) => {
+        if (document.slice(span.start, span.end).length >= 8) {
+            createSpan(span.start, span.end, { kind: 'long-word' });
+        }
+    })
 )
 ```
 
@@ -787,33 +949,31 @@ spansCompose(
 
 ### `applyMerge()`
 
-Merge overlapping or adjacent spans into continuous regions. **Always preserves merged spans in `origin` field as an array.**
+Merge overlapping or adjacent spans into continuous regions.
 
 ```typescript
-applyMerge(): TransformSpans
+applyMerge<Data, RenderOptions>(): TransformSpans<Data, RenderOptions, undefined>
 ```
 
-**Origin:** Array of merged spans (enables access to individual items)
+The complete input is sorted by `start` ascending and then `end` ascending. Each disjoint group produces one output; adjacency merges because `next.start <= current.end`. Output order follows the sorted groups, regardless of input order. Merged outputs have `data: undefined`; `origin` is an array of normalized records for every group member, including each member's prior origin.
+
+**Origin:** An array containing every normalized input span in the merged group. Each member retains its own prior origin.
 
 **Use cases:**
-- Combining overlapping highlights
-- Deduplicating spans
-- Continuous region extraction
-- Generating summaries from merged items
+
+- Coalesce overlapping highlights or context windows.
+- Convert adjacent spans into continuous render regions.
+- Retain access to every group member for summaries or aggregate hooks.
 
 **Example:**
 ```typescript
-// Merge with access to individual headers via origin
-spansCompose(
-    spansFromMatch(/^#{1,6}\s+(.+)$/gm),
-    applyDataMap(match => ({
-        level: match[1].length,
-        text: match[2]
-    })),
-    applyCollapseTo('document-start'),
-    applyMerge()  // origin contains all headers
+// Nearby diagnostics may expand to overlapping line windows.
+// Merge them into disjoint render regions; each output origin lists its group.
+const diagnosticRegions = spansCompose(
+    spansFromLayer<Diagnostic>('diagnostics'),
+    applyExpandTo('line', 1),
+    applyMerge()
 )
-// In render: span.origin.map(({ data }) => ...)
 ```
 
 ---
@@ -824,7 +984,7 @@ Add padding spans around lines.
 
 ```typescript
 applyPadLines<Data, RenderOptions>(
-    lines: number | [before: number, after: number],
+    lines: number | [linesBefore: number, linesAfter: number],
     size: number
 ): TransformSpans<Data, RenderOptions, number>
 ```
@@ -833,25 +993,28 @@ applyPadLines<Data, RenderOptions>(
 - `lines` - Padding line count:
   - Number: lines after only (e.g., `2` = 0 before, 2 after)
   - Tuple: `[before, after]` for explicit control (e.g., `[1, 2]`)
-- `size` - Target width for each padding line in characters
+- `size` - Target width for each selected line in UTF-16 code units
 
-**Origin:** Inherits from input span (direct connection)
+For each input and selected relative line, the transformer emits `[lineStart, min(lineStart + size, lineContentEnd)]`. A scalar selects that many lines after the input line and no lines before it; a tuple controls both sides. Output `data` is `size - emittedLength`, the number of missing UTF-16 code units needed to reach the target width. Outputs preserve an existing root or derive from the input. Overlapping selected lines from different inputs are not deduplicated.
+
+**Origin:** Derives each selected line span from the input root. If the input has no origin, the input span becomes the root.
 
 **Use cases:**
-- Smart spacing
-- Visual separation
-- Context preservation
 
-**Example:**
+- Compute how much padding each selected line needs to reach a target width.
+- Add fixed-width context lines before or after an input.
+- Prepare rectangular text regions for terminal or structured rendering.
+
+**Examples:**
 ```typescript
-// Add 2 lines after each span
-spansCompose(
+// Select the input line and two following lines, each capped at width 50.
+const forwardPadding = spansCompose(
     spansFromLines('line-content'),
     applyPadLines(2, 50)
 )
 
-// Add 1 before and 2 after
-spansCompose(
+// Select one line before and two after each diagnostic line.
+const surroundingPadding = spansCompose(
     spansFromLines('line-content'),
     applyPadLines([1, 2], 50)
 )
@@ -867,21 +1030,26 @@ Clear origin tracking from spans.
 applyResetOrigin(): TransformSpans
 ```
 
-**Origin:** Cleared (`undefined`)
+Geometry, data, and order are unchanged. Clearing the origin makes each output the root for later positional derivatives; it does not modify the input record.
+
+**Origin:** Cleared. Every output becomes a new root with `origin: undefined`.
 
 **Use cases:**
-- Clean up transformation history
-- Prevent origin bloat
-- Fresh transformation chains
+
+- Make a fitted or expanded region the root of later transformations.
+- Stop later derivatives from referring back to an obsolete geometry.
+- Deliberately establish a new lineage boundary.
 
 **Example:**
 ```typescript
-// Clear origins after complex transformations
-spansCompose(
-    spans,
+// Make each fitted viewport the new root before deriving its end marker.
+const viewportEndMarkers = spansCompose(
+    spansFromMatch(/error/g),
     applyExpandTo('line'),
-    applyMerge(),
-    applyResetOrigin()
+    applyFitToWindow(80),
+    applyResetOrigin(),
+    // The marker now points to the viewport, not the original match.
+    applyCollapseTo('end')
 )
 ```
 
@@ -892,9 +1060,13 @@ spansCompose(
 Sort spans by custom criteria.
 
 ```typescript
-applySort(
-    comparator?: (spanA, spanB, context) => number
-): TransformSpans
+applySort<Data, RenderOptions>(
+    comparator?: (
+        spanA: SpanRecord<Data>,
+        spanB: SpanRecord<Data>,
+        context: SpanOperationContext<Data, RenderOptions>
+    ) => number
+): TransformSpans<Data, RenderOptions>
 ```
 
 **Parameters:**
@@ -903,23 +1075,31 @@ applySort(
   - Returns negative (A before B), zero (equal), or positive (B before A)
   - Default: sort by start ascending, then end descending
 
-**Origin:** Inherits from input span (direct connection)
+The complete input is materialized before sorting. The default order is `start` ascending, then `end` descending, so an outer span precedes an inner span with the same start. Records retain data and origin. A custom comparator receives shared operation context; `context.index` does not identify either comparator argument.
+
+**Origin:** Preserves every span's existing origin unchanged.
 
 **Use cases:**
-- Rendering order control
-- Priority sorting
-- Chronological ordering
 
-**Example:**
+- Normalize spans into rendering order.
+- Prioritize diagnostics or annotations by domain data.
+- Apply a stable custom order before limiting or grouping spans.
+
+**Examples:**
 ```typescript
-// Default sort
-spansCompose(spans, applySort())
+// Default order: start ascending, then longer spans first at equal starts.
+const renderOrder = spansCompose(
+    spansFromLayer('syntax'),
+    applySort()
+)
 
-// Sort by line number
-spansCompose(
-    spans,
-    applySort((a, b, { lines }) =>
-        lines.getLine(a.start) - lines.getLine(b.start)
+const severityRank = { error: 0, warning: 1, info: 2 };
+
+// Override the positional order with domain priority.
+const diagnosticsBySeverity = spansCompose(
+    spansFromLayer<Diagnostic>('diagnostics'),
+    applySort((a, b) =>
+        severityRank[a.data.severity] - severityRank[b.data.severity]
     )
 )
 ```
@@ -928,14 +1108,16 @@ spansCompose(
 
 ### `applyTake(n, predicate?)`
 
-Take first or last N spans with optional filtering. Combines positional limiting with filtering
-for efficient selection - evaluates spans in order and stops when limit is reached.
+Take the first or last N spans, optionally counting only spans accepted by a predicate.
 
 ```typescript
-applyTake(
+applyTake<Data, RenderOptions>(
     n: number | 'first' | 'last',
-    predicate?: (span, opContext) => boolean
-): TransformSpans
+    predicate?: (
+        span: SpanRecord<Data>,
+        context: SpanOperationContext<Data, RenderOptions>
+    ) => boolean
+): TransformSpans<Data, RenderOptions>
 ```
 
 **Parameters:**
@@ -948,32 +1130,35 @@ applyTake(
   - `span` - Full span object
   - `opContext` - Context with `{ document, lines, renderOptions, spans, index }`
 
-**Origin:** Inherits from input spans (direct connection)
+The complete input is materialized before selection. Without a predicate, selection uses array slicing. With a positive count, predicates run from the start; with a negative count, they run from the end until enough matches are found. Last-N output is restored to input order. `0` emits nothing. Predicate evaluation short-circuits after enough matches, but source consumption does not.
+
+**Origin:** Preserves every selected span's existing origin unchanged.
 
 **Use cases:**
-- Pagination (first/last page of results)
-- Limiting output with filtering (top 10 errors, not just any 10 spans)
-- Quick preview (first match only)
-- Efficient selection (stops early when limit reached)
 
-**Example:**
+- Limit a layer to its first or last N spans.
+- Select the first or last span matching a predicate.
+- Keep the most recent matching diagnostics while preserving their input order.
+
+**Examples:**
 ```typescript
-// Take first 10 matches
-spansCompose(
+// Take the first ten matches in input order.
+const firstTenErrors = spansCompose(
     spansFromMatch(/error/g),
     applyTake(10)
 )
 
-// Take last 5 matches
-spansCompose(
-    spansFromMatch(/error/g),
-    applyTake(-5)
+// Evaluate from the end, keep the last five matching diagnostics,
+// then emit those five in their original input order.
+const lastFiveErrors = spansCompose(
+    spansFromLayer<Diagnostic>('diagnostics'),
+    applyTake(-5, span => span.data.severity === 'error')
 )
 
-// First error
-spansCompose(
-    ...,
-    applyTake('first', span => span.data.severity === 'error')
+// Keyword form for the first matching diagnostic.
+const firstWarning = spansCompose(
+    spansFromLayer<Diagnostic>('diagnostics'),
+    applyTake('first', span => span.data.severity === 'warning')
 )
 ```
 
