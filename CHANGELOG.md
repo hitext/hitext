@@ -1,3 +1,7 @@
+## 1.0.0 (August 5, 2026)
+
+No changes since `1.0.0-beta.1`. Just a release to mark the stable version of the library.
+
 ## 1.0.0-beta.1 (May 14, 2020)
 
 - Added `hitext.printer.fork()` method to extend/overload a printer set
