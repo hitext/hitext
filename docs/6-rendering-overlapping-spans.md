@@ -67,17 +67,17 @@ The span model must therefore be distinguished from the output structure:
 
 HiText does not require analyzers to reshape crossing spans in advance. It resolves their intersections during rendering.
 
-## Crossing spans are materialized as segments
+## Layer order decides which crossing span is segmented
 
-A crossing span may be interrupted at a boundary introduced by another span. For `A = [1, 8)` and `B = [5, 12)`, the earlier-ending span A is split while B remains one segment:
+Suppose `A = [1, 8)` belongs to an earlier layer and `B = [5, 12)` belongs to a later layer. A must remain outer to B throughout their overlap. Because B continues after A ends, B is materialized as two segments:
 
 ```text
 A: [-----------)
 B:       [-----------)
 
 segments:
-A: [----)[---)
-B:      [-------)
+A: [--------)
+B:      [--)[---)
 ```
 
 More explicitly:
@@ -90,31 +90,65 @@ B:             [-----------)
 
 segments:
 
-A₁:      [-----)
-A₂:            [-----)
-B:             [-----------)
+A:       [-----------)
+B₁:            [-----)
+B₂:                  [-----)
 ```
 
 The original analytical objects remain two spans: `A` and `B`.
 
-The render traversal uses three materialized segments: `A₁`, `A₂`, and `B`.
+The render traversal uses three materialized segments: `A`, `B₁`, and `B₂`.
 
 This enables a valid nested event sequence:
 
 ```text
-open A₁
+open A
     text
-close A₁
-
-open B
-    open A₂
+    open B₁
         text
-    close A₂
+    close B₁
+close A
+
+open B₂
     text
-close B
+close B₂
 ```
 
-The exact emitted structure depends on the hooks and renderer, but every output follows a deterministic segmentation of the source boundaries.
+Reversing the layer order reverses the overlap nesting and changes which span must be segmented. The exact emitted structure depends on the hooks and renderer, but the first registered layer is predictably outer on every overlap segment.
+
+## Fragmentation is directional
+
+Layer precedence gives fragmentation a direction:
+
+```text
+earlier layer
+    stable outer structure, fragmented less
+
+later layer
+    adapts to earlier boundaries, fragmented more
+```
+
+This is why layer order is useful rather than only deterministic. It lets a view decide which spans define its structural blocks.
+
+For section and line spans:
+
+| Registration order | Structural result | Span most likely to split |
+|---|---|---|
+| sections, then lines | lines are children of sections | lines at section boundaries |
+| lines, then sections | section segments are children of lines | sections at line boundaries |
+
+The same principle applies to syntax, search matches, diagnostics, selections, diff regions, and omissions. Put the layer whose wrappers should remain most continuous first. Put layers that may safely become several target nodes later.
+
+This rule does not change interaction among spans produced by one layer. Same-layer spans still use their geometry and source order. The additional precedence exists only when different layer markers interact.
+
+Fragmentation has observable consequences:
+
+* `open`, `close`, and `wrap` may run once for every segment;
+* one generated span may produce several DOM, JSX, or structured nodes;
+* stateful hooks must tolerate temporary close and reopen operations;
+* `context.span` remains the complete span while `context.start` and `context.end` identify each segment.
+
+Do not choose order only to reduce the number of hook calls. Choose the required target ancestry first, then make hooks segment-safe. See [Choose layer order by output ownership](5-layers-and-materialization.md#choose-layer-order-by-output-ownership) for practical patterns.
 
 ## Span and segment describe different scopes
 
@@ -422,9 +456,34 @@ replacement output
 annotation continuation: [------)
 ```
 
-When an annotation begins before a replacement and continues after it, ordinary replacement does not by itself split the surrounding annotation. The replacement is materialized inside that annotation. Set `break: true` only when the replacement must close the surrounding interpretation and let it resume as a later segment.
+When an annotation begins before a replacement and continues after it, layer order decides their relationship. An annotation from an earlier layer remains outside the replacement. An annotation from a later layer closes before the replacement and resumes afterwards. Set `break: true` when the replacement must interrupt every surrounding interpretation regardless of layer.
 
 These cases are one reason replacement semantics belong to the render model rather than to simple string substitution. HiText must reconcile replacement boundaries with active overlapping spans and produce a valid continuation.
+
+## Choose between replacement and interruption
+
+`replace` and `break` answer different questions:
+
+```text
+replace
+    Does this span consume its source region?
+
+break
+    Must this span sit outside every surrounding interpretation?
+```
+
+They can be used independently or together:
+
+| Configuration | Source text | Surrounding layers |
+|---|---|---|
+| wrapping hooks only | preserved | normal layer precedence |
+| `replace` | consumed | earlier layers may wrap it; later layers are interrupted |
+| `break` without `replace` | preserved | all surrounding interpretations are interrupted |
+| `replace` with `break` | consumed | all surrounding interpretations are interrupted |
+
+Use ordinary `replace` when the replacement still belongs to the surrounding structural context, such as an abbreviation inside a section. Add `break` when the replacement is itself a structural boundary, such as an omission between two independently materialized fragments.
+
+Avoid adding `break` merely to move a replacement one level outward. If the desired relationship follows the general view structure, adjust layer order instead. Use `break` for an exception that must override every layer.
 
 Advanced hooks should not assume that every source position covered by their complete span necessarily appears in the output.
 
@@ -472,9 +531,49 @@ Point spans are useful for:
 * table-of-contents insertion;
 * footnote references.
 
-When several point spans occupy the same boundary, the core render ordering determines their materialization sequence. It sorts by lower start offset, higher interruption weight from `break` and `replace`, larger end offset, and finally layer registration order. Fully tied spans from the same layer retain their source iteration order.
+By default, a point is placed at the depth of its layer. Spans from earlier layers wrap the insertion, while spans from later layers are outside it. The same rule applies when the boundary is the start or end of another span, not only when the point is strictly inside one.
 
-Applications that depend on a particular order should arrange layer registration and interruption policies deliberately rather than rely on incidental source creation order.
+Use `point` when the insertion must ignore layer depth:
+
+```js
+{
+    replace: () => '⚠',
+    point: 'inside'
+}
+```
+
+The available policies are:
+
+* omitted - the default; inside earlier layers and outside later layers;
+* `'inside'` - inside all non-replacement spans touching the boundary;
+* `'outside'` - outside all non-replacement spans touching the boundary.
+
+"Touching" includes three positions:
+
+```text
+span:       [-------------)
+start:      |
+inside:           |
+end:                      |
+```
+
+A point at the span start, strictly inside the span, or at the span end touches that span. A point before the start or after the end does not.
+
+The policies affect every touching non-replacement span as follows:
+
+| Point policy | Earlier layers | Same layer | Later layers |
+|---|---|---|---|
+| omitted | point is inside | ordinary same-layer rules | point is outside |
+| `'inside'` | point is inside | point is inside | point is inside |
+| `'outside'` | point is outside | point is outside | point is outside |
+
+Use the default when the insertion conceptually belongs to its layer. Use `'inside'` for content that must become part of the innermost touching annotation regardless of layer order. Use `'outside'` for a boundary value such as a gutter marker or structural label that must not inherit touching wrappers.
+
+Prefer the default when layer order already expresses the intended relationship. Explicit point policy is an override, not a replacement for choosing coherent layer order.
+
+Several points from different layers at one boundary are handled as one boundary event. Outside points materialize first, layer-relative points follow registration order, and inside points materialize last.
+
+Within one layer, omitted `point` preserves the ordinary pre-layer-precedence traversal rules, including source order for fully tied points. `break: true` is an explicit structural override and places a point outside surrounding spans even when `point` is `'inside'`.
 
 ## Equal spans remain independent
 
@@ -506,7 +605,7 @@ Examples include:
 * a link and emphasis covering the same source;
 * two independent structured annotations.
 
-Equal geometry is therefore a case where interruption weight and, after earlier sort criteria tie, layer registration order matter.
+Equal spans nest in layer registration order: the earlier layer is outer and the later layer is inner. Fully tied spans produced by one layer retain source iteration order.
 
 ## Interruption changes structural behaviour
 
@@ -761,6 +860,8 @@ Identify:
 * points;
 * replacements and interruptions.
 
+For different layers, also write their registration order beside the drawing. Ask which span should own the target subtree and whether the observed fragmented span is the later layer. Reversing two layers is a useful diagnostic experiment, but keep the reversal only when the resulting ancestry is the desired public structure.
+
 ### 4. Inspect segment context
 
 For advanced hooks, record:
@@ -772,6 +873,17 @@ For advanced hooks, record:
 * emitted value.
 
 This reveals whether unexpected repeated calls are caused by segmentation rather than duplicate source spans.
+
+Common layer-order symptoms are:
+
+| Symptom | Likely cause | Check |
+|---|---|---|
+| A wrapper appears as several sibling nodes | it belongs to a later crossing layer | inspect registration order and `context.spanIndex` |
+| A point inherits an unexpected wrapper | its default layer depth differs from the intended role | move the point layer or use explicit `point` policy |
+| A replacement closes too many wrappers | `break` overrides normal precedence | remove `break` unless a global interruption is required |
+| A replacement remains inside an unwanted wrapper | that wrapper is an earlier layer | reconsider layer order or use `break` for a deliberate exception |
+| Hook counts exceed span counts | one span has several materialized segments | aggregate before rendering or group calls by `spanIndex` |
+| Reordering appears to do nothing | one layer has no render hooks or spans do not overlap | inspect resolved hooks and span geometry |
 
 ### 5. Inspect the renderer separately
 

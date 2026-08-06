@@ -462,7 +462,7 @@ Nested buffers and `wrap()` naturally construct the tree.
 
 ## Crossing spans may produce several nodes
 
-As described in [Rendering Overlapping Spans](6-rendering-overlapping-spans.md#crossing-spans-are-materialized-as-segments), a crossing may divide one generated span into several properly nested materialized segments. For a structured renderer, each segment may become a separate annotation node.
+As described in [Rendering Overlapping Spans](6-rendering-overlapping-spans.md#layer-order-decides-which-crossing-span-is-segmented), a crossing may divide one generated span into several properly nested materialized segments. For a structured renderer, each segment may become a separate annotation node.
 
 The target-specific consequence is:
 
@@ -628,7 +628,7 @@ Interpret it:
 
 Because the span is zero-width, no source text is consumed.
 
-The marker node appears between the text nodes corresponding to the surrounding source regions.
+The marker node appears between the text nodes corresponding to the surrounding source regions. Its default depth follows layer registration order: earlier layers wrap it and later layers do not. Set `point: 'inside'` or `point: 'outside'` when the node must sit inside or outside every non-replacement span touching that boundary.
 
 This makes the same boundary-insertion pattern usable for:
 

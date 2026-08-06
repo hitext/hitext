@@ -662,9 +662,9 @@ Hooks should primarily interpret a span in the selected output model.
 
 Transformations should establish what the span means geometrically and semantically.
 
-## Layer order is a final tie-breaker
+## Layer order defines nesting precedence
 
-Layers are evaluated in registration order, but rendering does not treat that order as a general overlap priority. Registration order decides only cases that remain tied after geometry and interruption behavior are considered.
+Layers are evaluated in registration order, and that order defines their nesting precedence during materialization. An earlier renderable layer is outer to every later renderable layer wherever their spans overlap.
 
 For example:
 
@@ -675,19 +675,89 @@ const view = html()
     .addLayer(diagnosticSpans, diagnosticHooks);
 ```
 
+In an overlap, syntax is outer to search, and search is outer to diagnostics. This remains true for equal, nested, and crossing spans. When crossing geometry cannot preserve that order as one wrapper per span, HiText divides the later layer into properly nested segments.
+
 At the same time, layer order should not be used to encode analysis dependencies indirectly. When one span set derives from another, name the source layer and use `spansFromLayer()`.
 
 ```text
 data dependency
     → named layer relationship
 
-otherwise equal spans
-    → layer order as tie-breaker
+materialized overlap
+    → layer order as nesting precedence
 ```
 
-These are related but distinct concerns.
+These are related but distinct concerns. A layer may depend analytically on an earlier named layer while still occupying its normal registration position in the rendered nesting order.
 
 See [Ordering and Segments](pipeline-and-rendering-reference.md#ordering-and-segments) for the complete ordering contract.
+
+## Choose layer order by output ownership
+
+Layer order is not merely the order in which configuration happens. For renderable layers, it defines which interpretation owns the shared output structure.
+
+A useful default is:
+
+> Register stable structural regions first, then add progressively more local annotations.
+
+Earlier layers form the less fragmented outer structure. Later layers adapt to that structure and may be divided into more materialized segments. For example, consider section spans and line spans that cross section boundaries.
+
+Registering sections before lines expresses that sections own the output structure:
+
+```js
+const bySection = html()
+    .addLayer(sectionSpans, sectionHooks)
+    .addLayer(lineSpans, lineHooks);
+```
+
+```text
+section
+├── line
+└── line
+```
+
+Registering lines before sections expresses that each line owns its output subtree. A section crossing two lines is then materialized as two section segments:
+
+```js
+const byLine = html()
+    .addLayer(lineSpans, lineHooks)
+    .addLayer(sectionSpans, sectionHooks);
+```
+
+```text
+line
+└── section segment
+line
+└── section segment
+```
+
+Neither order is universally correct. Choose according to the target structure:
+
+| Desired output relationship | Register first | Register later |
+|---|---|---|
+| Sections contain line nodes | sections | lines |
+| Every line is an independent row | lines | sections and annotations |
+| Syntax provides stable token containers | syntax | search and diagnostics |
+| A selection should wrap every decoration | selection | syntax and diagnostics |
+| Diagnostics should remain local to existing structure | structural layers | diagnostics |
+
+This ordering controls materialized nesting, not analytical importance. A later diagnostic may be more important to the application while still being structurally inside an earlier syntax or line layer.
+
+Only renderable layers participate in output nesting. A named analytical layer with no hooks can support later derivation without claiming an outer position in the materialized result.
+
+Within one layer, the existing geometric rules continue to apply. Moving spans from one layer into separate layers therefore adds a structural precedence relationship; combining them into one layer removes that relationship and leaves their interaction to geometry and source order.
+
+Treat reordering `.addLayer()` calls as an intentional output-structure change. It may alter segment counts, hook invocation counts, DOM ancestry, terminal state transitions, and structured renderer trees even though every source span remains unchanged.
+
+Before registering two overlapping renderable layers, ask:
+
+1. Which interpretation should be the ancestor in the target output?
+2. Which span may safely become several materialized nodes?
+3. Does either layer represent a global structural exception that needs `break`, rather than ordinary precedence?
+4. Is the apparent ordering requirement actually an analytical dependency that should use a named layer instead?
+
+Register the desired ancestor first. If both answers depend on the renderer, reuse the analytical span sources but create renderer-specific pipeline orderings.
+
+For the exact crossing and point-boundary rules, see [Rendering Overlapping Spans](6-rendering-overlapping-spans.md#layer-order-decides-which-crossing-span-is-segmented).
 
 ## Pipelines are immutable view definitions
 

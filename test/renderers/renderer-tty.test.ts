@@ -210,7 +210,7 @@ describe('TTY renderer', () => {
                 ], tty.createStyle('blue'))
                 .render('Hello');
 
-            strictEqual(result, '\u001b[31mHel\u001b[34mlo\u001b[39m');
+            strictEqual(result, '\u001b[31mHe\u001b[34mllo\u001b[39m');
         });
 
         it('should handle overlapping foreground and background', () => {

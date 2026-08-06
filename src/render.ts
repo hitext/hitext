@@ -56,6 +56,8 @@ export function render<T, R = T, HC = unknown>(
     let segmentStart = 0;
     let segmentEnd = document.length;
     let currentSpanIndex = 0;
+    let pointBoundaryOffset = -1;
+    let lastPointIndex = -1;
     let currentSpanHook: SpanCallableHook = 'open';
     let currentSpan = rootSpan;
 
@@ -85,9 +87,10 @@ export function render<T, R = T, HC = unknown>(
     let currentBuffer = createBuffer();
 
     // Track opened spans and their segment start offsets
-    // spanStack is sorted by end descending, i.e. [[2, 10], [1, 6], [3, 3]]
+    // spanStack follows materialized nesting: earlier layers are outer, then geometry within a layer.
     const spanStack: Array<GeneratedSpan> = [];
     const spanStackSegmentStarts: number[] = []; // Parallel array to spanStack
+    const endStack: GeneratedSpan[] = [];
     let spanStackOpenIndex = 0;
 
     // Filter and sort spans (avoid input mutation)
@@ -102,11 +105,10 @@ export function render<T, R = T, HC = unknown>(
         .sort(
             (a, b) =>
                 a.start - b.start ||
+                getStartPriority(a) - getStartPriority(b) ||
                 spanWeight.get(toSpanMarkerKey(b.type))! - spanWeight.get(toSpanMarkerKey(a.type))! ||
-                b.end - a.end ||
-                spanPriority.get(toSpanMarkerKey(a.type))! - spanPriority.get(toSpanMarkerKey(b.type))!
+                compareSpanNesting(a, b)
         );
-
     // Call renderer open hook
     setRootContext('open');
     appendToBuffer(renderOpenHook?.(spanHookContext));
@@ -117,6 +119,23 @@ export function render<T, R = T, HC = unknown>(
         const replaceMode = Boolean(hook.replace);
         const breakFlag = hook.break === true;
 
+        if (span.start === span.end) {
+            if (pointBoundaryOffset !== span.start) {
+                pointBoundaryOffset = span.start;
+                lastPointIndex = currentSpanIndex;
+                for (let i = currentSpanIndex + 1; i < spans.length && spans[i].start === span.start; i++) {
+                    if (spans[i].start === spans[i].end) {
+                        lastPointIndex = i;
+                    }
+                }
+            }
+            closeSpanSegments(span.start, false, false);
+            if (hook.point !== null || hasDifferentMarker(span)) {
+                handlePointSpan(span);
+                continue;
+            }
+        }
+
         // Close any spans that end before the new span starts
         closeSpanSegments(span.start);
 
@@ -125,12 +144,12 @@ export function render<T, R = T, HC = unknown>(
             closeSpanSegments(span.end, true);
         }
 
-        // Find position to insert the new span in ordered by end descending
-        // so that spans with later end are opened first (higher priority)
+        // Find the new span's layer-ordered nesting position.
         while (spanStackOpenIndex > 0) {
-            // Stop when we find a span that ends after or at the same time as the new span;
-            // However, if break flag is set, continue closing spans even if they end after
-            if (!breakFlag && spanStack[spanStackOpenIndex - 1].end >= span.end) {
+            const parentSpan = spanStack[spanStackOpenIndex - 1];
+
+            // Earlier layers are outer. Within one layer, preserve geometric nesting.
+            if ((!breakFlag || spanHooksMap[parentSpan.type].break) && compareSpanNesting(parentSpan, span) <= 0) {
                 break;
             }
 
@@ -142,20 +161,14 @@ export function render<T, R = T, HC = unknown>(
 
         if (!replaceMode) {
             // Normal flow: insert new span
-            spanStack.splice(spanStackOpenIndex, 0, span);
-            spanStackSegmentStarts.splice(spanStackOpenIndex, 0, 0); // Set segment start to openAt
+            insertActiveSpan(span, spanStackOpenIndex);
         } else {
-            // Handle replace span
             handleReplaceSpan(span);
         }
 
         // Reopen spans that were closed to insert new span
-        for (; spanStackOpenIndex < spanStack.length; spanStackOpenIndex++) {
-            openSpanSegment(spanStack[spanStackOpenIndex], -1);
+        reopenSpanSegments();
 
-            // Track where this segment started (current offset) for close/wrap hooks
-            spanStackSegmentStarts[spanStackOpenIndex] = renderedOffset;
-        }
     }
 
     closeSpanSegments(document.length);
@@ -183,6 +196,45 @@ export function render<T, R = T, HC = unknown>(
 
     function toSpanMarkerKey(marker: SpanMarker): string | symbol {
         return typeof marker === 'number' ? String(marker) : marker;
+    }
+
+    function getSpanPriority(span: GeneratedSpan) {
+        const hooks = spanHooksMap[span.type];
+
+        if (span.start === span.end) {
+            if (hooks.point === 'outside' || hooks.break) {
+                return -1;
+            }
+            if (hooks.point === 'inside') {
+                return spanMarkers.length;
+            }
+        }
+
+        return spanPriority.get(toSpanMarkerKey(span.type))!;
+    }
+
+    function getStartPriority(span: GeneratedSpan) {
+        return spanHooksMap[span.type].break ? -2 : getSpanPriority(span);
+    }
+
+    function compareSpanNesting(a: GeneratedSpan, b: GeneratedSpan): number {
+        const aMarker = toSpanMarkerKey(a.type);
+        const bMarker = toSpanMarkerKey(b.type);
+        const aHasPointOverride = a.start === a.end && (spanHooksMap[a.type].point !== null || spanHooksMap[a.type].break);
+        const bHasPointOverride = b.start === b.end && (spanHooksMap[b.type].point !== null || spanHooksMap[b.type].break);
+        if (aMarker === bMarker && !aHasPointOverride && !bHasPointOverride) {
+            return b.end - a.end;
+        }
+
+        const aPriority = getSpanPriority(a);
+        const bPriority = getSpanPriority(b);
+
+        const aHooks = spanHooksMap[a.type];
+        const bHooks = spanHooksMap[b.type];
+        const breakDifference = Number(bHooks.break) - Number(aHooks.break);
+        const priorityDifference = aPriority - bPriority;
+
+        return breakDifference || priorityDifference || b.end - a.end;
     }
 
     function setRootContext(hook: SpanCallableHook) {
@@ -218,8 +270,13 @@ export function render<T, R = T, HC = unknown>(
         // - Or a replace/break span that will close the current span early
         segmentEnd = currentSpan.end;
 
+        const currentStackIndex = spanStack.indexOf(currentSpan);
+        for (let i = 0; i < currentStackIndex; i++) {
+            segmentEnd = Math.min(segmentEnd, spanStack[i].end);
+        }
+
         // Find next span's start that comes after renderedOffset
-        // and will cause interruption (its end > some opened span's end)
+        // and will be inserted outside the current span
         for (let i = currentSpanIndex + 1; i < spans.length; i++) {
             const nextSpan = spans[i];
 
@@ -230,9 +287,8 @@ export function render<T, R = T, HC = unknown>(
                     nextSpanHooks.break ||
                     // Replace flag closes spans that end at or before nextSpan.end
                     (nextSpanHooks.replace && currentSpan.end <= nextSpan.end) ||
-                    // Check if this span will cause an interruption to the current span
-                    // It causes interruption if its end is greater than the current span's end
-                    currentSpan.end < nextSpan.end;
+                    // Earlier layers and same-layer outer spans interrupt inner segments
+                    compareSpanNesting(nextSpan, currentSpan) < 0;
 
                 if (isBreakSpan) {
                     segmentEnd = nextSpan.start;
@@ -329,27 +385,95 @@ export function render<T, R = T, HC = unknown>(
         renderedOffset = offset;
     }
 
-    function closeSpanSegments(offset: number, replaceMode: boolean = false) {
-        while (spanStackOpenIndex > 0) {
-            const topSpanEnd = spanStack[spanStackOpenIndex - 1].end;
-
-            if (topSpanEnd > offset) {
+    function closeSpanSegments(offset: number, replaceMode: boolean = false, includeBoundary: boolean = true) {
+        while (endStack.length > 0) {
+            const nextEnd = endStack[endStack.length - 1].end;
+            if (includeBoundary ? nextEnd > offset : nextEnd >= offset) {
                 break;
             }
 
             if (!replaceMode) {
-                renderText(topSpanEnd);
+                renderText(nextEnd);
             }
 
-            spanStackOpenIndex--;
-            closeSpanSegment(spanStack[spanStackOpenIndex], spanStackSegmentStarts[spanStackOpenIndex]);
-            spanStack.pop();
-            spanStackSegmentStarts.pop();
+            if (!replaceMode && endStack[endStack.length - 1] === spanStack[spanStackOpenIndex - 1]) {
+                endStack.pop();
+                spanStackOpenIndex--;
+                closeSpanSegment(spanStack.pop()!, spanStackSegmentStarts.pop()!);
+                continue;
+            }
+
+            const removeThrough = replaceMode ? offset : nextEnd;
+            while (endStack[endStack.length - 1]?.end <= removeThrough) {
+                const span = endStack.pop()!;
+                const index = spanStack.indexOf(span);
+                while (spanStackOpenIndex > index) {
+                    spanStackOpenIndex--;
+                    closeSpanSegment(spanStack[spanStackOpenIndex], spanStackSegmentStarts[spanStackOpenIndex]);
+                }
+                spanStack.splice(index, 1);
+                spanStackSegmentStarts.splice(index, 1);
+            }
+            reopenSpanSegments();
         }
 
         if (!replaceMode) {
             renderText(offset);
         }
+    }
+
+    function reopenSpanSegments() {
+        for (; spanStackOpenIndex < spanStack.length; spanStackOpenIndex++) {
+            openSpanSegment(spanStack[spanStackOpenIndex], -1);
+            spanStackSegmentStarts[spanStackOpenIndex] = renderedOffset;
+        }
+    }
+
+    function hasDifferentMarker(span: GeneratedSpan) {
+        const marker = toSpanMarkerKey(span.type);
+        return spanStack.some(activeSpan => toSpanMarkerKey(activeSpan.type) !== marker);
+    }
+
+    function insertActiveSpan(span: GeneratedSpan, index: number) {
+        spanStack.splice(index, 0, span);
+        spanStackSegmentStarts.splice(index, 0, 0);
+
+        let endIndex = endStack.length;
+        while (endIndex > 0 && endStack[endIndex - 1].end < span.end) {
+            endIndex--;
+        }
+        endStack.splice(endIndex, 0, span);
+    }
+
+    function handlePointSpan(pointSpan: GeneratedSpan) {
+        const parentCount = getInsertionIndex(spanStack, pointSpan);
+        while (spanStackOpenIndex > parentCount) {
+            spanStackOpenIndex--;
+            closeSpanSegment(spanStack[spanStackOpenIndex], spanStackSegmentStarts[spanStackOpenIndex]);
+        }
+        emitPointSpan(pointSpan);
+
+        if (currentSpanIndex === lastPointIndex) {
+            closeSpanSegments(pointSpan.end);
+        }
+        reopenSpanSegments();
+    }
+
+    function getInsertionIndex(stack: GeneratedSpan[], span: GeneratedSpan, afterEqual: boolean = false) {
+        let index = stack.length;
+        while (index > 0) {
+            const order = compareSpanNesting(stack[index - 1], span);
+            if (order < 0 || (afterEqual && order === 0)) {
+                break;
+            }
+            index--;
+        }
+        return index;
+    }
+
+    function emitPointSpan(pointSpan: GeneratedSpan) {
+        openSpanSegment(pointSpan, pointSpan.end);
+        closeSpanSegment(pointSpan, pointSpan.start);
     }
 
     function handleReplaceSpan(replaceSpan: GeneratedSpan) {
@@ -371,22 +495,6 @@ export function render<T, R = T, HC = unknown>(
             // If the next span ends after the replaced span, it needs to be opened
             if (nextSpan.end > replaceSpan.end) {
                 const nextSpanHooks = spanHooksMap[nextSpan.type];
-                const breakFlag = nextSpanHooks.break;
-                let insertIndex = spanStack.length;
-
-                // Find insert position in span stack
-                for (let k = spanStack.length - 1; k >= 0; k--) {
-                    if (!breakFlag && spanStack[k].end >= nextSpan.end) {
-                        break;
-                    }
-                    insertIndex--;
-                }
-
-                // Close any spans that would be interrupted by the new span
-                while (spanStackOpenIndex > insertIndex) {
-                    spanStackOpenIndex--;
-                    closeSpanSegment(spanStack[spanStackOpenIndex], spanStackSegmentStarts[spanStackOpenIndex]);
-                }
 
                 // Just skip the span and its content if it also has replace hook
                 if (nextSpanHooks.replace) {
@@ -395,9 +503,8 @@ export function render<T, R = T, HC = unknown>(
                     continue;
                 }
 
-                // Insert new span
-                spanStack.splice(insertIndex, 0, nextSpan);
-                spanStackSegmentStarts.splice(insertIndex, 0, 0);
+                const insertIndex = getInsertionIndex(spanStack, nextSpan, true);
+                insertActiveSpan(nextSpan, insertIndex);
             }
         }
     }

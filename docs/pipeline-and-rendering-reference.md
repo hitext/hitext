@@ -110,6 +110,7 @@ A layer accepts three hook-definition forms.
     text?: SpanHookText | null;
     replace?: SpanHookReplace | null;
     break?: boolean;
+    point?: 'inside' | 'outside';
 }
 ```
 
@@ -236,26 +237,44 @@ Offsets outside the document are not rejected by this validation. Application sp
 
 ## Ordering and Segments
 
-Before traversal, renderable spans are ordered by:
+Layer registration order is nesting precedence. In every overlap region:
 
-1. lower `start` offset;
-2. higher interruption weight: `break` contributes two and `replace` contributes one;
-3. larger `end` offset;
-4. layer registration order when the preceding properties tie.
+- an earlier renderable layer is outer;
+- a later renderable layer is inner;
+- crossing spans are segmented as needed to preserve that order;
+- equal spans nest in registration order.
 
-Fully tied spans from the same layer retain source iteration order.
+For a pipeline, this order is the sequence of `.addLayer()` calls. For the low-level `render()` function, it is the own-key order of `spanHooksDefinitionMap` after JavaScript property-key ordering rules are applied.
+
+Geometry still determines when spans become active and inactive. Within one layer, geometric nesting applies; a later-ending crossing span becomes outer over the overlap. Fully tied spans from the same layer retain source iteration order.
+
+Ordering is directional: earlier layers establish the less fragmented outer structure, while later layers are segmented around earlier boundaries when required. Register sections before lines when section nodes should contain lines; register lines before sections when every line must remain an independent outer row. Reordering renderable layers is therefore an observable output-structure change.
+
+Only layers with resolved render hooks participate in this nesting order. Analytical layers remain available to generation and named-layer lookup but do not create materialized ancestry.
 
 Nested spans can be materialized directly. Crossing spans are divided into properly nested materialized segments. The complete generated record remains available as `context.span`; current segment boundaries are exposed as `context.start` and `context.end`.
+
+`break: true` is an explicit exception to normal layer precedence. It closes surrounding interpretations and places the breaking span outside them for the interrupted region.
 
 See [Rendering Overlapping Spans](6-rendering-overlapping-spans.md) for the operational model and examples.
 
 ## Replacement and Interruption
 
-A non-empty `replace` span consumes its selected source region. A point replacement where `start === end` inserts output without consuming source text.
+A non-empty `replace` span consumes its selected source region. Its replacement output is emitted at the nesting depth of its layer; earlier layers may wrap it, while later layers are interrupted around it. A point replacement where `start === end` inserts output without consuming source text.
 
 Spans fully contained by a replaced region do not receive normal materialization for the consumed source text. Spans extending beyond the replaced region may still materialize their remaining source coverage.
 
-`replace` does not automatically interrupt a surrounding span that begins before and ends after it. Set `break: true` when surrounding interpretations must close before the current span and resume afterward as later segments.
+`replace` preserves surrounding spans from earlier layers and interrupts spans from later layers. Set `break: true` when all surrounding interpretations must close before the replacement and resume afterward as later segments.
+
+Point spans use `point`:
+
+- omitted is the default and places the point inside earlier layers and outside later layers;
+- `'inside'` places it inside every non-replacement span touching the boundary;
+- `'outside'` places it outside every non-replacement span touching the boundary.
+
+Touching includes strict containment and shared start or end boundaries. Points from different layers at one offset are resolved as one boundary event, so a shared outer segment can contain all points assigned beneath it. When all touching spans belong to one layer and `point` is omitted, the renderer preserves the ordinary same-layer geometry, replacement, and source-order rules. `break: true` overrides `point` and places the point outside surrounding spans.
+
+Use omitted `point` for normal layer-relative insertion. Explicit `'inside'` or `'outside'` is a boundary override across all touching layers, including spans that start or end at the point offset.
 
 The built-in `spanHooksHide()` helper combines replacement with interruption behavior appropriate for omissions.
 

@@ -39,6 +39,66 @@ describe('Pipeline API', () => {
             strictEqual(result, '<div><span>Hello</span> world</div>');
         });
 
+        it('should use layer order as nesting precedence for crossing spans', () => {
+            const document = 'abcd';
+            const outerFirst = html()
+                .addLayer([[0, 3]], (content) => `<outer>${content}</outer>`)
+                .addLayer([[1, 4]], (content) => `<inner>${content}</inner>`);
+            const innerFirst = html()
+                .addLayer([[1, 4]], (content) => `<inner>${content}</inner>`)
+                .addLayer([[0, 3]], (content) => `<outer>${content}</outer>`);
+
+            strictEqual(
+                outerFirst.render(document),
+                '<outer>a<inner>bc</inner></outer><inner>d</inner>'
+            );
+            strictEqual(
+                innerFirst.render(document),
+                '<outer>a</outer><inner><outer>bc</outer>d</inner>'
+            );
+        });
+
+        it('should segment a later layer around an earlier geometrically nested layer', () => {
+            const result = html()
+                .addLayer([[1, 3]], (content) => `<outer>${content}</outer>`)
+                .addLayer([[0, 4]], (content) => `<inner>${content}</inner>`)
+                .render('abcd');
+
+            strictEqual(
+                result,
+                '<inner>a</inner><outer><inner>bc</inner></outer><inner>d</inner>'
+            );
+        });
+
+        it('should place a point between earlier and later layers', () => {
+            const result = html()
+                .addLayer([[0, 4]], (content) => `<outer>${content}</outer>`)
+                .addLayer([[2, 2]], {
+                    replace: () => '<point/>'
+                })
+                .addLayer([[0, 4]], (content) => `<inner>${content}</inner>`)
+                .render('abcd');
+
+            strictEqual(
+                result,
+                '<outer><inner>ab</inner><point/><inner>cd</inner></outer>'
+            );
+        });
+
+        it('should materialize a replacement outside later layers', () => {
+            const result = html()
+                .addLayer([[2, 3]], {
+                    replace: () => '<replacement/>'
+                })
+                .addLayer([[0, 4]], (content) => `<inner>${content}</inner>`)
+                .render('abcd');
+
+            strictEqual(
+                result,
+                '<inner>ab</inner><replacement/><inner>d</inner>'
+            );
+        });
+
         it('should pass data to hooks', () => {
             const result = html()
                 .addLayer<{ type: string }>(

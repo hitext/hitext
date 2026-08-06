@@ -21,6 +21,7 @@ This document is the SOURCE OF TRUTH for development of the project. Outdated do
 
 - **Validate Early** - `npm test` during development, `npm run fast-check` for quick validation, `npm run check` before committing
 - **Public API Only in Tests** - Import from `src/index.ts` or `src/types.d.ts` only (validates API surface, catches breaking changes)
+- **Benchmark Renderer Changes** - Run `npm run benchmark` before and after traversal, ordering, or buffer changes
 
 ### Architecture
 
@@ -34,7 +35,7 @@ createRenderPipeline(createRenderHooks) → .addLayer(spans, spanHooks, name?) �
 **Internal Flow:**
 1. `generateSpansFromLayers()` - Collects spans from all layers
 2. `resolveSpanHooksMap()` - Normalizes hook definitions
-3. `render()` - Sorts/filters spans, manages stack, executes hooks (open/text/wrap/replace/close)
+3. `render()` - Filters spans, resolves layer-ordered boundary events and segments, executes hooks (open/text/wrap/replace/close)
 
 **Key Modules:**
 
@@ -72,12 +73,13 @@ createRenderPipeline(createRenderHooks) → .addLayer(spans, spanHooks, name?) �
 - **Render Hooks Factory** - Function passed to `createRenderPipeline()` that creates output-specific render hooks and buffers
 - **Renderer Factory** - Public output-specific function (`string`, `html`, `dom`, `tty`, `jsx`) that creates a configured render pipeline
 - **Render Pipeline** - Immutable layer chain: `createRenderPipeline()` → `.addLayer()` → `.render()`
-- **Layer** - Span source + span hooks definition + optional name
+- **Layer** - Span source + span hooks definition + optional name; earlier renderable layers are outer to later layers in overlap regions
 - **Render Options** - User config passed to span generators and operation callbacks (theme, viewport)
 - **Render Buffer** - Output accumulator (string/DOM/JSX); subbuffers created during render (on hook execution), emitted results attach to parent buffer up to top buffer (result of `render()`)
 
 **Hooks:**
-- **Span Hooks** - Render functions applied to each span segment: `open`, `close`, `wrap`, `text`, `replace`, `break` flag
+- **Span Hooks** - Render functions applied to each span segment: `open`, `close`, `wrap`, `text`, `replace`, `break` flag, and point-only `point` mode
+- **Point Placement** - Boundary policy for a point span: layer-relative between layers by default, or explicitly inside/outside all spans touching the boundary
 - **Hook Context** - Data passed to hooks: `hook`, `document`, `lines`, `offset`, `line`, `column`, `start`, `end`, `spanIndex`, `spanText`, `span`, `data`, `createBuffer`, `dump`; span-level `text` hooks receive the context of the span that owns the selected hook
 - **Renderer Hook Context** - Renderer-level `open`, `text`, and `close` hooks use a synthetic span covering the document with `data: undefined` and `spanIndex: -1`; `text` hook `start`/`end` describe the current document chunk
 - **Generation Context** - Optional generation state: `renderOptions`, `marker`, `spans`, `spansByMarker`, `spansByName`, `lines`; pipeline generation supplies all except caller-provided `spans`

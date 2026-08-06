@@ -103,6 +103,8 @@ export type SpanHooksFactory<Data = unknown, T = unknown, R = T, HC = unknown> =
 };
 
 export type SpanCallableHook = 'open' | 'close' | 'wrap' | 'text' | 'replace';
+/** Explicit placement of a point span relative to spans touching its boundary. */
+export type SpanPointMode = 'inside' | 'outside';
 export interface SpanHooks<Data = unknown, T = unknown, R = T> {
     open: SpanHookOpen<Data, T, R> | null;
     close: SpanHookClose<Data, T, R> | null;
@@ -110,6 +112,8 @@ export interface SpanHooks<Data = unknown, T = unknown, R = T> {
     text: SpanHookText<Data, T, R> | null;
     replace: SpanHookReplace<Data, T, R> | null;
     break: boolean;
+    /** Point spans only. Omit for layer-relative placement. */
+    point: SpanPointMode | null;
 }
 
 export type SpanHookOpen<Data, T, R = T> = (

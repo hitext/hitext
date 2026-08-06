@@ -137,6 +137,231 @@ describe('render', () => {
         );
     });
 
+    it('should use hook registration order as nesting precedence for crossing spans', () => {
+        const spans: GeneratedSpan[] = [
+            { type: 'outer', start: 0, end: 3 },
+            { type: 'inner', start: 1, end: 4 }
+        ];
+
+        strictEqual(
+            render('abcd', spans, {
+                outer: {
+                    open: () => '<outer>',
+                    close: () => '</outer>'
+                },
+                inner: {
+                    open: () => '<inner>',
+                    close: () => '</inner>'
+                }
+            }),
+            '<outer>a<inner>bc</inner></outer><inner>d</inner>'
+        );
+    });
+
+    it('should place a point replacement inside an earlier registered layer at both boundaries', () => {
+        const hooks = {
+            outer: {
+                open: () => '<outer>',
+                close: () => '</outer>'
+            },
+            point: {
+                replace: () => '<point/>'
+            }
+        };
+
+        strictEqual(
+            render('abcd', [
+                { type: 'outer', start: 0, end: 2 },
+                { type: 'point', start: 2, end: 2 }
+            ], hooks),
+            '<outer>ab<point/></outer>cd'
+        );
+        strictEqual(
+            render('abcd', [
+                { type: 'outer', start: 2, end: 4 },
+                { type: 'point', start: 2, end: 2 }
+            ], hooks),
+            'ab<outer><point/>cd</outer>'
+        );
+    });
+
+    it('should preserve same-layer point placement', () => {
+        const hooks = {
+            test: {
+                open: ({ data }: SpanHookContext<string>) => data === 'point' ? '<point>' : '<span>',
+                close: ({ data }: SpanHookContext<string>) => data === 'point' ? '</point>' : '</span>'
+            }
+        };
+
+        strictEqual(
+            render('abcd', [
+                { type: 'test', start: 0, end: 2, data: 'span' },
+                { type: 'test', start: 2, end: 2, data: 'point' }
+            ], hooks),
+            '<span>ab</span><point></point>cd'
+        );
+        strictEqual(
+            render('abcd', [
+                { type: 'test', start: 2, end: 4, data: 'span' },
+                { type: 'test', start: 2, end: 2, data: 'point' }
+            ], hooks),
+            'ab<span><point></point>cd</span>'
+        );
+        strictEqual(
+            render('abcd', [
+                { type: 'test', start: 0, end: 4, data: 'span' },
+                { type: 'test', start: 2, end: 2, data: 'point' }
+            ], hooks),
+            '<span>ab<point></point>cd</span>'
+        );
+    });
+
+    it('should support explicit outside placement for point spans', () => {
+        const hooks = {
+            outer: {
+                open: () => '<outer>',
+                close: () => '</outer>'
+            },
+            point: {
+                replace: () => '<point/>',
+                point: 'outside' as const
+            }
+        };
+
+        strictEqual(
+            render('abcd', [
+                { type: 'outer', start: 0, end: 4 },
+                { type: 'point', start: 2, end: 2 }
+            ], hooks),
+            '<outer>ab</outer><point/><outer>cd</outer>'
+        );
+        strictEqual(
+            render('abcd', [
+                { type: 'outer', start: 0, end: 2 },
+                { type: 'point', start: 2, end: 2 }
+            ], hooks),
+            '<outer>ab</outer><point/>cd'
+        );
+        strictEqual(
+            render('abcd', [
+                { type: 'outer', start: 2, end: 4 },
+                { type: 'point', start: 2, end: 2 }
+            ], hooks),
+            'ab<point/><outer>cd</outer>'
+        );
+    });
+
+    it('should support explicit inside placement for point spans', () => {
+        strictEqual(
+            render('abcd', [
+                { type: 'point', start: 2, end: 2 },
+                { type: 'inner', start: 2, end: 4 }
+            ], {
+                point: {
+                    replace: () => '<point/>',
+                    point: 'inside'
+                },
+                inner: {
+                    open: () => '<inner>',
+                    close: () => '</inner>'
+                }
+            }),
+            'ab<inner><point/>cd</inner>'
+        );
+    });
+
+    it('should place a point outside later layers by default', () => {
+        const hooks = {
+            point: {
+                replace: () => '<point/>'
+            },
+            inner: {
+                open: () => '<inner>',
+                close: () => '</inner>'
+            }
+        };
+
+        strictEqual(
+            render('abcd', [
+                { type: 'inner', start: 0, end: 2 },
+                { type: 'point', start: 2, end: 2 }
+            ], hooks),
+            '<inner>ab</inner><point/>cd'
+        );
+        strictEqual(
+            render('abcd', [
+                { type: 'inner', start: 2, end: 4 },
+                { type: 'point', start: 2, end: 2 }
+            ], hooks),
+            'ab<point/><inner>cd</inner>'
+        );
+    });
+
+    it('should keep an ending outer layer open for every point at one boundary', () => {
+        strictEqual(
+            render('abcd', [
+                { type: 'outer', start: 0, end: 2 },
+                { type: 'firstPoint', start: 2, end: 2 },
+                { type: 'secondPoint', start: 2, end: 2 }
+            ], {
+                outer: {
+                    open: () => '<outer>',
+                    close: () => '</outer>'
+                },
+                firstPoint: {
+                    replace: () => '<first/>'
+                },
+                secondPoint: {
+                    replace: () => '<second/>'
+                }
+            }),
+            '<outer>ab<first/><second/></outer>cd'
+        );
+    });
+
+    it('should let break override inside point placement', () => {
+        strictEqual(
+            render('abcd', [
+                { type: 'outer', start: 0, end: 4 },
+                { type: 'point', start: 2, end: 2 }
+            ], {
+                outer: {
+                    open: () => '<outer>',
+                    close: () => '</outer>'
+                },
+                point: {
+                    replace: () => '<point/>',
+                    point: 'inside',
+                    break: true
+                }
+            }),
+            '<outer>ab</outer><point/><outer>cd</outer>'
+        );
+    });
+
+    it('should place a point between ending outer and starting inner layers', () => {
+        strictEqual(
+            render('abcd', [
+                { type: 'outer', start: 0, end: 2 },
+                { type: 'point', start: 2, end: 2 },
+                { type: 'inner', start: 2, end: 4 }
+            ], {
+                outer: {
+                    open: () => '<outer>',
+                    close: () => '</outer>'
+                },
+                point: {
+                    replace: () => '<point/>'
+                },
+                inner: {
+                    open: () => '<inner>',
+                    close: () => '</inner>'
+                }
+            }),
+            '<outer>ab<point/></outer><inner>cd</inner>'
+        );
+    });
+
     it('should order numeric span markers independently of generator order', () => {
         const hooks = {
             1: (content: string) => `<1>${content}</1>`,
@@ -147,6 +372,27 @@ describe('render', () => {
 
         strictEqual(render('123', [one, two], hooks), '1<1><2>2</2></1>3');
         strictEqual(render('123', [two, one], hooks), '1<1><2>2</2></1>3');
+    });
+
+    it('should preserve registration order between equal breaking spans', () => {
+        strictEqual(
+            render('abc', [
+                { type: 'first', start: 0, end: 3 },
+                { type: 'second', start: 0, end: 3 }
+            ], {
+                first: {
+                    open: () => '<first>',
+                    close: () => '</first>',
+                    break: true
+                },
+                second: {
+                    open: () => '<second>',
+                    close: () => '</second>',
+                    break: true
+                }
+            }),
+            '<first><second>abc</second></first>'
+        );
     });
 
     it('should be fine when open/close is omitted in printer span hook', () => {

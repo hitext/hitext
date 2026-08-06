@@ -58,7 +58,8 @@ export function resolveSpanHooksDefinition<Data, T, R = T, HC = unknown>(
             wrap: functionOrValue(definition.wrap, null),
             text: functionOrValue(definition.text, null),
             replace: functionOrValue(definition.replace, null),
-            break: definition.break ?? false
+            break: definition.break ?? false,
+            point: definition.point ?? null
         };
     }
 

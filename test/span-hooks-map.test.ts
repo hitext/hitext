@@ -88,7 +88,8 @@ describe('Span Hooks Map Helpers', () => {
                 wrap: shortcut,
                 text: null,
                 replace: null,
-                break: false
+                break: false,
+                point: null
             });
         });
 
@@ -105,7 +106,8 @@ describe('Span Hooks Map Helpers', () => {
                 wrap: null,
                 text: null,
                 replace: null,
-                break: false
+                break: false,
+                point: null
             });
         });
 
@@ -128,7 +130,8 @@ describe('Span Hooks Map Helpers', () => {
                 wrap: null,
                 text: null,
                 replace: null,
-                break: false
+                break: false,
+                point: null
             });
 
             strictEqual(resolved?.open?.({} as any), '<custom>');
@@ -146,6 +149,15 @@ describe('Span Hooks Map Helpers', () => {
 
             strictEqual(typeof resolved?.wrap, 'function');
             strictEqual(resolved?.wrap?.('test', {} as any), '**test**');
+        });
+
+        it('should preserve explicit point placement', () => {
+            const resolved = resolveSpanHooksDefinition({
+                replace: () => 'point',
+                point: 'outside'
+            }, {});
+
+            strictEqual(resolved?.point, 'outside');
         });
     });
 
@@ -182,7 +194,8 @@ describe('Span Hooks Map Helpers', () => {
                     wrap: null,
                     text: null,
                     replace: null,
-                    break: false
+                    break: false,
+                    point: null
                 },
                 [marker2]: {
                     open: null,
@@ -190,7 +203,8 @@ describe('Span Hooks Map Helpers', () => {
                     wrap: marker2hooks,
                     text: null,
                     replace: null,
-                    break: false
+                    break: false,
+                    point: null
                 },
                 [marker3]: {
                     open: marker3hooks.open,
@@ -198,7 +212,8 @@ describe('Span Hooks Map Helpers', () => {
                     wrap: null,
                     text: marker3hooks.text,
                     replace: null,
-                    break: false
+                    break: false,
+                    point: null
                 }
             }));
         });
@@ -227,7 +242,8 @@ describe('Span Hooks Map Helpers', () => {
                     wrap: shortcut,
                     text: null,
                     replace: null,
-                    break: false
+                    break: false,
+                    point: null
                 },
                 [marker2]: {
                     open: null,
@@ -235,7 +251,8 @@ describe('Span Hooks Map Helpers', () => {
                     wrap: null,
                     text: null,
                     replace: null,
-                    break: false
+                    break: false,
+                    point: null
                 }
             }));
         });

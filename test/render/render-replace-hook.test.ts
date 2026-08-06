@@ -185,9 +185,7 @@ describe('Replace Hook', () => {
                     x: { replace: () => 'XXX' }
                 }
             );
-            // This is actually one of the failing tests - the current implementation has bugs
-            // Just verify the helper works syntactically for now
-            assert.strictEqual(result, '<s><b>START</b> XXX </s><a><s>EN</s>D</a>');
+            assert.strictEqual(result, '<b><s>START</s></b><s> XXX <a>EN</a></s><a>D</a>');
         });
     });
 
@@ -488,16 +486,8 @@ describe('Replace Hook', () => {
                 }
                 // inside span would be auto-skipped
             );
-            // before wraps "START", spanning wraps from position 2-17
-            // The 'b' span (0-5) and 's' span (2-17) overlap:
-            //   - At position 0-2: only 'b' is active: "<b>ST</b>"
-            //   - At position 2-5: both 'b' and 's' are active: "<s><b>ART</b>"
-            //   - At position 5-6: only 's' is active: "<s> </s>"
-            //   - Replace happens at 6-15: "XXX"
-            //   - At position 15-16: only 's' is active: "<s> </s>"
-            //   - At position 16-17: both 's' and 'a' are active: "<a><s>E</s>"
-            //   - At position 17-19: only 'a' is active: "ND</a>"
-            assert.strictEqual(result, '<b>ST</b><s><b>ART</b> XXX </s><a><s>E</s>ND</a>');
+            // Hook registration order is nesting precedence in overlap regions.
+            assert.strictEqual(result, '<b>ST<s>ART</s></b><s> XXX <a>E</a></s><a>ND</a>');
         });
 
         it('should handle replace with break flag - closes and reopens spanning spans', () => {
@@ -655,8 +645,8 @@ describe('Replace Hook', () => {
                     x: { replace: () => 'XXX' }
                 }
             );
-            // All three spans open at replace.end (18), close at their respective ends
-            assert.strictEqual(result, 'AAA XXX<t><s><r> BBB</r> CCC</s> DDD</t>');
+            // All three spans open at replace.end in layer order and segment as they end.
+            assert.strictEqual(result, 'AAA XXX<r><s><t> BBB</t></s></r><s><t> CCC</t></s><t> DDD</t>');
         });
 
         it('should handle spans starting within replace with different end positions', () => {
@@ -670,8 +660,8 @@ describe('Replace Hook', () => {
                     x: { replace: () => 'X' }
                 }
             );
-            // All open at 12 (replace.end), close at their ends
-            assert.strictEqual(result, 'AA X<l><m><s> BB</s> CC</m> DD EE</l>');
+            // All open at 12 (replace.end) in layer order.
+            assert.strictEqual(result, 'AA X<s><m><l> BB</l></m></s><m><l> CC</l></m><l> DD EE</l>');
         });
     });
 
@@ -707,7 +697,7 @@ describe('Replace Hook', () => {
             // spanning1 and spanning2 stay open through replace
             // inside1 and inside2 open at replace.end
             assert.strictEqual(result,
-                '<s>AA <t>BB XXX</t><j><t><i> CC DD</i></t> EE</j></s>');
+                '<s>AA <t>BB XXX<i><j> CC DD</j></i></t><j> EE</j></s>');
         });
 
         it('should handle complex scenario: spanning + ending inside + starting inside', () => {
@@ -727,7 +717,7 @@ describe('Replace Hook', () => {
             // before-to-inside closes before replace (its end is inside replaced segment)
             // inside-to-after opens at replace.end
             // after opens at 16
-            assert.strictEqual(result, '<a>A <b>B C </b>XXX<i> </i><e><i>D E</i> F</e></a>');
+            assert.strictEqual(result, '<a>A <b>B C </b>XXX<i> <e>D E</e></i><e> F</e></a>');
         });
     });
 
@@ -1091,7 +1081,7 @@ describe('Replace Hook', () => {
             );
             // SpansSource ending inside close before replace at actual close position (not declared end)
             // e closes at 2, f closes at 4 (before replace), s and t open at 13 (after replace)
-            assert.strictEqual(result, '<e:0:2>A </e:0:2><f:2:4><e:2:4>B </e:2:4></f:2:4>XXX<t:13:19><s:13:17> C D</s:13:17> E</t:13:19>');
+            assert.strictEqual(result, '<e:0:4>A <f:2:4>B </f:2:4></e:0:4>XXX<s:13:17><t:13:17> C D</t:13:17></s:13:17><t:17:19> E</t:17:19>');
         });
 
         it('should show correct boundaries when replace has break and spans span it', () => {

@@ -123,7 +123,7 @@ describe('render / text hook', () => {
                 b: replaceTextHook('b'),
                 c: replaceTextHook('c')
             }),
-            'aaaaaacbb9'
+            'aaabbccbb9'
         );
     });
 
@@ -223,7 +223,7 @@ describe('render / text hook', () => {
                 outer: replaceTextHook('o'),
                 interrupting: replaceTextHook('i')
             }),
-            'ooooooooooii'
+            'ooooiiiiiiii'
         );
     });
 });

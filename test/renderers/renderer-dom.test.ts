@@ -201,7 +201,7 @@ describe('DOM renderer', () => {
 
             strictEqual(
                 result.toString(),
-                '<#document-fragment><b>Hel</b><i><b>lo wo</b>rld</i></#document-fragment>'
+                '<#document-fragment><b>Hel<i>lo wo</i></b><i>rld</i></#document-fragment>'
             );
         });
 
