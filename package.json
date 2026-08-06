@@ -24,7 +24,7 @@
     "scripts": {
         "check": "npm run lint:fix && npm test && npm run typecheck && npm run build-and-test",
         "fast-check": "npm run lint && npm test && npm run typecheck",
-        "lint": "eslint scripts src test",
+        "lint": "eslint scripts src test benchmark",
         "lint:fix": "npm run lint -- --fix",
         "lint-and-test": "npm run lint && npm test",
         "typecheck": "tsc --noEmit",
@@ -42,6 +42,7 @@
         "transpile-and-test": "npm run bundle && npm run transpile && npm run test:all",
         "bundle": "node scripts/bundle",
         "bundle-and-test": "npm run bundle && npm run test:dist",
+        "benchmark": "node --import=tsx --expose-gc benchmark/render.ts",
         "prepublishOnly": "npm run check",
         "coverage": "c8 --reporter=lcovonly npm run test:esm"
     },

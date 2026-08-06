@@ -108,6 +108,10 @@ test/
 ├── span-hooks/           # Mirror src structure
 └── *.test.ts             # Core module tests
 
+benchmark/
+├── render.ts             # Renderer traversal benchmark suite
+└── README.md             # Benchmark usage and interpretation
+
 docs/
 ├── span-functions-guidelines.md  # Span function development guidelines
 └── span-functions-reference.md   # Span functions implementation reference
@@ -125,6 +129,7 @@ npm run typecheck     # TypeScript type check
 npm run fast-check    # lint + test + typecheck
 npm run build         # Transpile/bundle/emit types
 npm run check         # Full validation: lint:fix + test + typecheck + build + test builds/bundles
+npm run benchmark     # Measure renderer traversal scenarios
 ```
 
 ## Span Functions
