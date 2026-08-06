@@ -616,91 +616,13 @@ A text interpretation processes source chunks that remain part of normal travers
 
 Most views should leave source-text handling to the renderer unless the task explicitly requires a local alternative.
 
-## Materialization must resolve overlaps
+## Overlaps may produce several hook segments
 
-Independent spans do not necessarily form one nested tree.
+Independent spans may cross rather than form one nested tree. HiText resolves those intersections during materialization, so one generated span can contribute several properly nested segments and its hooks may run more than once.
 
-Consider two crossing spans:
+Most application hooks need no special handling beyond remaining stateless. Logic that must run once per analytical fact usually belongs in span generation or transformation rather than in a render hook.
 
-```text
-A: [----------)
-B:      [----------)
-```
-
-HTML, DOM, JSX, and most structured outputs require properly nested results. They cannot represent this directly as:
-
-```text
-open A
-open B
-close A
-close B
-```
-
-HiText resolves such intersections during materialization.
-
-Conceptually, only the spans that must be interrupted are split into multiple materialized segments. For `A = [1, 8)` and `B = [5, 12)`:
-
-```text
-A: [----)[---)
-B:      [-------)
-```
-
-Here A contributes `[1, 5)` and `[5, 8)`, while B remains one segment `[5, 12)`. The renderer can then produce a valid nested sequence.
-
-The original spans are not rewritten into unrelated objects. Their materialization is divided into segments.
-
-This introduces an important distinction:
-
-```text
-span
-    the complete analytical entity over the source document
-
-segment
-    the part of that span materialized between intersection boundaries
-```
-
-A single span may therefore contribute more than once during rendering.
-
-## Hooks operate on materialized segments
-
-For ordinary non-crossing spans, one span usually corresponds to one materialized region.
-
-For crossing spans, the same interpretation may be entered more than once:
-
-```text
-span A
-    → segment A1
-    → segment A2
-```
-
-Hook context distinguishes the complete span from the current segment:
-
-```text
-span.start / span.end
-    complete source span
-
-start / end
-    current materialized segment
-```
-
-This distinction matters when writing advanced hooks.
-
-A hook should not assume:
-
-> It will be called exactly once for every generated span.
-
-This is especially important for:
-
-* stateful renderers;
-* event collection;
-* counters;
-* generated element identifiers;
-* resource acquisition and cleanup;
-* aggregation performed during rendering.
-
-Within one render, `spanIndex` identifies the same generated span across its repeated segments, while `span` exposes that complete generated record. Neither is a persistent application identity across render calls. When logic should happen once per generated span, deduplicate by `spanIndex` within that render or, preferably, perform the logic earlier during span transformation.
-
-This is another reason not to use rendering hooks as a substitute for analysis.
+The next chapter, [Rendering Overlapping Spans](6-rendering-overlapping-spans.md), explains segment boundaries, repeated hooks, replacement, interruption, and text-hook selection. The [Pipeline and Rendering Reference](pipeline-and-rendering-reference.md#span-hook-context) defines the exact public context contract.
 
 ## Keep analysis out of hooks
 
@@ -742,7 +664,7 @@ Transformations should establish what the span means geometrically and semantica
 
 ## Layer order is a final tie-breaker
 
-Layers are evaluated in registration order, but rendering does not treat that order as a general overlap priority.
+Layers are evaluated in registration order, but rendering does not treat that order as a general overlap priority. Registration order decides only cases that remain tied after geometry and interruption behavior are considered.
 
 For example:
 
@@ -752,15 +674,6 @@ const view = html()
     .addLayer(searchSpans, searchHooks)
     .addLayer(diagnosticSpans, diagnosticHooks);
 ```
-
-Before materialization, generated spans are ordered by:
-
-1. lower start offset;
-2. higher interruption weight from `break` and `replace` hooks;
-3. larger end offset;
-4. layer registration order when the preceding properties are equal.
-
-Layer order therefore decides only otherwise equal cases. `break` and `replace` semantics can interrupt surrounding materialization independently of registration order, and crossing spans are resolved through segment handling.
 
 At the same time, layer order should not be used to encode analysis dependencies indirectly. When one span set derives from another, name the source layer and use `spansFromLayer()`.
 
@@ -773,6 +686,8 @@ otherwise equal spans
 ```
 
 These are related but distinct concerns.
+
+See [Ordering and Segments](pipeline-and-rendering-reference.md#ordering-and-segments) for the complete ordering contract.
 
 ## Pipelines are immutable view definitions
 
@@ -968,7 +883,7 @@ Materialization means producing an observable representation, not necessarily pr
 
 ## A complete layer graph
 
-Consider the diagnostic view built in the previous guide.
+Consider the view built in [Building a Diagnostic View](2-building-a-diagnostics-view.md#the-complete-view).
 
 Its analytical structure is:
 
@@ -1000,76 +915,7 @@ omitted regions
     → ellipsis presentation
 ```
 
-The corresponding pipeline is:
-
-```js
-function escapeHtmlAttribute(value) {
-    return String(value)
-        .replace(/&/g, '&amp;')
-        .replace(/"/g, '&quot;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
-}
-
-const diagnosticExcerpt = html()
-    .addLayer(
-        keywordSpans,
-        content => `<span class="keyword">${content}</span>`
-    )
-
-    .addLayer(
-        diagnosticSpans,
-        {
-            wrap(content, { data }) {
-                const severity = data.severity === 'error'
-                    ? 'error'
-                    : 'warning';
-
-                return (
-                    `<span class="diagnostic ${severity}">` +
-                        content +
-                    '</span>'
-                );
-            }
-        },
-        'diagnostics'
-    )
-
-    .addLayer(
-        spansCompose(
-            spansFromLayer('diagnostics'),
-            applyCollapseTo('end')
-        ),
-        {
-            replace: ({ data }) =>
-                '<span class="marker" title="' +
-                    escapeHtmlAttribute(data.message) +
-                '">⚠</span>'
-        }
-    )
-
-    .addLayer(
-        spansCompose(
-            spansFromLayer('diagnostics'),
-            applyExpandTo('line', 1),
-            applyMerge()
-        ),
-        null,
-        'visible-context'
-    )
-
-    .addLayer(
-        spansCompose(
-            spansFromLayer('visible-context'),
-            applyInvert()
-        ),
-        spanHooksHide({
-            skippedLines: () => '…'
-        })
-    );
-```
-
-The pipeline does not describe a sequence of output rewrites.
+The complete code remains in the tutorial. At the layer level, that pipeline does not describe a sequence of output rewrites.
 
 It declares:
 

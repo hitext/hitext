@@ -18,6 +18,8 @@ It becomes a problem when the spans are materialized as HTML, DOM, JSX, terminal
 
 This chapter explains how HiText interprets arbitrary span intersections while preserving each complete generated span and its source coordinates.
 
+It assumes the basic layer and hook model from [Layers and Materialization](5-layers-and-materialization.md). The focus here is what changes when spans cross, replace source regions, or interrupt surrounding output.
+
 ## Spans do not have to form a tree
 
 Some span relationships are naturally nested:
@@ -263,131 +265,13 @@ Derived representations that appear to move content are constructed explicitly:
 
 The source coordinate space remains unchanged throughout the process.
 
-## Wrapping interprets completed child content
+## Hook lifecycles repeat per segment
 
-The simplest span interpretation wraps its materialized content:
+`wrap` operates on a completed child-buffer result, while `open` and `close` contribute at traversal boundaries. [Layers and Materialization](5-layers-and-materialization.md#boundary-hooks-can-express-streaming-style-output) explains when each form is appropriate.
 
-```js
-content => `<mark>${content}</mark>`
-```
+Segmentation adds one rule: the selected lifecycle runs for every materialized segment, not once for the complete generated span. A split wrapper may therefore produce several target nodes, and boundary hooks may open and close the same generated span more than once.
 
-Equivalent explicit form:
-
-```js
-{
-    wrap(content) {
-        return `<mark>${content}</mark>`;
-    }
-}
-```
-
-Conceptually, materialization performs:
-
-```text
-create child buffer
-    → materialize source text and nested spans
-    → emit child result
-    → call wrap(child result)
-    → append wrapper result to parent
-```
-
-For HTML, the child result is a string.
-
-For DOM, it may be a `DocumentFragment`.
-
-For JSX, it may be an array of child values.
-
-For a custom renderer, it may be another structured representation.
-
-`wrap` is therefore not fundamentally an HTML-tag operation. It is an interpretation of completed child output.
-
-Use it when the target representation naturally needs the materialized children as one value:
-
-* create an HTML wrapper;
-* create a DOM element;
-* return a JSX node;
-* construct an annotation object;
-* inspect or transform complete child content.
-
-## Boundary hooks contribute before and after content
-
-Some output formats are naturally expressed through separate opening and closing contributions:
-
-```js
-{
-    open() {
-        return '<mark>';
-    },
-
-    close() {
-        return '</mark>';
-    }
-}
-```
-
-The conceptual lifecycle is:
-
-```text
-open
-    → materialize source text and nested spans
-close
-```
-
-This is useful when:
-
-* the target output is stream-like;
-* opening and closing values are independently meaningful;
-* renderer state changes at span boundaries;
-* constructing a completed child value is unnecessary.
-
-A span split into several segments may enter this lifecycle several times.
-
-Therefore, an opening hook should not be treated as “the span started for the first and only time”, nor a closing hook as “the analytical span is permanently complete”, unless the context explicitly confirms that boundary.
-
-## Wrapping and boundary hooks serve different output models
-
-Both forms may produce visually equivalent HTML:
-
-```js
-content => `<mark>${content}</mark>`
-```
-
-and:
-
-```js
-{
-    open: () => '<mark>',
-    close: () => '</mark>'
-}
-```
-
-But their materialization models differ.
-
-`wrap` operates on completed child output:
-
-```text
-children → wrapper
-```
-
-`open` and `close` operate at traversal boundaries:
-
-```text
-open value → children → close value
-```
-
-Prefer `wrap` when:
-
-* the output is tree-oriented;
-* the wrapper needs complete children;
-* the hook returns one structured node.
-
-Prefer `open` and `close` when:
-
-* the renderer has natural boundary state;
-* the output is accumulated sequentially;
-* opening and closing have separate semantics.
-
-Application code can usually use the simplest form appropriate for its renderer. Custom renderer authors need to understand the distinction more precisely.
+Use `context.span` and the per-render `context.spanIndex` to relate those invocations. Do not treat the first `open` as the permanent start or the first `close` as the permanent completion of the analytical fact.
 
 ## Source text has a renderer default
 
@@ -658,7 +542,7 @@ Use an interruption when the span represents a structural boundary in the output
 * a replacement that should not inherit surrounding wrappers;
 * a target-specific boundary that cannot be nested normally.
 
-The precise ordering and interaction rules belong in the API reference and tests.
+See [Replacement and Interruption](pipeline-and-rendering-reference.md#replacement-and-interruption) for the exact public contract.
 
 ## Segmentation preserves target validity, not visual continuity
 
@@ -725,47 +609,7 @@ same span traversal
 
 The buffer abstraction is not merely a performance utility. It is what makes output type independent from span analysis.
 
-## Tree outputs naturally use nested buffers
-
-Suppose a custom renderer produces annotation nodes:
-
-```js
-{
-    type: 'annotation',
-    data,
-    children
-}
-```
-
-When a span is wrapped:
-
-1. a child buffer collects its materialized content;
-2. `emit()` produces the children;
-3. `wrap()` constructs the annotation node;
-4. the node is appended to the parent buffer.
-
-The result may be:
-
-```js
-[
-    {
-        type: 'text',
-        value: 'const value = '
-    },
-    {
-        type: 'annotation',
-        kind: 'diagnostic',
-        children: [
-            {
-                type: 'text',
-                value: 'config.value'
-            }
-        ]
-    }
-]
-```
-
-Nothing in the span source needed to know that the output would be an object tree.
+Tree renderers use nested buffers to turn completed child results into nodes. The next guide, [Creating a Custom Renderer](create-custom-renderer.md), develops that target contract and its normalization choices step by step.
 
 ## Stateful renderers must restore outer state
 

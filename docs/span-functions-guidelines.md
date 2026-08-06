@@ -45,7 +45,7 @@ type TransformSpans<InputData, RenderOptions, OutputData = InputData> = (
 
 `GenerateSpansContext` is available inside generators and contains generation state: `renderOptions`, `marker`, previously generated spans by marker or layer name, and shared `lines`.
 
-`SpanOperationContext` is passed to operation callbacks and contains `document`, `lines`, `renderOptions`, the materialized input `spans`, and `index`. For single-span callbacks, `index` is the current span's zero-based position. A comparison callback receives the shared context; `index` does not identify either comparator argument.
+`SpanOperationContext` is passed to operation callbacks and contains `document`, `lines`, `renderOptions`, the collected input `spans`, and `index`. For single-span callbacks, `index` is the current span's zero-based position. A comparison callback receives the shared context; `index` does not identify either comparator argument.
 
 Reuse `context.lines` instead of constructing another `LineBoundaries` instance. This keeps all operations in a generation pass on the same document metrics.
 
@@ -78,7 +78,7 @@ span.end = newEnd;
 
 Filtering, sorting, and taking spans preserve the existing origin without creating a new one because they do not derive new geometry.
 
-### 3. Streaming and Materialization
+### 3. Streaming and Complete-input Evaluation
 
 Use `processSpans()` for one-pass operations that do not need the complete input:
 
@@ -90,9 +90,9 @@ return (document, createSpan, context) => {
 };
 ```
 
-Use `processSpansWithContext()` when callbacks need stable `context.spans` and `context.index`. It materializes the complete input before invoking the callback. This applies to `applyFilter`, `applyDataMap`, `applyMap`, `applyAugment`, `applySort`, and `applyTake`.
+Use `processSpansWithContext()` when callbacks need stable `context.spans` and `context.index`. It collects the complete input before invoking the callback. This applies to `applyFilter`, `applyDataMap`, `applyMap`, `applyAugment`, `applySort`, and `applyTake`.
 
-Materialization may also be required by semantics, such as sorting, merging, inversion, padding, or branching over a one-shot iterable. Do not describe a function as streaming merely because it emits output through `createSpan`.
+Complete-input evaluation may also be required by semantics, such as sorting, merging, inversion, padding, or branching over a one-shot iterable. Do not describe a function as streaming merely because it emits output through `createSpan`.
 
 ### 4. Origin and Data Propagation
 
@@ -227,7 +227,7 @@ JSDoc must document every parameter, the return value, and the behaviors a calle
 
 - whether offsets are clamped, rejected, or allowed outside document bounds;
 - whether input order is retained or normalized;
-- whether all input is materialized before callbacks or output;
+- whether all input is collected before callbacks or output;
 - how `data` and `origin` are produced;
 - how empty input, point spans, overlaps, and one-shot iterables behave.
 
@@ -349,7 +349,7 @@ Keep the public [Span Functions Reference](span-functions-reference.md) synchron
 4. Update this document only when the change introduces or revises a shared implementation contract.
 5. Update `AGENTS.md` immediately when a code change contradicts its architecture, terminology, public API, or validation requirements.
 
-Avoid repeating generic use-case lists in every function section. Prefer details that affect a caller's decision or prevent a bug: point-span behavior, overlap rules, ordering, materialization, one-shot inputs, regex state, option defaults, and type-inference limits.
+Avoid repeating generic use-case lists in every function section. Prefer details that affect a caller's decision or prevent a bug: point-span behavior, overlap rules, ordering, complete-input evaluation, one-shot inputs, regex state, option defaults, and type-inference limits.
 
 ---
 
@@ -384,7 +384,7 @@ These decisions should be visible in the function's type, JSDoc, tests, and refe
 2. Add the public generic signature before implementation details. Verify that output data inference matches runtime data, especially when output data is replaced or becomes `undefined`.
 3. Implement generation through `createSpan()` without mutating input records.
 4. Apply the origin policy chosen in step 1 consistently to every output path.
-5. Add JSDoc using the template above. Document defaults, ordering, materialization, data/origin behavior, and edge cases that are not obvious from the signature.
+5. Add JSDoc using the template above. Document defaults, ordering, complete-input evaluation, data/origin behavior, and edge cases that are not obvious from the signature.
 6. Add a semantic `@example`; add another only for a genuinely different mode or parameter form.
 
 Run the source tests immediately after the first working implementation:
@@ -436,7 +436,7 @@ npm run typecheck
     - every parameter, valid form, and default;
     - output geometry, ordering, and cardinality;
     - data and origin behavior;
-    - materialization and one-shot iterable implications;
+    - complete-input evaluation and one-shot iterable implications;
     - empty-input, point-span, overlap, or boundary semantics where relevant;
     - commented examples that show realistic usage and explain the semantic role of each non-obvious step.
 3. Update shared contracts in this guide only when the function introduces or changes a reusable implementation rule.

@@ -143,4 +143,4 @@ npm run check         # Full validation: lint:fix + test + typecheck + build + t
 - [Signature patterns](docs/span-functions-guidelines.md#signature-patterns)
 - [Documentation sync](docs/span-functions-guidelines.md#documentation-sync)
 
-**Design changes?** Update [Design Principles](docs/span-functions-guidelines.md#design-principles) or [Core Concepts](docs/span-functions-guidelines.md#core-concepts) as needed.
+**Design changes?** Update [Design Principles](docs/span-functions-guidelines.md#design-principles) or [Core Contracts](docs/span-functions-guidelines.md#core-contracts) as needed.

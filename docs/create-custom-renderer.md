@@ -25,6 +25,8 @@ The analytical span sources and transformations do not need to change for these 
 
 In this guide, we will build a renderer that produces a JSON-compatible tree.
 
+This guide assumes the layer and buffer model from [Layers and Materialization](5-layers-and-materialization.md) and the segment model from [Rendering Overlapping Spans](6-rendering-overlapping-spans.md).
+
 ## The target representation
 
 Given this source:
@@ -460,44 +462,9 @@ Nested buffers and `wrap()` naturally construct the tree.
 
 ## Crossing spans may produce several nodes
 
-Independent spans may cross:
+As described in [Rendering Overlapping Spans](6-rendering-overlapping-spans.md#crossing-spans-are-materialized-as-segments), a crossing may divide one generated span into several properly nested materialized segments. For a structured renderer, each segment may become a separate annotation node.
 
-```text
-A: [-----------)
-B:       [-----------)
-```
-
-A tree cannot represent both spans as one uninterrupted node without invalid nesting.
-
-HiText therefore materializes crossing spans as segments.
-
-For a structured renderer, this means one analytical span may produce more than one annotation node.
-
-Conceptually:
-
-```js
-[
-    {
-        type: 'annotation',
-        span: 'A',
-        children: [...]
-    },
-    {
-        type: 'annotation',
-        span: 'B',
-        children: [
-            {
-                type: 'annotation',
-                span: 'A',
-                children: [...]
-            },
-            ...
-        ]
-    }
-]
-```
-
-The earlier-ending A is materialized as two nodes. B remains one node and contains A's continuation. The important consequence is stable:
+The target-specific consequence is:
 
 > One span does not necessarily correspond to one output node.
 
@@ -518,7 +485,7 @@ When several materialized nodes need to be associated with the same generated sp
 }
 ```
 
-The public property is `spanIndex`. It remains stable across all segments of the same generated span within one render, but it is not a persistent identifier across render calls.
+The public property is `spanIndex`. It remains stable across all segments of the same generated span within one render, but it is not a persistent identifier across render calls. See [Span Hook Context](pipeline-and-rendering-reference.md#span-hook-context) for the complete context contract.
 
 ## Represent source and segment geometry separately
 

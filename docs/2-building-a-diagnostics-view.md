@@ -247,7 +247,7 @@ omitted:  [-----------)                      [---------)
 
 The omitted spans still refer to the original source document. Nothing has been cut or reindexed.
 
-`applyInvert()` is designed for projections with at least one input span. Empty input produces no omitted spans rather than a span covering the whole document. Its default trailing boundary may extend to `document.length + 1`; pass `true` to `applyInvert(true)` when downstream code requires all coordinates to stay within the document length.
+This projection assumes at least one visible span: `applyInvert()` produces no output for empty input. See [`applyInvert()`](span-functions-reference.md#applyinvertexact) for exact trailing-boundary behavior.
 
 ## Represent omissions
 

@@ -109,8 +109,6 @@ spansCompose(
 
 This composition starts with diagnostic spans, expands them into context windows, joins overlapping windows, and finally produces spans for everything outside the visible regions.
 
-This pattern assumes at least one visible span. `applyInvert()` returns no spans for empty input, and its default final gap may extend to `document.length + 1`; `applyInvert(true)` keeps that boundary within the document length.
-
 No output text has been cut yet. No HTML has been generated. All operations still describe the original document.
 
 ## Views instead of mutations

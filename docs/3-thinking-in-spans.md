@@ -2,6 +2,8 @@
 
 HiText does not provide a separate high-level primitive for every kind of text view.
 
+The previous guide built one diagnostic view step by step. This chapter generalizes the relationships used there and applies them to a different domain.
+
 Search excerpts, diagnostics, syntax highlighting, folding, generated summaries, redaction, focused logs, and progressive disclosure may look like unrelated features. In practice, they are usually built from a small number of recurring relationships between spans over one source document.
 
 The important skill is therefore not memorizing span functions. It is learning to identify:
@@ -428,7 +430,7 @@ This is one of the most useful projection patterns.
 
 Instead of finding every region that should be hidden, define the interesting regions and derive their complement.
 
-`applyInvert()` has two deliberate edge behaviors: empty input produces empty output, and the default final gap may end at `document.length + 1`. Use `applyInvert(true)` when downstream code requires coordinates bounded by the document length.
+For empty-input and document-boundary behavior, see [`applyInvert()`](span-functions-reference.md#applyinvertexact).
 
 Typical uses include:
 

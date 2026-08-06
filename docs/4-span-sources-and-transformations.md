@@ -24,6 +24,19 @@ A transformation answers:
 
 Keeping those roles separate makes span computations reusable, compositional, and independent from rendering.
 
+Choose a source by where its spans come from:
+
+| Input relationship | Typical API |
+| --- | --- |
+| Already available records | Literal iterable or `spansFrom()` |
+| Current document text | `spansFromMatch()` |
+| Current document structure | `spansFromLines()` or a custom generator |
+| Per-render application input | `spansFromOptions()` |
+| Completed earlier layer | `spansFromLayer()` |
+| Several independent inputs | `spansConcat()` or `spansWithFallback()` |
+
+These categories describe dependencies, not output behavior. Every form produces spans in the same source coordinate space.
+
 ## A source is a computation, not necessarily a collection
 
 The simplest span source is an array:
@@ -360,6 +373,17 @@ Some process each span independently. Some need the complete input set. Some pre
 
 Understanding these categories is more useful than memorizing individual functions.
 
+| Transformation concern | Typical operations | Input evaluation |
+| --- | --- | --- |
+| Membership | filter, take | Complete input when callback context or sequence position is required |
+| Data | data map | Complete input for stable callback context |
+| Local geometry | expand, collapse, fit | One input span at a time |
+| Custom derivatives | map, augment | Complete input for stable callback context |
+| Whole-set geometry | sort, merge, invert | Complete input |
+| Combined flows | append, fork, fallback | Depends on source and branch semantics |
+
+The [Span Functions Reference](span-functions-reference.md#quick-reference) gives the exact cardinality, data, origin, and evaluation contract for every operation.
+
 ## Select spans
 
 Filtering preserves only spans that satisfy a condition:
@@ -641,7 +665,7 @@ important spans
 
 Invert is a set-level operation. Its output represents absence of input coverage rather than a one-to-one transformation of a particular source span.
 
-For that reason, inverted spans have `data: undefined` and no origin. Empty input produces empty output rather than the whole document. By default, the final gap may end at `document.length + 1`; use `applyInvert(true)` to keep its end within the document length.
+For that reason, inverted spans have `data: undefined` and no origin. See [`applyInvert()`](span-functions-reference.md#applyinvertexact) for empty-input and trailing-boundary behavior.
 
 ## Select part of a sequence
 
