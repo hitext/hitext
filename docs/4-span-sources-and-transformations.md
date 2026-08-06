@@ -337,6 +337,28 @@ Its responsibility should remain analysis:
 
 Avoid putting renderer-specific output into a span generator. The same spans may later be used by HTML, TTY, DOM, JSX, or analytical layers with no rendering at all.
 
+## Use parser offsets directly
+
+HiText does not require a concrete syntax tree or tokenizer-specific output format. When a parser or analyzer already reports source offsets, adapt those records into spans and let the original document supply whitespace, comments, and other unannotated text.
+
+```js
+const syntaxSpans = astNodes.map(node => ({
+    start: node.start,
+    end: node.end,
+    data: node.type
+}));
+
+const highlighted = html().addLayer(
+    syntaxSpans,
+    (content, { data }) =>
+        `<span class="token-${data}">${content}</span>`
+);
+```
+
+The same pattern works with parser tokens, diagnostics, semantic indexes, search engines, and source maps that refer back to the rendered document. Producers do not need to emit markup or preserve every source character as a node. They only need zero-based, end-exclusive offsets into the document passed to `.render()`.
+
+Keep independent facts in independent layers. Syntax, diagnostics, selections, and search matches may reuse the same offsets without being merged into one parser-specific tree. Their output relationship is chosen later through layer order and hooks.
+
 ## Compose transformations from left to right
 
 `spansCompose()` starts with one source and applies transformations in order:

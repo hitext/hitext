@@ -280,10 +280,59 @@ The built-in `spanHooksHide()` helper combines replacement with interruption beh
 
 ## Built-in Renderers
 
-- `string()` preserves ordinary source chunks.
-- `html()` escapes `&`, `<`, and `>` in ordinary source chunks. Hook-generated markup is not escaped automatically.
-- `tty()` manages terminal-oriented style output.
-- `dom()` creates DOM output.
-- `jsx()` creates JSX-compatible output.
+### `string()`
+
+Produces one string and preserves ordinary source chunks without escaping. Hook results are concatenated according to the string buffer contract. Use it for plain text, Markdown-like formats, or output whose escaping policy is entirely application-defined.
+
+### `html()`
+
+Produces one HTML string. It escapes `&`, `<`, and `>` in ordinary source chunks. Hook-generated strings are renderer instructions and are not escaped automatically; validate or escape application data before interpolating it into markup.
+
+### `tty()`
+
+Produces one string with ANSI foreground and background transitions. It restores surrounding styles across nesting, crossings, and interruptions.
+
+Use `tty.createStyle()` for one fixed style:
+
+```js
+const errors = tty().addLayer(
+    spansFromMatch(/ERROR/g),
+    tty.createStyle('red')
+);
+```
+
+Use `tty.createStyleMap()` when span data or text selects the style:
+
+```js
+const messages = tty().addLayer(
+    spansFromMatch(/error|warning/g),
+    tty.createStyleMap({
+        error: ['red', 'bgWhite'],
+        warning: 'yellow'
+    })
+);
+```
+
+By default, the map key is `context.data ?? context.spanText`. Supply a fetcher for structured data:
+
+```js
+tty.createStyleMap(
+    {
+        high: 'red',
+        low: 'green'
+    },
+    ({ data }) => data.priority
+)
+```
+
+Supported names are the standard ANSI foreground colors (`black` through `white`, plus their `Bright` variants), corresponding `bg...` colors, and `reset`. TTY helpers are span-hook factories and are intended for use as the second argument to `.addLayer()`.
+
+### `dom()`
+
+Produces a `DocumentFragment`. Pass `{ document }` to use a particular DOM implementation; otherwise the renderer reads `globalThis.document`. Source chunks become text nodes, while hooks may return DOM nodes or fragments.
+
+### `jsx()`
+
+Produces an array of JSX-compatible children. Hooks may return elements from React, Preact, Solid, or another JSX runtime, and the result can be embedded directly as children.
 
 For a structured target, see [Creating a Custom Renderer](create-custom-renderer.md).

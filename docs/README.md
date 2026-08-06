@@ -16,6 +16,10 @@ Read these chapters in order:
 
 The first five chapters cover normal application use. Chapters 6 and 7 are primarily for advanced hooks and custom renderers.
 
+## Example Gallery
+
+- [Practical Examples](examples.md) applies the model to focused search, progressive detail, redaction, generated tables of contents, and terminal dashboards.
+
 ## API Reference
 
 - [Span Functions Reference](span-functions-reference.md) documents public span sources and transformations.
